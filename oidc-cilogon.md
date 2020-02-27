@@ -4,16 +4,19 @@ Valid credentials on the Fabric COmanage instance are required to create OIDC Cl
 Offical documentation: http://www.cilogon.org/oidc
 
 ## Register OIDC client in COmanage
-Name: Fabric-CredMgr-Test
-Home URL: https://152.54.14.42:443/
-Error URL: https://152.54.14.42:443/error
-Callback URL: https://152.54.14.42:443/oidc/redirect
-Refresh Token Lifetime: 10 days
-Scopes:
-openid
-profile
-email
-org.cilogon.userinfo
+Create a test client:Fabric-CredMgr-Test
+- Name: Fabric-CredMgr-Test
+- Home URL: https://152.54.14.42:443/
+- Error URL: https://152.54.14.42:443/error
+- Callback URL: https://152.54.14.42:443/oidc/redirect
+- Refresh Token Lifetime: 10 days
+- Scopes:
+  openid
+  profile
+  email
+  org.cilogon.userinfo
+  
+NOTE: IP Address here should be replaced with fqdn of your test/production server.
 
 ![OIDC Client](./images/oidc_client.png)
 
