@@ -94,7 +94,7 @@ Open a web browser, go to https://152.54.14.42:443/oidc/index.php, select an ide
 
 Here is example output using University of North Carolina at Chapel Hill as the Identity Provider:
 
-![OIDC Index](./images/oidc_index.png)
+![OIDC Index](./images/oidc_tokens.png)
 
 ## Handling Errors
 
