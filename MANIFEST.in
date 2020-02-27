@@ -1,0 +1,5 @@
+ recursive-include credmgr/CredentialManagers/OAuthCredmgrWebserver/static/*
+ recursive-include credmgr/CredentialManagers/OAuthCredmgrWebserver/templates/*
+ recursive-include examples *
+ include README.md
+ include LICENSE

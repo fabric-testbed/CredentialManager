@@ -1,0 +1,41 @@
+# The config file for the daemon portion of the credmgr.
+# After making modifications to this file, please restart credmgr to re-read it.
+
+# This file is a sample; to alter a particular value, uncomment it, and set as desired.
+# credmgr will use sane defaults, in the absence of this configuration file.
+
+
+[runtime]
+## The directory into which credmgr should write credentials
+## This directory will be automatically created if it does not exist.
+#credentials-directory = /var/lib/credmgr/credentials
+#port = 443
+
+[logging]
+## The directory in which credmgr should create log files.
+## This directory will be automatically created if it does not exist.
+#log-directory = /var/log/credmgr
+#
+## The filename to be used for credmgr's log file.
+#log-file = credmgr.log
+#
+## The default log level for credmgr.
+#log-level = DEBUG
+#
+## credmgr rotates log files. You may specify how many archived log files to keep here.
+#log-retain = 5
+#
+## credmgr rotates log files after they exceed a certain size.
+## You may specify the file size that results in a log file being rotated here.
+#log-size = 5000000
+
+[oauth]
+#oauth-credmgr-token-lifetime = 60
+oauth-provider = cilogon
+oauth-authorization-url = https://cilogon.org/authorize
+oauth-client-id = cilogon:/client_id/380c2bfa5d99ae74a3871d874ae9e669
+oauth-client-secret = zx9Y7JcI8kpOHRRnWUkZp5JrPPOTuHI34H99p1DdTMWmS6LQEju4bMS97frFCngNYmilFtGNjr-2RLQzUpxryw
+oauth-token-url = https://cilogon.org/oauth2/token
+oauth-user-url = https://cilogon.org/oauth2/userinfo
+oauth-return-url = https://152.54.14.113:443/return/cilogon
+oauth-scope = openid email profile org.cilogon.userinfo

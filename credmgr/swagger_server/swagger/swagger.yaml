@@ -1,0 +1,244 @@
+openapi: 3.0.1
+info:
+  title: Fabric Credential Manager API
+  description: This is Fabric Credential Manager API
+  contact:
+    email: kthare10@renci.org
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  version: 1.0.0
+servers:
+- url: https://virtserver.swaggerhub.com/fabric/credmgr
+paths:
+  /create:
+    post:
+      summary: create tokens for an user
+      description: |
+        Request to create tokens for an user
+      operationId: create_post
+      parameters:
+      - name: userName
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/credMgrResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/credMgrResponse'
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/credMgrResponse'
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/credMgrResponse'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/credMgrResponse'
+        default:
+          description: Unexpected Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/credMgrResponse'
+      x-openapi-router-controller: credmgr.swagger_server.controllers.default_controller
+  /refresh:
+    post:
+      summary: refresh tokens
+      description: |
+        Request to get tokens for an user
+      operationId: refresh_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/refreshRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/credMgrResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/credMgrResponse'
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/credMgrResponse'
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/credMgrResponse'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/credMgrResponse'
+        default:
+          description: Unexpected Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/credMgrResponse'
+      x-codegen-request-body-name: string
+      x-openapi-router-controller: credmgr.swagger_server.controllers.default_controller
+  /get:
+    get:
+      summary: get tokens for an user
+      description: |
+        Request to get tokens for an user
+      operationId: get_get
+      parameters:
+      - name: userName
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/credMgrResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/credMgrResponse'
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/credMgrResponse'
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/credMgrResponse'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/credMgrResponse'
+        default:
+          description: Unexpected Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/credMgrResponse'
+      x-openapi-router-controller: credmgr.swagger_server.controllers.default_controller
+components:
+  schemas:
+    credMgrResponse:
+      type: object
+      properties:
+        status:
+          minimum: 0
+          type: integer
+          description: status code
+        message:
+          type: string
+          description: status message
+        value:
+          $ref: '#/components/schemas/credMgrResponse_value'
+        version:
+          type: string
+          description: Actor version
+      example:
+        message: message
+        value:
+          access_token: access_token
+          refresh_token: refresh_token
+          expires_at: expires_at
+          id_token: id_token
+          token_type: token_type
+          expires_in: expires_in
+        version: version
+        status: 0
+    refreshRequest:
+      required:
+      - refresh_token
+      type: object
+      properties:
+        refresh_token:
+          type: string
+          description: Refresh Token
+    credMgrResponse_value:
+      required:
+      - access_token
+      - expires_at
+      - expires_in
+      - id_token
+      - refresh_token
+      - token_type
+      type: object
+      properties:
+        access_token:
+          type: string
+          description: Access Token
+        id_token:
+          type: string
+          description: Identity Token
+        token_type:
+          type: string
+          description: Token Type
+        expires_in:
+          type: string
+          description: Expires in (seconds)
+        expires_at:
+          type: string
+          description: Expires at
+        refresh_token:
+          type: string
+          description: Refresh Token
+      description: JSON object
+      example:
+        access_token: access_token
+        refresh_token: refresh_token
+        expires_at: expires_at
+        id_token: id_token
+        token_type: token_type
+        expires_in: expires_in
+  parameters:
+    userName:
+      name: userName
+      in: query
+      required: true
+      schema:
+        type: string
+
