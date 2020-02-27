@@ -64,7 +64,7 @@ def setup_logging(log_path = None, log_level = None):
     logging.basicConfig(format=log_format, filename=log_path)
 
     return log
-    
+
 def get_cred_dir(cred_dir = None):
     '''
     Detects the path for the credential directory from the credmgr config,
@@ -98,7 +98,7 @@ def get_cred_dir(cred_dir = None):
         raise RuntimeError('The credmgr cannot verify the permissions of the credential directory.')
     if not os.access(cred_dir, (os.R_OK | os.W_OK | os.X_OK)):
         raise RuntimeError('The credmgr does not have access to the credential directory.')
-        
+
     return cred_dir
 
 
@@ -133,7 +133,7 @@ def credmgr_complete(cred_dir):
 
 def atomic_rename(tmp_file, target_file, mode=stat.S_IRUSR):
     """
-    If successful HTCondor will only be dealing with fully prepared and
+    If successful Credmgr will only be dealing with fully prepared and
     usable credential cache files.
 
     :param tmp_file: The temp file path containing
@@ -143,7 +143,7 @@ def atomic_rename(tmp_file, target_file, mode=stat.S_IRUSR):
     :return: Whether the chmod/rename was successful.
     :rtype: bool
     """
-    
+
     os.chmod(tmp_file, mode)
     os.rename(tmp_file, target_file)
 
@@ -222,7 +222,7 @@ def generate_secret_key():
 
 def get_providers():
     if not CONFIG and ('oauth' not in CONFIG):
-        raise RuntimeError('OAUTH configuration parameters must be specified in config') 
+        raise RuntimeError('OAUTH configuration parameters must be specified in config')
 
     providers = {}
     provider = CONFIG.get('oauth', "oauth-provider")
