@@ -45,12 +45,26 @@ $ swagger-codegen generate -i swagger.json -l python-flask -o credmgr
 ```
 
 ## Usage
-Coming soon
+To run the Credential Manage, please execute the following from the root directory:
 
+ ```
+ git clone https://github.com/fabric-testbed/CredentialManager.git 
+ ./install.sh
+ ```
 ## Running with Docker
 
-Coming soon
+ To run the server on a Docker container, please execute the following from the root directory:
 
+ ```bash
+ # building the image
+ docker build -t credmgr .
+
+ # starting up a container
+ docker run -p 8082:8082 credmgr
+
+ # bring using via docker-compose
+ docker-compose up -d
+ ```
 ## Example
 
 Create a token for user 'testUser'.
