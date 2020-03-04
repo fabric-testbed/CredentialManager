@@ -55,7 +55,7 @@ Coming soon
 
 Create a token for user 'testUser'.
 ```bash
-curl -X POST -i "localhost:8080/fabric/credmgr/create?userName=testUser" -H "accept: application/json"
+curl -X POST -i "localhost:8082/fabric/credmgr/create?userName=testUser" -H "accept: application/json"
 Hello, testUser
 HTTP/1.0 200 OK
 Content-Type: application/json
@@ -68,7 +68,7 @@ Date: Thu, 27 Feb 2020 15:53:56 GMT
 
 Get token for user 'testUser'
 ```bash
-curl -X GET -i "localhost:8080/fabric/credmgr/get?userName=testUser" -H "accept: application/json"
+curl -X GET -i "localhost:8082/fabric/credmgr/get?userName=testUser" -H "accept: application/json"
 HTTP/1.0 200 OK
 Content-Type: application/json
 Content-Length: 1778
@@ -90,7 +90,7 @@ Date: Thu, 27 Feb 2020 20:01:17 GMT
 
 Refresh token for user 'testUser'
 ```bash
-$ curl -X POST -i "localhost:8080/fabric/credmgr/refresh" -H "accept: application/json" -H "Content-Type: application/json" --data '{"refresh_token": "https://cilogon.org/oauth2/refreshToken/69636d330f2f4acd8f7aef48e2991af9/1582827832162"}'
+$ curl -X POST -i "localhost:8082/fabric/credmgr/refresh" -H "accept: application/json" -H "Content-Type: application/json" --data '{"refresh_token": "https://cilogon.org/oauth2/refreshToken/69636d330f2f4acd8f7aef48e2991af9/1582827832162"}'
 HTTP/1.0 200 OK
 Content-Type: application/json
 Content-Length: 1780

@@ -40,6 +40,7 @@ CredentialsDirectory = '/var/lib/credmgr/credentials'
 CredentialsDirectoryPermissionCheck = 'True'
 OAuthCredMgrTokenLifeTime = '60'
 Port = '443'
+RestPort = '8082'
 
 LogDir = '/var/log/credmgr'
 LogFile = 'credmgr.log'
@@ -57,6 +58,7 @@ CONFIG.add_section('logging')
 CONFIG.set('runtime', 'credentials-directory', CredentialsDirectory)
 CONFIG.set('runtime', 'credentials-directory-check', CredentialsDirectoryPermissionCheck)
 CONFIG.set('runtime', 'port', Port)
+CONFIG.set('runtime', 'rest-port', RestPort)
 
 CONFIG.set('oauth', 'oauth-credmgr-token-lifetime', OAuthCredMgrTokenLifeTime)
 

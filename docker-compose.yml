@@ -22,5 +22,5 @@ services:
             - "./docker/self.signed.crt:/etc/credmgr/hostcert.pem"
             - "./docker/self.signed.key:/etc/credmgr/hostkey.pem"
         ports:
-        - "8080:8080"
+        - "8082:8082"
         - "443:443"

@@ -28,6 +28,7 @@ import signal
 import connexion
 from flask import jsonify
 
+from credmgr import CONFIG
 from credmgr.CredentialManagers.OAuthCredmgrSingleton import OAuthCredmgrSingleton
 from credmgr.swagger_server import encoder
 
@@ -37,7 +38,8 @@ def main():
     app.app.json_encoder = encoder.JSONEncoder
     app.add_api('swagger.yaml', arguments={'title': 'Fabric Credential Manager API'}, pythonic_params=True)
     OAuthCredmgrSingleton.get()
-    app.run(port=8080)
+    port = CONFIG.get('runtime','rest-port')
+    app.run(port=port)
 
     @app.route('/stopServer', methods=['GET'])
     def stopServer():
