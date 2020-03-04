@@ -1,0 +1,26 @@
+version: '3.6'
+
+services:
+    credmgr:
+        container_name: credmgr 
+        hostname: credmgr 
+        image: credmgr:latest
+        restart: always
+        privileged: true
+        cap_add:
+            - SYS_ADMIN
+        security_opt:
+            - seccomp:unconfined
+        tmpfs:
+            - /run
+            - /run/lock
+        volumes:
+            - /sys/fs/cgroup:/sys/fs/cgroup:ro
+            - ./log:/var/log
+            - ./credentials:/var/lib/credmgr/credentials
+            - "./docker/config:/etc/credmgr/config_docker"
+            - "./docker/self.signed.crt:/etc/credmgr/hostcert.pem"
+            - "./docker/self.signed.key:/etc/credmgr/hostkey.pem"
+        ports:
+        - "8080:8080"
+        - "443:443"

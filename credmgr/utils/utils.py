@@ -1,10 +1,32 @@
-import base64
+#!/usr/bin/env python3
+# MIT License
+#
+# Copyright (c) 2020 FABRIC Testbed
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+# Author Komal Thareja (kthare10@renci.org)
 import os
 import json
 import logging
 import logging.handlers
 import stat
-import sys
 import tempfile
 import errno
 import uuid
@@ -31,6 +53,25 @@ def atomic_output(file_contents, output_fname, mode=stat.S_IRUSR):
             os.unlink(tmp_file_name)
         except OSError:
             pass
+
+
+def get_log_file(log_path = None):
+    if (log_path is None) and (CONFIG is not None) and ('logging' in CONFIG) \
+            and ('log-directory' in CONFIG['logging']) and ('log-file' in CONFIG['logging']):
+        log_path = CONFIG.get('logging', "log-directory") + '/' + CONFIG.get('logging', "log-file")
+    elif (log_path is None):
+        raise RuntimeError('The log file path must be specified in config or passed as an argument')
+    return log_path
+
+
+def get_log_level(log_level = None):
+    # Get the log level
+    if (log_level is None) and (CONFIG is not None) and ('logging' in CONFIG) and ('log-level' in CONFIG['logging']):
+        log_level = CONFIG.get('logging', "log-level")
+    if log_level is None:
+        log_level = logging.INFO
+    return log_level
+
 
 def setup_logging(log_path = None, log_level = None):
     '''
@@ -90,14 +131,17 @@ def get_cred_dir(cred_dir = None):
         os.makedirs(cred_dir,
                         (stat.S_ISGID | stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | stat.S_IRGRP | stat.S_IWGRP | stat.S_IXGRP))
 
-    # Make sure the permissions on the credential directory are correct
-    try:
-        if (os.stat(cred_dir).st_mode & (stat.S_IROTH | stat.S_IWOTH | stat.S_IXOTH)):
-            raise RuntimeError('The credential directory is readable and/or writable by others.')
-    except OSError:
-        raise RuntimeError('The credmgr cannot verify the permissions of the credential directory.')
-    if not os.access(cred_dir, (os.R_OK | os.W_OK | os.X_OK)):
-        raise RuntimeError('The credmgr does not have access to the credential directory.')
+    permission_check = CONFIG.get('runtime','credentials-directory-check')
+
+    if permission_check == 'True' :
+        # Make sure the permissions on the credential directory are correct
+        try:
+            if (os.stat(cred_dir).st_mode & (stat.S_IROTH | stat.S_IWOTH | stat.S_IXOTH)):
+                raise RuntimeError('The credential directory is readable and/or writable by others.')
+        except OSError:
+            raise RuntimeError('The credmgr cannot verify the permissions of the credential directory.')
+        if not os.access(cred_dir, (os.R_OK | os.W_OK | os.X_OK)):
+            raise RuntimeError('The credmgr does not have access to the credential directory.')
 
     return cred_dir
 

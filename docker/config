@@ -33,9 +33,8 @@
 ## The directory into which credmgr should write credentials
 ## This directory will be automatically created if it does not exist.
 credentials-directory = /var/lib/credmgr/credentials
-credentials-directory-check = True
 port = 443
-
+credentials-directory-check = False
 [logging]
 ## The directory in which credmgr should create log files.
 ## This directory will be automatically created if it does not exist.
@@ -64,4 +63,4 @@ oauth-scope = openid email profile org.cilogon.userinfo
 
 oauth-client-id = cilogon:/client_id/77e1aea020a4676937eaa22df1d432d8
 oauth-client-secret = SPY0AxjgVbzFrXKnmqe_5ehQzt-rWZ_wPij-r8RXw-CPhHKFmr1AoNgjyWh7u1DSjt8G_SVooUzIyrCAhu6J_g
-oauth-return-url = https://152.54.14.86:443/return/cilogon
+oauth-return-url = https://127.0.0.1:443/return/cilogon

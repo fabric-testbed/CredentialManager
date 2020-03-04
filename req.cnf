@@ -12,6 +12,6 @@ CN = example.com
 [v3_req]
 subjectAltName = @alt_names
 [alt_names]
-DNS.1 = www.fabric-credmgr.com
-DNS.2 = fabric-credmgr.com
-DNS.3 = fabric-credmgr.net
+DNS.1 = www.REPLACE_WITH_FQDN.com
+DNS.2 = REPLACE_WITH_FQDN.com
+DNS.3 = REPLACE_WITH_FQDN.net

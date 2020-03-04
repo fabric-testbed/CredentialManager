@@ -1,0 +1,13 @@
+[Unit]
+Description=credmgrd.service
+
+[Service]
+User=credmgr
+Type=oneshot
+RemainAfterExit=yes
+StandardOutput=journal+console
+ExecStart=/usr/local/bin/credmgrd start
+ExecStop=/usr/local/bin/credmgrd stop
+
+[Install]
+WantedBy=default.target
