@@ -1,9 +1,19 @@
 version: '3.6'
 
 services:
+    database:
+        image: postgres:10
+        container_name: database
+        restart: always
+        environment:
+        - POSTGRES_PASSWORD=credmgr
+        - POSTGRES_USER=credmgr
+        - POSTGRES_DB=credmgr
+        ports:
+        - 5432:${POSTGRES_PORT:-5432}
     credmgr:
-        container_name: credmgr 
-        hostname: credmgr 
+        container_name: credmgr
+        hostname: credmgr
         image: credmgr:latest
         restart: always
         privileged: true
@@ -22,5 +32,5 @@ services:
             - "./docker/self.signed.crt:/etc/credmgr/hostcert.pem"
             - "./docker/self.signed.key:/etc/credmgr/hostkey.pem"
         ports:
-        - "8082:8082"
+        - "8082:8080"
         - "443:443"

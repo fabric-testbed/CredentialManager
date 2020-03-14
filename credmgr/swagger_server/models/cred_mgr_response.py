@@ -1,10 +1,12 @@
 # coding: utf-8
 
 from __future__ import absolute_import
+from datetime import date, datetime  # noqa: F401
 
 from credmgr.swagger_server.models.base_model_ import Model
 from credmgr.swagger_server.models.cred_mgr_response_value import CredMgrResponseValue  # noqa: F401,E501
 from credmgr.swagger_server import util
+from typing import List, Dict  # noqa: F401
 
 
 class CredMgrResponse(Model):

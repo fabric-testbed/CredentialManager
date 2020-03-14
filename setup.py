@@ -45,7 +45,10 @@ REQUIRES = [
         'python_dateutil == 2.6.0',
         'setuptools >= 21.0.0',
         'mod-wsgi',
-        'python-daemon'
+        'python-daemon',
+        'psycopg2',
+        'sqlalchemy',
+        'PyJWT >=1.7.1'
         ]
 
 setup(

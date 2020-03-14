@@ -13,16 +13,24 @@ servers:
 paths:
   /create:
     post:
-      summary: create tokens for an user
+      summary: Generate OAuth tokens for an user
       description: |
-        Request to create tokens for an user
+        Request to generate OAuth tokens for an user
       operationId: create_post
       parameters:
-      - name: userName
+      - name: projectName
         in: query
-        required: true
         schema:
           type: string
+          default: all
+      - name: scope
+        in: query
+        schema:
+          type: string
+          default: all
+          enum:
+          - measurement
+          - all
       responses:
         "200":
           description: OK
@@ -63,15 +71,78 @@ paths:
       x-openapi-router-controller: credmgr.swagger_server.controllers.default_controller
   /refresh:
     post:
-      summary: refresh tokens
+      summary: Refresh OAuth tokens for an user
       description: |
-        Request to get tokens for an user
+        Request to refresh OAuth tokens for an user
       operationId: refresh_post
+      parameters:
+      - name: userId
+        in: query
+        required: true
+        schema:
+          type: string
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/refreshRequest'
+              $ref: '#/components/schemas/refresh_revoke_Request'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/credMgrResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/credMgrResponse'
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/credMgrResponse'
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/credMgrResponse'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/credMgrResponse'
+        default:
+          description: Unexpected Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/credMgrResponse'
+      x-codegen-request-body-name: string
+      x-openapi-router-controller: credmgr.swagger_server.controllers.default_controller
+  /revoke:
+    post:
+      summary: Revoke a refresh token for an user
+      description: |
+        Request to revoke a refresh token for an user
+      operationId: revoke_post
+      parameters:
+      - name: userId
+        in: query
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/refresh_revoke_Request'
         required: true
       responses:
         "200":
@@ -119,7 +190,7 @@ paths:
         Request to get tokens for an user
       operationId: get_get
       parameters:
-      - name: userName
+      - name: userId
         in: query
         required: true
         schema:
@@ -182,15 +253,12 @@ components:
       example:
         message: message
         value:
-          access_token: access_token
           refresh_token: refresh_token
-          expires_at: expires_at
+          user_id: user_id
           id_token: id_token
-          token_type: token_type
-          expires_in: expires_in
         version: version
         status: 0
-    refreshRequest:
+    refresh_revoke_Request:
       required:
       - refresh_token
       type: object
@@ -200,45 +268,45 @@ components:
           description: Refresh Token
     credMgrResponse_value:
       required:
-      - access_token
-      - expires_at
-      - expires_in
       - id_token
       - refresh_token
-      - token_type
+      - user_id
       type: object
       properties:
-        access_token:
+        user_id:
           type: string
-          description: Access Token
+          description: Unique id to identify the user to which token was issued
         id_token:
           type: string
           description: Identity Token
-        token_type:
-          type: string
-          description: Token Type
-        expires_in:
-          type: string
-          description: Expires in (seconds)
-        expires_at:
-          type: string
-          description: Expires at
         refresh_token:
           type: string
           description: Refresh Token
       description: JSON object
       example:
-        access_token: access_token
         refresh_token: refresh_token
-        expires_at: expires_at
+        user_id: user_id
         id_token: id_token
-        token_type: token_type
-        expires_in: expires_in
   parameters:
-    userName:
-      name: userName
+    userId:
+      name: userId
       in: query
       required: true
       schema:
         type: string
+    projectName:
+      name: projectName
+      in: query
+      schema:
+        type: string
+        default: all
+    scope:
+      name: scope
+      in: query
+      schema:
+        type: string
+        default: all
+        enum:
+        - measurement
+        - all
 

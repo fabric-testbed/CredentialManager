@@ -25,6 +25,7 @@
 
 # Install the required packages
 yum install -y epel-release gcc httpd mod_ssl mod_wsgi httpd-devel python3-devel
+yum install -y postgresql postgresql-devel
 pip3 install --no-cache-dir -r requirements.txt
 
 # Create credmgr user

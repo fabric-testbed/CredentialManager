@@ -282,7 +282,7 @@ def get_providers():
 
     return providers
 
-def generate_user_key(user):
+def generate_user_key(project, scope):
     """
     Return user key file to be returned when access token is requested
     """
@@ -295,7 +295,9 @@ def generate_user_key(user):
     try:
         with open(keyfile, 'w+') as fp:
             print("[user]", file=fp)
-            print("user-name = " + user, file=fp)
+            print("user-name = " + filename, file=fp)
+            print("project = " + project, file=fp)
+            print("scope = " + scope, file=fp)
 
         os.chmod(keyfile, stat.S_IWUSR| stat.S_IREAD)
     except Exception as e:

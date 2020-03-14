@@ -51,23 +51,26 @@ from credmgr import LOGGER
 from credmgr.CredentialManagers.OAuthCredmgrSingleton import OAuthCredmgrSingleton
 from credmgr.swagger_server.models import CredMgrResponseValue
 from credmgr.swagger_server.models.cred_mgr_response import CredMgrResponse
-from credmgr.swagger_server.models.refresh_request import RefreshRequest  # noqa: E501
+from credmgr.swagger_server.models.refresh_revoke_request import RefreshRevokeRequest  # noqa: E501
+from credmgr.swagger_server import util
 
 
-def create_post(user_name):  # noqa: E501
-    """create tokens for an user
+def create_post(project_name=None, scope=None):  # noqa: E501
+    """Generate OAuth tokens for an user
 
-    Request to create tokens for an user  # noqa: E501
+    Request to generate OAuth tokens for an user  # noqa: E501
 
-    :param user_name: 
-    :type user_name: str
+    :param project_name: 
+    :type project_name: str
+    :param scope: 
+    :type scope: str
 
     :rtype: CredMgrResponse
     """
     logger = logging.getLogger(LOGGER)
     response = CredMgrResponse()
     try:
-        response.message = OAuthCredmgrSingleton.get().create_token(user_name)
+        response.message = OAuthCredmgrSingleton.get().create_token(project_name, scope)
         response.status = 200
     except Exception as e:
         response.message = str(e)
@@ -76,20 +79,20 @@ def create_post(user_name):  # noqa: E501
     return response
 
 
-def get_get(user_name):  # noqa: E501
+def get_get(user_id):  # noqa: E501
     """get tokens for an user
 
     Request to get tokens for an user  # noqa: E501
 
-    :param user_name: 
-    :type user_name: str
+    :param user_id: 
+    :type user_id: str
 
     :rtype: CredMgrResponse
     """
     logger = logging.getLogger(LOGGER)
     response = CredMgrResponse()
     try:
-        response.value = CredMgrResponseValue.from_dict(OAuthCredmgrSingleton.get().get_token(user_name))
+        response.value = CredMgrResponseValue.from_dict(OAuthCredmgrSingleton.get().get_token(user_id))
         response.status = 200
     except Exception as e:
         logger.exception(e)
@@ -98,25 +101,45 @@ def get_get(user_name):  # noqa: E501
     return response
 
 
-def refresh_post(body):  # noqa: E501
-    """refresh tokens
+def refresh_post(body, user_id):  # noqa: E501
+    """Refresh OAuth tokens for an user
 
-    Request to get tokens for an user  # noqa: E501
+    Request to refresh OAuth tokens for an user  # noqa: E501
 
     :param body: 
     :type body: dict | bytes
+    :param user_id: 
+    :type user_id: str
 
     :rtype: CredMgrResponse
     """
     if connexion.request.is_json:
-        body = RefreshRequest.from_dict(connexion.request.get_json())  # noqa: E501
+        body = RefreshRevokeRequest.from_dict(connexion.request.get_json())  # noqa: E501
     logger = logging.getLogger(LOGGER)
     response = CredMgrResponse()
     try:
-        response.value = CredMgrResponseValue.from_dict(OAuthCredmgrSingleton.get().refresh_token(body.refresh_token))
+        response.value = CredMgrResponseValue.from_dict(OAuthCredmgrSingleton.get().refresh_token(user_id,
+                                                                                                  body.refresh_token))
         response.status = 200
     except Exception as e:
         response.message = str(e)
         response.status = 500
         logger.exception(e)
     return response
+
+
+def revoke_post(body, user_id):  # noqa: E501
+    """Revoke a refresh token for an user
+
+    Request to revoke a refresh token for an user  # noqa: E501
+
+    :param body: 
+    :type body: dict | bytes
+    :param user_id: 
+    :type user_id: str
+
+    :rtype: CredMgrResponse
+    """
+    if connexion.request.is_json:
+        body = RefreshRevokeRequest.from_dict(connexion.request.get_json())  # noqa: E501
+    return 'do some magic!'

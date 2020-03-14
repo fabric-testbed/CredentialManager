@@ -35,6 +35,8 @@
 credentials-directory = /var/lib/credmgr/credentials
 port = 443
 credentials-directory-check = False
+rest-port = 8080
+
 [logging]
 ## The directory in which credmgr should create log files.
 ## This directory will be automatically created if it does not exist.

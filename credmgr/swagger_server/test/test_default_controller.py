@@ -3,8 +3,10 @@
 from __future__ import absolute_import
 
 from flask import json
+from six import BytesIO
 
-from credmgr.swagger_server.models.refresh_request import RefreshRequest  # noqa: E501
+from credmgr.swagger_server.models.cred_mgr_response import CredMgrResponse  # noqa: E501
+from credmgr.swagger_server.models.refresh_revoke_request import RefreshRevokeRequest  # noqa: E501
 from credmgr.swagger_server.test import BaseTestCase
 
 
@@ -14,11 +16,12 @@ class TestDefaultController(BaseTestCase):
     def test_create_post(self):
         """Test case for create_post
 
-        create tokens for an user
+        Generate OAuth tokens for an user
         """
-        query_string = [('user_name', 'user_name_example')]
+        query_string = [('project_name', 'project_name_example'),
+                        ('scope', 'scope_example')]
         response = self.client.open(
-            '/kthare10/credmgr/1.0.0/create',
+            '/fabric/credmgr/create',
             method='POST',
             query_string=query_string)
         self.assert200(response,
@@ -29,9 +32,9 @@ class TestDefaultController(BaseTestCase):
 
         get tokens for an user
         """
-        query_string = [('user_name', 'user_name_example')]
+        query_string = [('user_id', 'user_id_example')]
         response = self.client.open(
-            '/kthare10/credmgr/1.0.0/get',
+            '/fabric/credmgr/get',
             method='GET',
             query_string=query_string)
         self.assert200(response,
@@ -40,14 +43,32 @@ class TestDefaultController(BaseTestCase):
     def test_refresh_post(self):
         """Test case for refresh_post
 
-        refresh tokens
+        Refresh OAuth tokens for an user
         """
-        body = RefreshRequest()
+        body = RefreshRevokeRequest()
+        query_string = [('user_id', 'user_id_example')]
         response = self.client.open(
-            '/kthare10/credmgr/1.0.0/refresh',
+            '/fabric/credmgr/refresh',
             method='POST',
             data=json.dumps(body),
-            content_type='application/json')
+            content_type='application/json',
+            query_string=query_string)
+        self.assert200(response,
+                       'Response body is : ' + response.data.decode('utf-8'))
+
+    def test_revoke_post(self):
+        """Test case for revoke_post
+
+        Revoke a refresh token for an user
+        """
+        body = RefreshRevokeRequest()
+        query_string = [('user_id', 'user_id_example')]
+        response = self.client.open(
+            '/fabric/credmgr/revoke',
+            method='POST',
+            data=json.dumps(body),
+            content_type='application/json',
+            query_string=query_string)
         self.assert200(response,
                        'Response body is : ' + response.data.decode('utf-8'))
 

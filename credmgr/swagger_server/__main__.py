@@ -31,15 +31,21 @@ from flask import jsonify
 from credmgr import CONFIG
 from credmgr.CredentialManagers.OAuthCredmgrSingleton import OAuthCredmgrSingleton
 from credmgr.swagger_server import encoder
+from credmgr.utils import setup_logging
 
 
 def main():
-    app = connexion.App(__name__, specification_dir='swagger/')
-    app.app.json_encoder = encoder.JSONEncoder
-    app.add_api('swagger.yaml', arguments={'title': 'Fabric Credential Manager API'}, pythonic_params=True)
-    OAuthCredmgrSingleton.get()
-    port = CONFIG.get('runtime','rest-port')
-    app.run(port=port)
+    log = setup_logging()
+    try:
+        app = connexion.App(__name__, specification_dir='swagger/')
+        app.app.json_encoder = encoder.JSONEncoder
+        app.add_api('swagger.yaml', arguments={'title': 'Fabric Credential Manager API'}, pythonic_params=True)
+        OAuthCredmgrSingleton.get()
+        port = CONFIG.get('runtime','rest-port')
+        app.run(port=port)
+    except Exception as e:
+        log.error("Exception occurred while starting Flask app")
+        log.error(e)
 
     @app.route('/stopServer', methods=['GET'])
     def stopServer():

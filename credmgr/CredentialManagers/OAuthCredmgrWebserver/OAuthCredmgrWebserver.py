@@ -56,6 +56,8 @@ import json
 import re
 import logging
 
+from credmgr.utils.database import Database
+
 log = logging.getLogger(LOGGER)
 
 # initialize Flask
@@ -119,6 +121,8 @@ def key(key):
 
     # the local username is global to the session, just grab it from the last classad
     session['local_username'] = keyInfo.get("user", "user-name")
+    session['local_project'] = keyInfo.get("user", "project")
+    session['local_scope'] = keyInfo.get("user", "scope")
 
     session['providers'] = providers
     log.debug(session['providers'])
@@ -221,60 +225,8 @@ def oauth_return(provider):
     except ValueError:
         session['providers'][provider]['username'] = 'Unknown'
 
-    # split off the refresh token from the access token if it exists
-    try:
-        refresh_token_string = token.pop('refresh_token')
-    except KeyError: # no refresh token
-        use_refresh_token = False
-        refresh_token_string = ''
-    else:
-        use_refresh_token = True
-
-    refresh_token = {
-        'refresh_token': refresh_token_string
-        }
-
-    # create a metadata file for refreshing the token
-    metadata = {
-        'client_id': client_id,
-        'client_secret': client_secret,
-        'token_url': token_url,
-        'use_refresh_token': use_refresh_token
-        }
-
-    # atomically write the tokens to the cred dir
-    cred_dir = get_cred_dir()
-    user_cred_dir = os.path.join(cred_dir, session['local_username'])
-    if not os.path.isdir(user_cred_dir):
-        os.makedirs(user_cred_dir)
-    refresh_token_path = os.path.join(user_cred_dir, provider.replace(' ', '_') + '.top')
-    access_token_path = os.path.join(user_cred_dir, provider.replace(' ', '_') + '.use')
-    metadata_path = os.path.join(user_cred_dir, provider.replace(' ', '_') + '.meta')
-
-    # write tokens to tmp files
-    try:
-        (tmp_fd, tmp_access_token_path) = tempfile.mkstemp(dir = user_cred_dir)
-    except OSError as oe:
-        log.debug("Failed to create temporary file in the user credential directory: {0}".format(str(oe)))
-        raise
-    with os.fdopen(tmp_fd, 'w') as f:
-        json.dump(token, f)
-
-    (tmp_fd, tmp_refresh_token_path) = tempfile.mkstemp(dir = user_cred_dir)
-    with os.fdopen(tmp_fd, 'w') as f:
-        json.dump(refresh_token, f)
-
-    (tmp_fd, tmp_metadata_path) = tempfile.mkstemp(dir = user_cred_dir)
-    with os.fdopen(tmp_fd, 'w') as f:
-        json.dump(metadata, f)
-
-    # (over)write token files
-    try:
-        atomic_rename(tmp_access_token_path, access_token_path)
-        atomic_rename(tmp_refresh_token_path, refresh_token_path)
-        atomic_rename(tmp_metadata_path, metadata_path)
-    except OSError as e:
-        log.error('{0}\n'.format(str(e)))
+    db = Database()
+    db.create_tokens(session['local_username'], token, session['local_project'], session['local_scope'])
 
     # mark provider as logged in
     session['providers'][provider]['logged_in'] = True

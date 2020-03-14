@@ -1,6 +1,9 @@
 # coding: utf-8
 
 from __future__ import absolute_import
+from datetime import date, datetime  # noqa: F401
+
+from typing import List, Dict  # noqa: F401
 
 from credmgr.swagger_server.models.base_model_ import Model
 from credmgr.swagger_server import util
@@ -11,44 +14,29 @@ class CredMgrResponseValue(Model):
 
     Do not edit the class manually.
     """
-    def __init__(self, access_token: str=None, id_token: str=None, token_type: str=None, expires_in: str=None, expires_at: str=None, refresh_token: str=None):  # noqa: E501
+    def __init__(self, user_id: str=None, id_token: str=None, refresh_token: str=None):  # noqa: E501
         """CredMgrResponseValue - a model defined in Swagger
 
-        :param access_token: The access_token of this CredMgrResponseValue.  # noqa: E501
-        :type access_token: str
+        :param user_id: The user_id of this CredMgrResponseValue.  # noqa: E501
+        :type user_id: str
         :param id_token: The id_token of this CredMgrResponseValue.  # noqa: E501
         :type id_token: str
-        :param token_type: The token_type of this CredMgrResponseValue.  # noqa: E501
-        :type token_type: str
-        :param expires_in: The expires_in of this CredMgrResponseValue.  # noqa: E501
-        :type expires_in: str
-        :param expires_at: The expires_at of this CredMgrResponseValue.  # noqa: E501
-        :type expires_at: str
         :param refresh_token: The refresh_token of this CredMgrResponseValue.  # noqa: E501
         :type refresh_token: str
         """
         self.swagger_types = {
-            'access_token': str,
+            'user_id': str,
             'id_token': str,
-            'token_type': str,
-            'expires_in': str,
-            'expires_at': str,
             'refresh_token': str
         }
 
         self.attribute_map = {
-            'access_token': 'access_token',
+            'user_id': 'user_id',
             'id_token': 'id_token',
-            'token_type': 'token_type',
-            'expires_in': 'expires_in',
-            'expires_at': 'expires_at',
             'refresh_token': 'refresh_token'
         }
-        self._access_token = access_token
+        self._user_id = user_id
         self._id_token = id_token
-        self._token_type = token_type
-        self._expires_in = expires_in
-        self._expires_at = expires_at
         self._refresh_token = refresh_token
 
     @classmethod
@@ -63,29 +51,29 @@ class CredMgrResponseValue(Model):
         return util.deserialize_model(dikt, cls)
 
     @property
-    def access_token(self) -> str:
-        """Gets the access_token of this CredMgrResponseValue.
+    def user_id(self) -> str:
+        """Gets the user_id of this CredMgrResponseValue.
 
-        Access Token  # noqa: E501
+        Unique id to identify the user to which token was issued  # noqa: E501
 
-        :return: The access_token of this CredMgrResponseValue.
+        :return: The user_id of this CredMgrResponseValue.
         :rtype: str
         """
-        return self._access_token
+        return self._user_id
 
-    @access_token.setter
-    def access_token(self, access_token: str):
-        """Sets the access_token of this CredMgrResponseValue.
+    @user_id.setter
+    def user_id(self, user_id: str):
+        """Sets the user_id of this CredMgrResponseValue.
 
-        Access Token  # noqa: E501
+        Unique id to identify the user to which token was issued  # noqa: E501
 
-        :param access_token: The access_token of this CredMgrResponseValue.
-        :type access_token: str
+        :param user_id: The user_id of this CredMgrResponseValue.
+        :type user_id: str
         """
-        if access_token is None:
-            raise ValueError("Invalid value for `access_token`, must not be `None`")  # noqa: E501
+        if user_id is None:
+            raise ValueError("Invalid value for `user_id`, must not be `None`")  # noqa: E501
 
-        self._access_token = access_token
+        self._user_id = user_id
 
     @property
     def id_token(self) -> str:
@@ -111,81 +99,6 @@ class CredMgrResponseValue(Model):
             raise ValueError("Invalid value for `id_token`, must not be `None`")  # noqa: E501
 
         self._id_token = id_token
-
-    @property
-    def token_type(self) -> str:
-        """Gets the token_type of this CredMgrResponseValue.
-
-        Token Type  # noqa: E501
-
-        :return: The token_type of this CredMgrResponseValue.
-        :rtype: str
-        """
-        return self._token_type
-
-    @token_type.setter
-    def token_type(self, token_type: str):
-        """Sets the token_type of this CredMgrResponseValue.
-
-        Token Type  # noqa: E501
-
-        :param token_type: The token_type of this CredMgrResponseValue.
-        :type token_type: str
-        """
-        if token_type is None:
-            raise ValueError("Invalid value for `token_type`, must not be `None`")  # noqa: E501
-
-        self._token_type = token_type
-
-    @property
-    def expires_in(self) -> str:
-        """Gets the expires_in of this CredMgrResponseValue.
-
-        Expires in (seconds)  # noqa: E501
-
-        :return: The expires_in of this CredMgrResponseValue.
-        :rtype: str
-        """
-        return self._expires_in
-
-    @expires_in.setter
-    def expires_in(self, expires_in: str):
-        """Sets the expires_in of this CredMgrResponseValue.
-
-        Expires in (seconds)  # noqa: E501
-
-        :param expires_in: The expires_in of this CredMgrResponseValue.
-        :type expires_in: str
-        """
-        if expires_in is None:
-            raise ValueError("Invalid value for `expires_in`, must not be `None`")  # noqa: E501
-
-        self._expires_in = expires_in
-
-    @property
-    def expires_at(self) -> str:
-        """Gets the expires_at of this CredMgrResponseValue.
-
-        Expires at  # noqa: E501
-
-        :return: The expires_at of this CredMgrResponseValue.
-        :rtype: str
-        """
-        return self._expires_at
-
-    @expires_at.setter
-    def expires_at(self, expires_at: str):
-        """Sets the expires_at of this CredMgrResponseValue.
-
-        Expires at  # noqa: E501
-
-        :param expires_at: The expires_at of this CredMgrResponseValue.
-        :type expires_at: str
-        """
-        if expires_at is None:
-            raise ValueError("Invalid value for `expires_at`, must not be `None`")  # noqa: E501
-
-        self._expires_at = expires_at
 
     @property
     def refresh_token(self) -> str:
