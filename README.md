@@ -67,59 +67,55 @@ To run the Credential Manage, please execute the following from the root directo
  ```
 ## Example
 
-Create a token for user 'testUser'.
+Create a tokens
 ```bash
-curl -X POST -i "localhost:8082/fabric/credmgr/create?userName=testUser" -H "accept: application/json"
-Hello, testUser
+curl -X POST -i "localhost:8082/fabric/credmgr/create" -H "accept: application/json"
 HTTP/1.0 200 OK
 Content-Type: application/json
-Content-Length: 58
+Content-Length: 187
 Server: Werkzeug/1.0.0 Python/3.6.8
-Date: Thu, 27 Feb 2020 15:53:56 GMT
+Date: Sat, 14 Mar 2020 14:10:37 GMT
 
-"Please visit https://152.54.14.113:443/key/63DCA81972074659"
+{
+  "message": "Please visit https://credmgr:443/key/54343CC3EDE64847822718F5800EBA46! Use 54343CC3EDE64847822718F5800EBA46 to retrieve the token after authentication",
+  "status": 200
+}
 ```
 
-Get token for user 'testUser'
+Get token for userId '54343CC3EDE64847822718F5800EBA46'
 ```bash
-curl -X GET -i "localhost:8082/fabric/credmgr/get?userName=testUser" -H "accept: application/json"
+curl -X GET -i "localhost:8082/fabric/credmgr/get?userId=54343CC3EDE64847822718F5800EBA46" -H "accept: application/json"
 HTTP/1.0 200 OK
 Content-Type: application/json
-Content-Length: 1778
+Content-Length: 1624
 Server: Werkzeug/1.0.0 Python/3.6.8
-Date: Thu, 27 Feb 2020 20:01:17 GMT
+Date: Sat, 14 Mar 2020 14:11:24 GMT
 
 {
   "status": 200,
   "value": {
-    "access_token": "https://cilogon.org/oauth2/accessToken/f73a1b572f98a1c2eb104f3d2a41f87/1582827832162",
-    "expires_at": "1608747832.199543",
-    "expires_in": "25920000",
-    "id_token": "eyJ0eXAiOiJKV1QiLCJraWQiOiIyNDRCMjM1RjZCMjhFMzQxMDhEMTAxRUFDNzM2MkM0RSIsImFsZyI6IlJTMjU2In0.eyJpc3MiOiJodHRwczovL2NpbG9nb24ub3JnIiwic3ViIjoiaHR0cDovL2NpbG9nb24ub3JnL3NlcnZlckEvdXNlcnMvMTE5MDQxMDEiLCJhdWQiOiJjaWxvZ29uOi9jbGllbnRfaWQvMzgwYzJiZmE1ZDk5YWU3NGEzODcxZDg3NGFlOWU2NjkiLCJhdXRoX3RpbWUiOiIxNTgyODI3ODMxIiwiZXhwIjoxNTgyODI4NzMyLCJpYXQiOjE1ODI4Mjc4MzIsImVtYWlsIjoia3RoYXJlMTBAZW1haWwudW5jLmVkdSIsImdpdmVuX25hbWUiOiJLb21hbCIsImZhbWlseV9uYW1lIjoiVGhhcmVqYSIsImNlcnRfc3ViamVjdF9kbiI6Ii9EQz1vcmcvREM9Y2lsb2dvbi9DPVVTL089VW5pdmVyc2l0eSBvZiBOb3J0aCBDYXJvbGluYSBhdCBDaGFwZWwgSGlsbC9DTj1Lb21hbCBUaGFyZWphIEExMTkwNDEwNiIsImlkcCI6InVybjptYWNlOmluY29tbW9uOnVuYy5lZHUiLCJpZHBfbmFtZSI6IlVuaXZlcnNpdHkgb2YgTm9ydGggQ2Fyb2xpbmEgYXQgQ2hhcGVsIEhpbGwiLCJlcHBuIjoia3RoYXJlMTBAdW5jLmVkdSIsImFmZmlsaWF0aW9uIjoiZW1wbG95ZWVAdW5jLmVkdTtzdGFmZkB1bmMuZWR1O21lbWJlckB1bmMuZWR1IiwibmFtZSI6IktvbWFsIFRoYXJlamEiLCJhY3IiOiJ1cm46b2FzaXM6bmFtZXM6dGM6U0FNTDoyLjA6YWM6Y2xhc3NlczpQYXNzd29yZFByb3RlY3RlZFRyYW5zcG9ydCIsImVudGl0bGVtZW50IjoidXJuOm1hY2U6ZGlyOmVudGl0bGVtZW50OmNvbW1vbi1saWItdGVybXMifQ.Jil7levJ3sykxPy70SkV0W01I9JjvPMSSo-T5f9kz4CQ_GFBbTSqzF8LFwOKimOAtkYgapo6olpiWFJuOWpZLiQu7-455xXHeRJdSvU1mYOabjsVJMx2Lv4hHB8OpN1YPoYajXSmVtQxufOkWcbvZS0jmLOM4WJGUc7t3ApEmUm9e8P8v4EonskwZvWx7zBLjKYzYHtf9W7Pk27HdH-ndDUUOQFl-VH5MS_HpZSBBsxEc4LWmwLIBeKuSbMbJ9IHS5Us3DhHygMX2WRvo1E2wzZ0EkKEqCI2OI2Sx5gqfqB8IU3kPm2779m0ZdFzp3-W96PrUsI2hEKWZreue0aYiA",
-    "refresh_token": "https://cilogon.org/oauth2/refreshToken/69636d330f2f4acd8f7aef48e2991af9/1582827832162",
-    "token_type": "Bearer"
+    "id_token": "eyJ0eXAiOiJKV1QiLCJraWQiOiIyNDRCMjM1RjZCMjhFMzQxMDhEMTAxRUFDNzM2MkM0RSIsImFsZyI6IlJTMjU2In0.eyJpc3MiOiJodHRwczovL2NpbG9nb24ub3JnIiwic3ViIjoiaHR0cDovL2NpbG9nb24ub3JnL3NlcnZlckEvdXNlcnMvMTE5MDQxMDEiLCJhdWQiOiJjaWxvZ29uOi9jbGllbnRfaWQvNzdlMWFlYTAyMGE0Njc2OTM3ZWFhMjJkZjFkNDMyZDgiLCJhdXRoX3RpbWUiOiIxNTg0MTk1MDUyIiwiZXhwIjoxNTg0MTk1OTUzLCJpYXQiOjE1ODQxOTUwNTMsImVtYWlsIjoia3RoYXJlMTBAZW1haWwudW5jLmVkdSIsImdpdmVuX25hbWUiOiJLb21hbCIsImZhbWlseV9uYW1lIjoiVGhhcmVqYSIsImNlcnRfc3ViamVjdF9kbiI6Ii9EQz1vcmcvREM9Y2lsb2dvbi9DPVVTL089VW5pdmVyc2l0eSBvZiBOb3J0aCBDYXJvbGluYSBhdCBDaGFwZWwgSGlsbC9DTj1Lb21hbCBUaGFyZWphIEExMTkwNDEwNiIsImlkcCI6InVybjptYWNlOmluY29tbW9uOnVuYy5lZHUiLCJpZHBfbmFtZSI6IlVuaXZlcnNpdHkgb2YgTm9ydGggQ2Fyb2xpbmEgYXQgQ2hhcGVsIEhpbGwiLCJlcHBuIjoia3RoYXJlMTBAdW5jLmVkdSIsImFmZmlsaWF0aW9uIjoiZW1wbG95ZWVAdW5jLmVkdTtzdGFmZkB1bmMuZWR1O21lbWJlckB1bmMuZWR1IiwibmFtZSI6IktvbWFsIFRoYXJlamEiLCJhY3IiOiJ1cm46b2FzaXM6bmFtZXM6dGM6U0FNTDoyLjA6YWM6Y2xhc3NlczpQYXNzd29yZFByb3RlY3RlZFRyYW5zcG9ydCIsImVudGl0bGVtZW50IjoidXJuOm1hY2U6ZGlyOmVudGl0bGVtZW50OmNvbW1vbi1saWItdGVybXMifQ.GNHSbN6Ftq8rAfY-GEr0oJe8VXd9sBwyih0Q05sD6Mg-0PdTwyqSODJNv--vSS5o9i6Zi_JGKvjCxCg4ce30JuB_OCmY0zDwLaedBzILlfVmwbuwAQMnzg9yxBGqSW8O2tdoMVqausjQj6BZ5EuUA9pvT-IwK6lDJPVvTZ42FURsJfZXCyRSqafxXrJFQg7-fHxY6KmG2RY_J8ChOKN07o519G0Tr8N4pmqmGa5j0FIACyL4tznFY8yJ6ccBLxxEMGDqIMHO_Xc-P0b6powF4_6CktLX3Qqf_2w8hquvDqa_e6OHd8uNbuA3kcGuMhFdu2M8r0byzEIJjhSSYXM_vw",
+    "refresh_token": "https://cilogon.org/oauth2/refreshToken/74a8d3b23765f0fd5f19ce0c646c60b4/1584195053226",
+    "user_id": "54343CC3EDE64847822718F5800EBA46"
   }
 }
 ```
 
 Refresh token for user 'testUser'
 ```bash
-$ curl -X POST -i "localhost:8082/fabric/credmgr/refresh" -H "accept: application/json" -H "Content-Type: application/json" --data '{"refresh_token": "https://cilogon.org/oauth2/refreshToken/69636d330f2f4acd8f7aef48e2991af9/1582827832162"}'
+curl -X POST -i "localhost:8082/fabric/credmgr/refresh?userId=54343CC3EDE64847822718F5800EBA46" -H "accept: application/json" -H "Content-Type: application/json" -d '{"refresh_token":"https://cilogon.org/oauth2/refreshToken/74a8d3b23765f0fd5f19ce0c646c60b4/1584195053226"}'
 HTTP/1.0 200 OK
 Content-Type: application/json
-Content-Length: 1780
+Content-Length: 1624
 Server: Werkzeug/1.0.0 Python/3.6.8
-Date: Thu, 27 Feb 2020 20:24:11 GMT
+Date: Sat, 14 Mar 2020 14:13:30 GMT
 
 {
   "status": 200,
   "value": {
-    "access_token": "https://cilogon.org/oauth2/accessToken/420af01a0a2ce4c557f36c247d2e9dc8/1582835051742",
-    "expires_at": "1608755051.7802415",
-    "expires_in": "25920000",
-    "id_token": "eyJ0eXAiOiJKV1QiLCJraWQiOiIyNDRCMjM1RjZCMjhFMzQxMDhEMTAxRUFDNzM2MkM0RSIsImFsZyI6IlJTMjU2In0.eyJpc3MiOiJodHRwczovL2NpbG9nb24ub3JnIiwic3ViIjoiaHR0cDovL2NpbG9nb24ub3JnL3NlcnZlckEvdXNlcnMvMTE5MDQxMDEiLCJhdWQiOiJjaWxvZ29uOi9jbGllbnRfaWQvMzgwYzJiZmE1ZDk5YWU3NGEzODcxZDg3NGFlOWU2NjkiLCJhdXRoX3RpbWUiOiIxNTgyODI3ODMxIiwiZXhwIjoxNTgyODM1OTUxLCJpYXQiOjE1ODI4MzUwNTEsImVtYWlsIjoia3RoYXJlMTBAZW1haWwudW5jLmVkdSIsImdpdmVuX25hbWUiOiJLb21hbCIsImZhbWlseV9uYW1lIjoiVGhhcmVqYSIsImNlcnRfc3ViamVjdF9kbiI6Ii9EQz1vcmcvREM9Y2lsb2dvbi9DPVVTL089VW5pdmVyc2l0eSBvZiBOb3J0aCBDYXJvbGluYSBhdCBDaGFwZWwgSGlsbC9DTj1Lb21hbCBUaGFyZWphIEExMTkwNDEwNiIsImlkcCI6InVybjptYWNlOmluY29tbW9uOnVuYy5lZHUiLCJpZHBfbmFtZSI6IlVuaXZlcnNpdHkgb2YgTm9ydGggQ2Fyb2xpbmEgYXQgQ2hhcGVsIEhpbGwiLCJlcHBuIjoia3RoYXJlMTBAdW5jLmVkdSIsImFmZmlsaWF0aW9uIjoiZW1wbG95ZWVAdW5jLmVkdTtzdGFmZkB1bmMuZWR1O21lbWJlckB1bmMuZWR1IiwibmFtZSI6IktvbWFsIFRoYXJlamEiLCJhY3IiOiJ1cm46b2FzaXM6bmFtZXM6dGM6U0FNTDoyLjA6YWM6Y2xhc3NlczpQYXNzd29yZFByb3RlY3RlZFRyYW5zcG9ydCIsImVudGl0bGVtZW50IjoidXJuOm1hY2U6ZGlyOmVudGl0bGVtZW50OmNvbW1vbi1saWItdGVybXMifQ.LemXfK9nDsZd-uyCcn5qEc_LlUApd9KSdK3_XD7rLLkpl9Zc9CJfHBrH45rJTN6VmixZTCvibola-3pD7S-PaLPHJdTELrprkNsR9xilgXpxCvh_aDfC-7sIX3LCMxx3tYzYvIDy2WF2yTgN1Rav3HSF8ysx_Iwaw6wrVds2d4rRaAprZwIlO8LjZ35tkPT85C-hAxB_hFKJT-WMKlBmnDQjKtgD8YXM_gmYAVf--d57lND83bKi5KCttcxwqVt17dJvesFEfwAOmHRQfJWiLcfrrHQHhcCyemUbl9EJqLmF69tMwoE0O-zULZlaiSFfblDeJ6BZE2nr9XVj4ldZyA",
-    "refresh_token": "https://cilogon.org/oauth2/refreshToken/76def6ab47a52da415275db9d27feba4/1582835051742",
-    "token_type": "Bearer"
+    "id_token": "eyJ0eXAiOiJKV1QiLCJraWQiOiIyNDRCMjM1RjZCMjhFMzQxMDhEMTAxRUFDNzM2MkM0RSIsImFsZyI6IlJTMjU2In0.eyJpc3MiOiJodHRwczovL2NpbG9nb24ub3JnIiwic3ViIjoiaHR0cDovL2NpbG9nb24ub3JnL3NlcnZlckEvdXNlcnMvMTE5MDQxMDEiLCJhdWQiOiJjaWxvZ29uOi9jbGllbnRfaWQvNzdlMWFlYTAyMGE0Njc2OTM3ZWFhMjJkZjFkNDMyZDgiLCJhdXRoX3RpbWUiOiIxNTg0MTk1MDUyIiwiZXhwIjoxNTg0MTk2MTEwLCJpYXQiOjE1ODQxOTUyMTAsImVtYWlsIjoia3RoYXJlMTBAZW1haWwudW5jLmVkdSIsImdpdmVuX25hbWUiOiJLb21hbCIsImZhbWlseV9uYW1lIjoiVGhhcmVqYSIsImNlcnRfc3ViamVjdF9kbiI6Ii9EQz1vcmcvREM9Y2lsb2dvbi9DPVVTL089VW5pdmVyc2l0eSBvZiBOb3J0aCBDYXJvbGluYSBhdCBDaGFwZWwgSGlsbC9DTj1Lb21hbCBUaGFyZWphIEExMTkwNDEwNiIsImlkcCI6InVybjptYWNlOmluY29tbW9uOnVuYy5lZHUiLCJpZHBfbmFtZSI6IlVuaXZlcnNpdHkgb2YgTm9ydGggQ2Fyb2xpbmEgYXQgQ2hhcGVsIEhpbGwiLCJlcHBuIjoia3RoYXJlMTBAdW5jLmVkdSIsImFmZmlsaWF0aW9uIjoiZW1wbG95ZWVAdW5jLmVkdTtzdGFmZkB1bmMuZWR1O21lbWJlckB1bmMuZWR1IiwibmFtZSI6IktvbWFsIFRoYXJlamEiLCJhY3IiOiJ1cm46b2FzaXM6bmFtZXM6dGM6U0FNTDoyLjA6YWM6Y2xhc3NlczpQYXNzd29yZFByb3RlY3RlZFRyYW5zcG9ydCIsImVudGl0bGVtZW50IjoidXJuOm1hY2U6ZGlyOmVudGl0bGVtZW50OmNvbW1vbi1saWItdGVybXMifQ.B18BxMBBNR3U6NenjxYojk-42CUsbWPoQCgZ7CnWfx_xwqEMEiwXxB8zDA0Vs7rRdU3X6Tu0SwVqs4WL3kVpzft5TJDbqiWf0ySrEVXRKUdwJX5GJhkmDtXhRg06AshuRv0sAVykHRnuRU_E67kXRWSWXcckVEU_nSyyTwxdVfkpi55OeV2XD2u_ZXEYCl1Mo9lmpJtd9yn3_tNfQKKK9EwJ-Npg9GNvGrKQ7aNcs38Qy4vyN_EnXJJ0mckVTC5YcKACO-xW80X34mHuTQeRsyNZTqJkLp2x4nL363tj1UX5KBmJcBbWyWQawZuz1-IpR36CqRyZ4UtbxxpMk78vpg",
+    "refresh_token": "https://cilogon.org/oauth2/refreshToken/5658311bb211c072ae50a2d2e0f58350/1584195209846",
+    "user_id": "54343CC3EDE64847822718F5800EBA46"
   }
 }
 ```
