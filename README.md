@@ -67,7 +67,7 @@ To run the Credential Manage, please execute the following from the root directo
  ```
 ## Example
 
-Create a tokens
+Create a tokens for all projects and all scope
 ```bash
 curl -X POST -i "localhost:8082/fabric/credmgr/create" -H "accept: application/json"
 HTTP/1.0 200 OK
@@ -101,7 +101,7 @@ Date: Sat, 14 Mar 2020 14:11:24 GMT
 }
 ```
 
-Refresh token for user 'testUser'
+Refresh token for user '54343CC3EDE64847822718F5800EBA46'
 ```bash
 curl -X POST -i "localhost:8082/fabric/credmgr/refresh?userId=54343CC3EDE64847822718F5800EBA46" -H "accept: application/json" -H "Content-Type: application/json" -d '{"refresh_token":"https://cilogon.org/oauth2/refreshToken/74a8d3b23765f0fd5f19ce0c646c60b4/1584195053226"}'
 HTTP/1.0 200 OK
