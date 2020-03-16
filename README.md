@@ -134,7 +134,7 @@ Server: Werkzeug/1.0.0 Python/3.6.8
 Date: Mon, 16 Mar 2020 18:32:38 GMT
 
 {
-  "message": "Invalid URL 'https:/test.cilogon.org/oauth2/revoke': No host supplied",
-  "status": 500
+  "message": "Token revoked successfully",
+  "status": 200
 }
 ```
