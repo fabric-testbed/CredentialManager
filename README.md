@@ -98,7 +98,6 @@ Update the docker-compose.yml for database user, password, and database name. Al
         volumes:
             - /sys/fs/cgroup:/sys/fs/cgroup:ro
             - ./log:/var/log
-            - "./docker/config:/etc/credmgr/config_docker"
             - "./docker/self.signed.crt:/etc/credmgr/hostcert.pem"
             - "./docker/self.signed.key:/etc/credmgr/hostkey.pem"        
         ports:
