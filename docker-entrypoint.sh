@@ -44,7 +44,6 @@ pip3 install .
 
 # Generate mod_wsgi config
 mod_wsgi-express install-module > /etc/httpd/conf.modules.d/02-wsgi.conf
-cp /etc/credmgr/config_docker /etc/credmgr/config
 sed -i "s/REPLACE_WITH_FQDN/credmgr/g" /etc/httpd/conf.d/credmgr.conf
 sed -i 's/w+t/wb+/g' /usr/local/lib/python3*/site-packages/daemon/runner.py
 
