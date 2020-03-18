@@ -57,22 +57,22 @@ log-size = 5000000
 [oauth]
 oauth-credmgr-token-lifetime = 60
 oauth-provider = cilogon
-oauth-authorization-url = https://dev.cilogon.org/authorize
-oauth-token-url = https://dev.cilogon.org/oauth2/token
-oauth-revoke-url = https:/dev.cilogon.org/oauth2/revoke
+oauth-authorization-url = https://cilogon.org/authorize
+oauth-token-url = https://cilogon.org/oauth2/token
+oauth-revoke-url = https://cilogon.org/oauth2/revoke
 oauth-user-url = https://cilogon.org/oauth2/userinfo
 oauth-scope = openid email profile org.cilogon.userinfo
 oauth-jwks-url = https://cilogon.org/oauth2/certs
 
-oauth-client-id = cilogon:/client_id/4cda83483abefad2bfcf785dc9742456
-oauth-client-secret = v1SystpgnyMehBu9UURrMNAd0gTFEZZohLtshtopkA6laThlPD4XbdCQqxaAkiSst0RB2FkW_MhuvG_l6qIdgA
-oauth-return-url = https://127.0.0.1:443/return/cilogon
+oauth-client-id = 
+oauth-client-secret = 
+oauth-return-url = 
 
 [ldap]
-ldap-host = ldaps://ldap-test.cilogon.org
-ldap-user = uid=readonly_user,ou=system,o=FABRIC,o=CO,dc=cilogon,dc=org
-ldap-password = zRVwecZk4wEGUopYGR1J
-ldap-search-base = o=FABRIC,o=CO,dc=cilogon,dc=org
+ldap-host = 
+ldap-user = 
+ldap-password = 
+ldap-search-base = 
 
 [jwt]
 jwt-public-key = /etc/credmgr/hostcert.pem
