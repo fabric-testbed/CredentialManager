@@ -4,9 +4,11 @@
 Fabric uses CILogon 2.0 and COmanage for Identity Authentication and Authorization management. 
 Fabric Credential Manager provides generate and refreshes credentials for Fabric users. 
 This package includes:
- - A Flask application that users can be directed to in order to obtain OAuth2 tokens from CILogon.
- - Swagger generated Server which supports APIs to create/get/delete/refresh tokens
- - CredMgr daemon which monitors and refreshes the saved tokens 
+ - A Flask application that users would be directed for authentication via CILogon.
+ - Swagger generated REST Server which supports APIs to create/get/refresh/revoke tokens
+ - CredMgr daemon which deletes stale key files and expired tokens
+ 
+ ![Component Diagram](./images/credmgr.png)
 
 ## Requirements
 - Python 3.6+
@@ -45,15 +47,62 @@ $ swagger-codegen generate -i swagger.json -l python-flask -o credmgr
 ```
 
 ## Usage
-To run the Credential Manage, please execute the following from the root directory:
+To run the Credential Manager, please execute the following from the root directory:
 
  ```
  git clone https://github.com/fabric-testbed/CredentialManager.git 
  ./install.sh
  ```
 ## Running with Docker
+User is expected to update following in docker/config file:
+```
+oauth-client-id = 
+oauth-client-secret = 
+oauth-return-url = 
 
- To run the server on a Docker container, please execute the following from the root directory:
+ldap-host = 
+ldap-user = 
+ldap-password = 
+ldap-search-base =
+
+db-user = 
+db-password = 
+db-name = 
+```
+
+Update the docker-compose.yml for database user, password, and database name. Also, point credmgr certificates to Trusted Certificates. Update port mapping as needed.
+```
+    database:
+        image: postgres:10
+        container_name: database
+        restart: always
+        environment:
+        - POSTGRES_PASSWORD=credmgr
+        - POSTGRES_USER=credmgr
+        - POSTGRES_DB=credmgr
+        ports:
+        - 5432:${POSTGRES_PORT:-5432}
+    credmgr:
+        container_name: credmgr
+        hostname: credmgr
+        image: credmgr:latest
+        restart: always
+        privileged: true
+        cap_add:
+            - SYS_ADMIN
+        security_opt:
+            - seccomp:unconfined
+        tmpfs:
+            - /run
+            - /run/lock
+        volumes:
+            - /sys/fs/cgroup:/sys/fs/cgroup:ro
+            - ./log:/var/log
+            - "./docker/config:/etc/credmgr/config_docker"
+            - "./docker/self.signed.crt:/etc/credmgr/hostcert.pem"
+            - "./docker/self.signed.key:/etc/credmgr/hostkey.pem"        
+```
+To run the server on a Docker container, please execute the following from the root directory:
 
  ```bash
  # building the image
