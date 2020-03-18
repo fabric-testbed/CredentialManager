@@ -14,9 +14,11 @@ class CredMgrResponseValue(Model):
 
     Do not edit the class manually.
     """
-    def __init__(self, user_id: str=None, id_token: str=None, refresh_token: str=None):  # noqa: E501
+    def __init__(self, authorization_url: str=None, user_id: str=None, id_token: str=None, refresh_token: str=None):  # noqa: E501
         """CredMgrResponseValue - a model defined in Swagger
 
+        :param authorization_url: The authorization_url of this CredMgrResponseValue.  # noqa: E501
+        :type authorization_url: str
         :param user_id: The user_id of this CredMgrResponseValue.  # noqa: E501
         :type user_id: str
         :param id_token: The id_token of this CredMgrResponseValue.  # noqa: E501
@@ -25,16 +27,19 @@ class CredMgrResponseValue(Model):
         :type refresh_token: str
         """
         self.swagger_types = {
+            'authorization_url': str,
             'user_id': str,
             'id_token': str,
             'refresh_token': str
         }
 
         self.attribute_map = {
+            'authorization_url': 'authorization_url',
             'user_id': 'user_id',
             'id_token': 'id_token',
             'refresh_token': 'refresh_token'
         }
+        self._authorization_url = authorization_url
         self._user_id = user_id
         self._id_token = id_token
         self._refresh_token = refresh_token
@@ -49,6 +54,29 @@ class CredMgrResponseValue(Model):
         :rtype: CredMgrResponseValue
         """
         return util.deserialize_model(dikt, cls)
+
+    @property
+    def authorization_url(self) -> str:
+        """Gets the authorization_url of this CredMgrResponseValue.
+
+        Authorization Url user must visit to authenticate  # noqa: E501
+
+        :return: The authorization_url of this CredMgrResponseValue.
+        :rtype: str
+        """
+        return self._authorization_url
+
+    @authorization_url.setter
+    def authorization_url(self, authorization_url: str):
+        """Sets the authorization_url of this CredMgrResponseValue.
+
+        Authorization Url user must visit to authenticate  # noqa: E501
+
+        :param authorization_url: The authorization_url of this CredMgrResponseValue.
+        :type authorization_url: str
+        """
+
+        self._authorization_url = authorization_url
 
     @property
     def user_id(self) -> str:
@@ -95,8 +123,6 @@ class CredMgrResponseValue(Model):
         :param id_token: The id_token of this CredMgrResponseValue.
         :type id_token: str
         """
-        if id_token is None:
-            raise ValueError("Invalid value for `id_token`, must not be `None`")  # noqa: E501
 
         self._id_token = id_token
 
@@ -120,7 +146,5 @@ class CredMgrResponseValue(Model):
         :param refresh_token: The refresh_token of this CredMgrResponseValue.
         :type refresh_token: str
         """
-        if refresh_token is None:
-            raise ValueError("Invalid value for `refresh_token`, must not be `None`")  # noqa: E501
 
         self._refresh_token = refresh_token

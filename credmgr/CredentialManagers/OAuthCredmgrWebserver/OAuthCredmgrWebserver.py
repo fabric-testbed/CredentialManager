@@ -48,17 +48,16 @@ import sys
 from flask import Flask, request, redirect, render_template, session, url_for, jsonify
 from requests_oauthlib import OAuth2Session
 import os
-import tempfile
-from credmgr.utils import atomic_rename, get_cred_dir, get_providers
+from credmgr.utils import get_cred_dir, get_providers
 from credmgr import LOGGER
 
-import json
 import re
 import logging
 
 from credmgr.utils.database import Database
+from credmgr.utils.token import FabricToken
 
-log = logging.getLogger(LOGGER)
+log = logging.getLogger(LOGGER + '.' + __file__)
 
 # initialize Flask
 app = Flask(__name__)
@@ -151,7 +150,6 @@ def oauth_login(provider):
     oauth_kwargs['scope'] = provider_ad['scope']
 
     auth_url_kwargs = {}
-    #auth_url_kwargs['url'] = "https://cilogon.org/authorize"
     auth_url_kwargs['url'] = provider_ad['url']
     log.debug(provider_ad['url'])
 
@@ -224,6 +222,17 @@ def oauth_return(provider):
             session['providers'][provider]['username'] = 'Unknown'
     except ValueError:
         session['providers'][provider]['username'] = 'Unknown'
+
+    id_token_string = token.get('id_token')
+    log.debug("Before: {}".format(id_token_string))
+    # Construct Fabric token for specified project and scope
+    # Sign with Fabric Certs
+    fabric_token = FabricToken(id_token_string, session['local_project'], session['local_scope'])
+    fabric_token.decode()
+    fabric_token.update()
+    id_token_string = fabric_token.encode()
+    log.debug("After: {}".format(id_token_string))
+    token['id_token'] = id_token_string
 
     db = Database()
     db.create_tokens(session['local_username'], token, session['local_project'], session['local_scope'])

@@ -60,17 +60,22 @@ def create_post(project_name=None, scope=None):  # noqa: E501
 
     Request to generate OAuth tokens for an user  # noqa: E501
 
-    :param project_name: 
+    :param project_name:
     :type project_name: str
-    :param scope: 
+    :param scope:
     :type scope: str
 
     :rtype: CredMgrResponse
     """
-    logger = logging.getLogger(LOGGER)
+    logger = logging.getLogger(LOGGER + '.' + __file__)
     response = CredMgrResponse()
     try:
-        response.message = OAuthCredmgrSingleton.get().create_token(project_name, scope)
+        result = OAuthCredmgrSingleton.get().create_token(project_name, scope)
+        response.message = "Please visit {}! Use {} to retrieve the token after authentication".format(result["authorization_url"],
+                                                                                                       result["user_id"])
+        response.value = CredMgrResponseValue.from_dict(result)
+        logger.debug(result)
+        logger.debug(response.value)
         response.status = 200
     except Exception as e:
         response.message = str(e)
@@ -84,12 +89,12 @@ def get_get(user_id):  # noqa: E501
 
     Request to get tokens for an user  # noqa: E501
 
-    :param user_id: 
+    :param user_id:
     :type user_id: str
 
     :rtype: CredMgrResponse
     """
-    logger = logging.getLogger(LOGGER)
+    logger = logging.getLogger(LOGGER + '.' + __file__)
     response = CredMgrResponse()
     try:
         response.value = CredMgrResponseValue.from_dict(OAuthCredmgrSingleton.get().get_token(user_id))
@@ -106,16 +111,16 @@ def refresh_post(body, user_id):  # noqa: E501
 
     Request to refresh OAuth tokens for an user  # noqa: E501
 
-    :param body: 
+    :param body:
     :type body: dict | bytes
-    :param user_id: 
+    :param user_id:
     :type user_id: str
 
     :rtype: CredMgrResponse
     """
     if connexion.request.is_json:
         body = RefreshRevokeRequest.from_dict(connexion.request.get_json())  # noqa: E501
-    logger = logging.getLogger(LOGGER)
+    logger = logging.getLogger(LOGGER + '.' + __file__)
     response = CredMgrResponse()
     try:
         response.value = CredMgrResponseValue.from_dict(OAuthCredmgrSingleton.get().refresh_token(user_id,
@@ -133,13 +138,23 @@ def revoke_post(body, user_id):  # noqa: E501
 
     Request to revoke a refresh token for an user  # noqa: E501
 
-    :param body: 
+    :param body:
     :type body: dict | bytes
-    :param user_id: 
+    :param user_id:
     :type user_id: str
 
     :rtype: CredMgrResponse
     """
     if connexion.request.is_json:
         body = RefreshRevokeRequest.from_dict(connexion.request.get_json())  # noqa: E501
-    return 'do some magic!'
+    logger = logging.getLogger(LOGGER + '.' + __file__)
+    response = CredMgrResponse()
+    try:
+        OAuthCredmgrSingleton.get().revoke_token(user_id, body.refresh_token)
+        response.message = "Token revoked successfully"
+        response.status = 200
+    except Exception as e:
+        response.message = str(e)
+        response.status = 500
+        logger.exception(e)
+    return response

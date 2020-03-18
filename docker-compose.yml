@@ -27,7 +27,6 @@ services:
         volumes:
             - /sys/fs/cgroup:/sys/fs/cgroup:ro
             - ./log:/var/log
-            - ./credentials:/var/lib/credmgr/credentials
             - "./docker/config:/etc/credmgr/config_docker"
             - "./docker/self.signed.crt:/etc/credmgr/hostcert.pem"
             - "./docker/self.signed.key:/etc/credmgr/hostkey.pem"

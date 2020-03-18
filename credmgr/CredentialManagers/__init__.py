@@ -23,4 +23,3 @@
 #
 # Author Komal Thareja (kthare10@renci.org)
 from credmgr.CredentialManagers.OAuthCredmgr import OAuthCredmgr
-

@@ -255,6 +255,7 @@ components:
         value:
           refresh_token: refresh_token
           user_id: user_id
+          authorization_url: authorization_url
           id_token: id_token
         version: version
         status: 0
@@ -268,11 +269,12 @@ components:
           description: Refresh Token
     credMgrResponse_value:
       required:
-      - id_token
-      - refresh_token
       - user_id
       type: object
       properties:
+        authorization_url:
+          type: string
+          description: Authorization Url user must visit to authenticate
         user_id:
           type: string
           description: Unique id to identify the user to which token was issued
@@ -286,6 +288,7 @@ components:
       example:
         refresh_token: refresh_token
         user_id: user_id
+        authorization_url: authorization_url
         id_token: id_token
   parameters:
     userId:

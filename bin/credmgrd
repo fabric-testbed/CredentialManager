@@ -48,7 +48,6 @@ class CredMgrDaemon:
         self.pidfile_timeout = 10000
 
     def run(self):
-        credmgr_incomplete(self.cred_dir)
         cred_mgr = OAuthCredmgr(self.cred_dir)
         # set up scan tokens loop
         while True:
@@ -56,7 +55,6 @@ class CredMgrDaemon:
                 cred_mgr.scan_tokens()
             except Exception as e:
                 self.logger.exception(e)
-            credmgr_complete(self.cred_dir)
             self.logger.info('Sleeping for 60 seconds')
             sleeper.clear()
             sleeper.wait(60)
@@ -146,7 +144,6 @@ def main():
     except Exception as e:
         logger.exception(e)
         logger.error('Unable to stop service; reason was: %s' % str(e))
-        credmgr_complete(cred_dir)
         sys.exit(-1)
     sys.exit(0)
 

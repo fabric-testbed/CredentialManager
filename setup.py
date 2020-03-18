@@ -38,6 +38,7 @@ VERSION = "1.0.0"
 # http://pypi.python.org/pypi/setuptools
 
 REQUIRES = [
+        'requests',
         'requests_oauthlib',
         'six',
         'flask',
@@ -48,7 +49,8 @@ REQUIRES = [
         'python-daemon',
         'psycopg2',
         'sqlalchemy',
-        'PyJWT >=1.7.1'
+        'PyJWT >=1.7.1',
+        'ldap3==2.6'
         ]
 
 setup(

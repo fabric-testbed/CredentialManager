@@ -130,50 +130,8 @@ def get_cred_dir(cred_dir = None):
     if not os.path.exists(cred_dir):
         os.makedirs(cred_dir,
                         (stat.S_ISGID | stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | stat.S_IRGRP | stat.S_IWGRP | stat.S_IXGRP))
-
-    permission_check = CONFIG.get('runtime','credentials-directory-check')
-
-    if permission_check == 'True' :
-        # Make sure the permissions on the credential directory are correct
-        try:
-            if (os.stat(cred_dir).st_mode & (stat.S_IROTH | stat.S_IWOTH | stat.S_IXOTH)):
-                raise RuntimeError('The credential directory is readable and/or writable by others.')
-        except OSError:
-            raise RuntimeError('The credmgr cannot verify the permissions of the credential directory.')
-        if not os.access(cred_dir, (os.R_OK | os.W_OK | os.X_OK)):
-            raise RuntimeError('The credmgr does not have access to the credential directory.')
-
     return cred_dir
 
-
-def drop_pid(cred_dir):
-    """
-    Drop a PID file in the cred dir for credmgr to find.
-    """
-    curr_pid = os.getpid()
-    pid_path = os.path.join(cred_dir, "pid")
-    with open(pid_path, "w") as pid_fd:
-        pid_fd.write("{0}".format(curr_pid))
-    return
-
-def credmgr_incomplete(cred_dir):
-    """
-    Remove CREDMGR_COMPLETE
-    """
-    # Arguably we should check for uptime, but it's just aklog that
-    # occurs as a result, so no premature optimisation
-    complete_name = os.path.join(cred_dir, 'CREDMGR_COMPLETE')
-    if os.path.isfile(complete_name):
-        os.unlink(complete_name)
-
-def credmgr_complete(cred_dir):
-    """
-    Touch CREDMGR_COMPLETE
-    """
-    complete_name = os.path.join(cred_dir, 'CREDMGR_COMPLETE')
-    with open(complete_name, 'a'):
-        os.utime(complete_name, None)
-    return
 
 def atomic_rename(tmp_file, target_file, mode=stat.S_IRUSR):
     """
@@ -223,7 +181,7 @@ def generate_secret_key():
     """
     Return a secret key that is common across all sessions
     """
-    logger = logging.getLogger(LOGGER)
+    logger = logging.getLogger(LOGGER + '.' + __file__)
 
     if not CONFIG:
         logger.warning("Credmgr module is missing will use a non-persistent WSGI session key")
@@ -264,7 +222,11 @@ def generate_secret_key():
         return new_key
     return new_key
 
+
 def get_providers():
+    """
+    Constructor providers dict based on the information provided in config file
+    """
     if not CONFIG and ('oauth' not in CONFIG):
         raise RuntimeError('OAUTH configuration parameters must be specified in config')
 
@@ -277,16 +239,18 @@ def get_providers():
     providers[provider]['url'] = CONFIG.get('oauth', "oauth-authorization-url")
     providers[provider]['client_secret'] = CONFIG.get('oauth', "oauth-client-secret")
     providers[provider]['token_uri'] = CONFIG.get('oauth', "oauth-token-url")
+    providers[provider]['revoke_uri'] = CONFIG.get('oauth', "oauth-revoke-url")
     providers[provider]['user_uri'] = CONFIG.get('oauth', "oauth-user-url")
     providers[provider]['scope'] = CONFIG.get('oauth', "oauth-scope")
 
     return providers
 
+
 def generate_user_key(project, scope):
     """
     Return user key file to be returned when access token is requested
     """
-    logger = logging.getLogger(LOGGER)
+    logger = logging.getLogger(LOGGER + '.' + __file__)
 
     filename = uuid.uuid4().hex[:64].upper()
 
