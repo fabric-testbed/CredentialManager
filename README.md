@@ -101,6 +101,9 @@ Update the docker-compose.yml for database user, password, and database name. Al
             - "./docker/config:/etc/credmgr/config_docker"
             - "./docker/self.signed.crt:/etc/credmgr/hostcert.pem"
             - "./docker/self.signed.key:/etc/credmgr/hostkey.pem"        
+        ports:
+        - "8082:8080"
+        - "443:443"            
 ```
 To run the server on a Docker container, please execute the following from the root directory:
 
@@ -109,7 +112,7 @@ To run the server on a Docker container, please execute the following from the r
  docker build -t credmgr .
 
  # starting up a container
- docker run -p 8082:8082 credmgr
+ docker run -p 8082:8080 credmgr
 
  # bring using via docker-compose
  docker-compose up -d
