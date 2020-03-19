@@ -113,30 +113,47 @@ To run the server on a Docker container, please execute the following from the r
  # bring using via docker-compose
  docker-compose up -d
  ```
-## Example
+## API Examples
 
-Create a tokens for all projects and all scope
+### Create a tokens with projectName=all and scope=all
 ```bash
-curl -X POST -i "localhost:8082/fabric/credmgr/create" -H "accept: application/json"
+curl -X POST -i "localhost:8082/fabric/credmgr/create?projectName=all&scope=all" -H "accept: application/json"
 HTTP/1.0 200 OK
 Content-Type: application/json
 Content-Length: 340
 Server: Werkzeug/1.0.0 Python/3.6.8
-Date: Mon, 16 Mar 2020 18:29:18 GMT
+Date: Thu, 19 Mar 2020 02:01:25 GMT
 
 {
-  "message": "Please visit https://credmgr:443/key/5F455AFB1B7848AA96BB396E237A2759! Use 5F455AFB1B7848AA96BB396E237A2759 to retrieve the token after authentication",
+  "message": "Please visit https://credmgr:443/key/7016315FF8EF4D7F9E0A7550730A256D! Use 7016315FF8EF4D7F9E0A7550730A256D to retrieve the token after authentication",
   "status": 200,
   "value": {
-    "authorization_url": "https://credmgr:443/key/5F455AFB1B7848AA96BB396E237A2759",
-    "user_id": "5F455AFB1B7848AA96BB396E237A2759"
+    "authorization_url": "https://credmgr:443/key/7016315FF8EF4D7F9E0A7550730A256D",
+    "user_id": "7016315FF8EF4D7F9E0A7550730A256D"
   }
 }
 ```
+### Create Token for projectName=RENCI-TEST and scope=measurement
+```
+curl -X POST -i "localhost:8082/fabric/credmgr/create?projectName=RENCI-TEST&scope=measurement" -H "accept: application/json"
+HTTP/1.0 200 OK
+Content-Type: application/json
+Content-Length: 340
+Server: Werkzeug/1.0.0 Python/3.6.8
+Date: Thu, 19 Mar 2020 02:06:43 GMT
 
-Get token for userId '5F455AFB1B7848AA96BB396E237A2759'
+{
+  "message": "Please visit https://credmgr:443/key/1548FCD4006D413AB4B11D04E1E9FC1C! Use 1548FCD4006D413AB4B11D04E1E9FC1C to retrieve the token after authentication",
+  "status": 200,
+  "value": {
+    "authorization_url": "https://credmgr:443/key/1548FCD4006D413AB4B11D04E1E9FC1C",
+    "user_id": "1548FCD4006D413AB4B11D04E1E9FC1C"
+  }
+}
+```
+### Get token for userId '7016315FF8EF4D7F9E0A7550730A256D'
 ```bash
-curl -X GET -i "localhost:8082/fabric/credmgr/get?userId=5F455AFB1B7848AA96BB396E237A2759" -H "accept: application/json"
+curl -X GET -i "localhost:8082/fabric/credmgr/get?userId=7016315FF8EF4D7F9E0A7550730A256D" -H "accept: application/json"
 HTTP/1.0 200 OK
 Content-Type: application/json
 Content-Length: 1624
@@ -148,14 +165,13 @@ Date: Mon, 16 Mar 2020 18:30:23 GMT
   "value": {
     "id_token": "eyJ0eXAiOiJKV1QiLCJraWQiOiIyNDRCMjM1RjZCMjhFMzQxMDhEMTAxRUFDNzM2MkM0RSIsImFsZyI6IlJTMjU2In0.eyJpc3MiOiJodHRwczovL2NpbG9nb24ub3JnIiwic3ViIjoiaHR0cDovL2NpbG9nb24ub3JnL3NlcnZlckEvdXNlcnMvMTE5MDQxMDEiLCJhdWQiOiJjaWxvZ29uOi9jbGllbnRfaWQvNzdlMWFlYTAyMGE0Njc2OTM3ZWFhMjJkZjFkNDMyZDgiLCJhdXRoX3RpbWUiOiIxNTg0MzgzMzg3IiwiZXhwIjoxNTg0Mzg0Mjg3LCJpYXQiOjE1ODQzODMzODcsImVtYWlsIjoia3RoYXJlMTBAZW1haWwudW5jLmVkdSIsImdpdmVuX25hbWUiOiJLb21hbCIsImZhbWlseV9uYW1lIjoiVGhhcmVqYSIsImNlcnRfc3ViamVjdF9kbiI6Ii9EQz1vcmcvREM9Y2lsb2dvbi9DPVVTL089VW5pdmVyc2l0eSBvZiBOb3J0aCBDYXJvbGluYSBhdCBDaGFwZWwgSGlsbC9DTj1Lb21hbCBUaGFyZWphIEExMTkwNDEwNiIsImlkcCI6InVybjptYWNlOmluY29tbW9uOnVuYy5lZHUiLCJpZHBfbmFtZSI6IlVuaXZlcnNpdHkgb2YgTm9ydGggQ2Fyb2xpbmEgYXQgQ2hhcGVsIEhpbGwiLCJlcHBuIjoia3RoYXJlMTBAdW5jLmVkdSIsImFmZmlsaWF0aW9uIjoiZW1wbG95ZWVAdW5jLmVkdTtzdGFmZkB1bmMuZWR1O21lbWJlckB1bmMuZWR1IiwibmFtZSI6IktvbWFsIFRoYXJlamEiLCJhY3IiOiJ1cm46b2FzaXM6bmFtZXM6dGM6U0FNTDoyLjA6YWM6Y2xhc3NlczpQYXNzd29yZFByb3RlY3RlZFRyYW5zcG9ydCIsImVudGl0bGVtZW50IjoidXJuOm1hY2U6ZGlyOmVudGl0bGVtZW50OmNvbW1vbi1saWItdGVybXMifQ.d18gtV85V0ik4jfKyalguSgnmlszz--cNrQ4fWY2c29POQf1LgaMKpDlLrR_eQ1sz1TOMMtrqhgJ764CsJIVTqVtWEqL7vQsPFffRcO5rT80OdeOyKH5jQirbWEgGomEOzZg1GCtW9KFh88aVQtV6nnxhGD0Lua7tUJMzAfMm7_2exTw3EehqOt0thPVzKsOPlGCQ_iuc3FRDI2vMNbzpTsSXfgqpTAwwD9DXcSf9QfmuvwFaKIjOQAywR-HJBZ1TwFAZVIAeGzyR-2XuofX8TaAWZDfDyppe8q8-bf-_3-XhjBHtMJ8Z87SaiIfHyDdk4sG7SJoxx7Ry3DS5VPO6Q",
     "refresh_token": "https://cilogon.org/oauth2/refreshToken/46438248f4b7691a851f88b0849d9687/1584383387474",
-    "user_id": "5F455AFB1B7848AA96BB396E237A2759"
+    "user_id": "7016315FF8EF4D7F9E0A7550730A256D"
   }
 }
 ```
-
-Refresh token for user '5F455AFB1B7848AA96BB396E237A2759'
+### Refresh token for user '7016315FF8EF4D7F9E0A7550730A256D'
 ```bash
-curl -X POST -i "localhost:8082/fabric/credmgr/refresh?userId=5F455AFB1B7848AA96BB396E237A2759" -H "accept: application/json" -H "Content-Type: application/json" -d '{"refresh_token": "https://cilogon.org/oauth2/refreshToken/46438248f4b7691a851f88b0849d9687/1584383387474"}'
+curl -X POST -i "localhost:8082/fabric/credmgr/refresh?userId=7016315FF8EF4D7F9E0A7550730A256D" -H "accept: application/json" -H "Content-Type: application/json" -d '{"refresh_token": "https://cilogon.org/oauth2/refreshToken/46438248f4b7691a851f88b0849d9687/1584383387474"}'
 HTTP/1.0 200 OK
 Content-Type: application/json
 Content-Length: 1624
@@ -167,14 +183,14 @@ Date: Mon, 16 Mar 2020 18:32:06 GMT
   "value": {
     "id_token": "eyJ0eXAiOiJKV1QiLCJraWQiOiIyNDRCMjM1RjZCMjhFMzQxMDhEMTAxRUFDNzM2MkM0RSIsImFsZyI6IlJTMjU2In0.eyJpc3MiOiJodHRwczovL2NpbG9nb24ub3JnIiwic3ViIjoiaHR0cDovL2NpbG9nb24ub3JnL3NlcnZlckEvdXNlcnMvMTE5MDQxMDEiLCJhdWQiOiJjaWxvZ29uOi9jbGllbnRfaWQvNzdlMWFlYTAyMGE0Njc2OTM3ZWFhMjJkZjFkNDMyZDgiLCJhdXRoX3RpbWUiOiIxNTg0MzgzMzg3IiwiZXhwIjoxNTg0Mzg0NDI2LCJpYXQiOjE1ODQzODM1MjYsImVtYWlsIjoia3RoYXJlMTBAZW1haWwudW5jLmVkdSIsImdpdmVuX25hbWUiOiJLb21hbCIsImZhbWlseV9uYW1lIjoiVGhhcmVqYSIsImNlcnRfc3ViamVjdF9kbiI6Ii9EQz1vcmcvREM9Y2lsb2dvbi9DPVVTL089VW5pdmVyc2l0eSBvZiBOb3J0aCBDYXJvbGluYSBhdCBDaGFwZWwgSGlsbC9DTj1Lb21hbCBUaGFyZWphIEExMTkwNDEwNiIsImlkcCI6InVybjptYWNlOmluY29tbW9uOnVuYy5lZHUiLCJpZHBfbmFtZSI6IlVuaXZlcnNpdHkgb2YgTm9ydGggQ2Fyb2xpbmEgYXQgQ2hhcGVsIEhpbGwiLCJlcHBuIjoia3RoYXJlMTBAdW5jLmVkdSIsImFmZmlsaWF0aW9uIjoiZW1wbG95ZWVAdW5jLmVkdTtzdGFmZkB1bmMuZWR1O21lbWJlckB1bmMuZWR1IiwibmFtZSI6IktvbWFsIFRoYXJlamEiLCJhY3IiOiJ1cm46b2FzaXM6bmFtZXM6dGM6U0FNTDoyLjA6YWM6Y2xhc3NlczpQYXNzd29yZFByb3RlY3RlZFRyYW5zcG9ydCIsImVudGl0bGVtZW50IjoidXJuOm1hY2U6ZGlyOmVudGl0bGVtZW50OmNvbW1vbi1saWItdGVybXMifQ.c5yAC1TanrIBF3h4NISk8hRSzSPu0uvetzv8JoZ65o3BE3TH6U85ZszLA1PUjTB6X55OzkxyqabgUw6kcPRGfLwbdWqVmYDmGDB1E2Y9Qxnhv_4Colan8po0bwA86Oc2Npbjmxr5njXuR_FdIq5NfGVOP8sov5z7kYSHHp4Pur9CtyyLc9eHIIqAfMOoNwRzRqGxT9dZ-LioHpVnyFDM_Zcxf3nZe3iz2WV7NFzVhL7xTLe8VxEP3WC41_p4D_r4B0zEBEAYYhXGCS0JtiZyO9XdJaSBvktMdRwaNPg41O8nAQvzjjh4j686JHVW93Wwt4tdjGq0KTcDCRqeN4puZw",
     "refresh_token": "https://cilogon.org/oauth2/refreshToken/6d13c5ac6205087ae7ab869e68f729b4/1584383526222",
-    "user_id": "5F455AFB1B7848AA96BB396E237A2759"
+    "user_id": "7016315FF8EF4D7F9E0A7550730A256D"
   }
 }
 ```
 
-Revoke token for user '5F455AFB1B7848AA96BB396E237A2759'
+### Revoke token for user '7016315FF8EF4D7F9E0A7550730A256D'
 ```bash
-curl -X POST -i "localhost:8082/fabric/credmgr/revoke?userId=5F455AFB1B7848AA96BB396E237A2759" -H "accept: application/json" -H "Content-Type: application/json" -d '{"refresh_token": "https://cilogon.org/oauth2/refreshToken/46438248f4b7691a851f88b0849d9687/1584383387474"}'
+curl -X POST -i "localhost:8082/fabric/credmgr/revoke?userId=7016315FF8EF4D7F9E0A7550730A256D" -H "accept: application/json" -H "Content-Type: application/json" -d '{"refresh_token": "https://cilogon.org/oauth2/refreshToken/46438248f4b7691a851f88b0849d9687/1584383387474"}'
 HTTP/1.0 200 OK
 Content-Type: application/json
 Content-Length: 106
@@ -184,5 +200,62 @@ Date: Mon, 16 Mar 2020 18:32:38 GMT
 {
   "message": "Token revoked successfully",
   "status": 200
+}
+```
+## Identity Token examples
+### Decoded Id Token Returned for projectName=all and scope=all
+```
+{
+  "iss": "https://cilogon.org",
+  "sub": "http://cilogon.org/serverA/users/11904101",
+  "aud": "cilogon:/client_id/311cbebecefc7c1a6e0282e13fcf9588",
+  "auth_time": "1584583311",
+  "exp": 1584584211,
+  "iat": 1584583311,
+  "email": "kthare10@email.unc.edu",
+  "given_name": "Komal",
+  "family_name": "Thareja",
+  "cert_subject_dn": "/DC=org/DC=cilogon/C=US/O=University of North Carolina at Chapel Hill/CN=Komal Thareja A11904106",
+  "idp": "urn:mace:incommon:unc.edu",
+  "idp_name": "University of North Carolina at Chapel Hill",
+  "eppn": "kthare10@unc.edu",
+  "affiliation": "employee@unc.edu;staff@unc.edu;member@unc.edu",
+  "name": "Komal Thareja",
+  "acr": "urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport",
+  "entitlement": "urn:mace:dir:entitlement:common-lib-terms",
+  "isMemberOf": [
+    "CO:members:active",
+    "CO:COU:Jupyterhub:members:active",
+    "CO:COU:RENCI-TEST:members:active"
+  ],
+  "scope": "all",
+  "project": "all"
+}
+```
+### Decoded Token for projectName=RENCI-TEST and scope=measurement
+```
+{
+  "iss": "https://cilogon.org",
+  "sub": "http://cilogon.org/serverA/users/11904101",
+  "aud": "cilogon:/client_id/311cbebecefc7c1a6e0282e13fcf9588",
+  "auth_time": "1584583311",
+  "exp": 1584584554,
+  "iat": 1584583654,
+  "email": "kthare10@email.unc.edu",
+  "given_name": "Komal",
+  "family_name": "Thareja",
+  "cert_subject_dn": "/DC=org/DC=cilogon/C=US/O=University of North Carolina at Chapel Hill/CN=Komal Thareja A11904106",
+  "idp": "urn:mace:incommon:unc.edu",
+  "idp_name": "University of North Carolina at Chapel Hill",
+  "eppn": "kthare10@unc.edu",
+  "affiliation": "employee@unc.edu;staff@unc.edu;member@unc.edu",
+  "name": "Komal Thareja",
+  "acr": "urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport",
+  "entitlement": "urn:mace:dir:entitlement:common-lib-terms",
+  "isMemberOf": [
+    "CO:COU:RENCI-TEST:members:active"
+  ],
+  "scope": "measurement",
+  "project": "RENCI-TEST"
 }
 ```
