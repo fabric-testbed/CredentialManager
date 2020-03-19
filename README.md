@@ -116,6 +116,7 @@ To run the server on a Docker container, please execute the following from the r
 ## API Examples
 
 ### Create a tokens with projectName=all and scope=all
+NOTE: In this case, it is not required to pass projectName and scope in query parameters as they default to all.
 ```bash
 curl -X POST -i "localhost:8082/fabric/credmgr/create?projectName=all&scope=all" -H "accept: application/json"
 HTTP/1.0 200 OK
