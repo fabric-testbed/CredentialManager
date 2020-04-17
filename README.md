@@ -190,9 +190,9 @@ Date: Mon, 16 Mar 2020 18:30:23 GMT
   }
 }
 ```
-### Refresh token for user '7016315FF8EF4D7F9E0A7550730A256D'
+### Refresh token with projectName=all and scope=all
 ```bash
-curl -X POST -i "localhost:8082/fabric/credmgr/refresh?userId=7016315FF8EF4D7F9E0A7550730A256D" -H "accept: application/json" -H "Content-Type: application/json" -d '{"refresh_token": "https://cilogon.org/oauth2/refreshToken/46438248f4b7691a851f88b0849d9687/1584383387474"}'
+curl -X POST -i "localhost:8082/fabric/credmgr/refresh?projectName=all&scope=all" -H "accept: application/json" -H "Content-Type: application/json" -d '{"refresh_token": "https://cilogon.org/oauth2/refreshToken/46438248f4b7691a851f88b0849d9687/1584383387474"}'
 HTTP/1.0 200 OK
 Content-Type: application/json
 Content-Length: 1624
@@ -209,9 +209,9 @@ Date: Mon, 16 Mar 2020 18:32:06 GMT
 }
 ```
 
-### Revoke token for user '7016315FF8EF4D7F9E0A7550730A256D'
+### Revoke token 
 ```bash
-curl -X POST -i "localhost:8082/fabric/credmgr/revoke?userId=7016315FF8EF4D7F9E0A7550730A256D" -H "accept: application/json" -H "Content-Type: application/json" -d '{"refresh_token": "https://cilogon.org/oauth2/refreshToken/46438248f4b7691a851f88b0849d9687/1584383387474"}'
+curl -X POST -i "localhost:8082/fabric/credmgr/revoke" -H "accept: application/json" -H "Content-Type: application/json" -d '{"refresh_token": "https://cilogon.org/oauth2/refreshToken/46438248f4b7691a851f88b0849d9687/1584383387474"}'
 HTTP/1.0 200 OK
 Content-Type: application/json
 Content-Length: 106
