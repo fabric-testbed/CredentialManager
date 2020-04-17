@@ -74,7 +74,7 @@ Update the docker-compose.yml for database user, password, and database name. Al
 ```
     database:
         image: postgres:10
-        container_name: database
+        container_name: cred_database
         restart: always
         environment:
         - POSTGRES_PASSWORD=credmgr
@@ -153,6 +153,25 @@ Date: Thu, 19 Mar 2020 02:06:43 GMT
   }
 }
 ```
+### Create a tokens with projectName=all and scope=all from CI Logon Token
+```
+curl -X POST "localhost:8082/fabric/credmgr/createWithIdToken?projectName=all&scope=all" -H "accept: application/json"  -H "Content-Type: application/json" -d '{
+     "id_token": "eyJ0eXAiOiJKV1QiLCJraWQiOiIyNDRCMjM1RjZCMjhFMzQxMDhEMTAxRUFDNzM2MkM0RSIsImFsZyI6IlJTMjU2In0.                eyJpc3MiOiJodHRwczovL2NpbG9nb24ub3JnIiwic3ViIjoiaHR0cDovL2NpbG9nb24ub3JnL3NlcnZlckEvdXNlcnMvMTE5MDQxMDEiLCJhdWQiOiJjaWxvZ29uOi9jbGllbnRfaWQvMzM3ZDllYTY0Y2ZlZjMzMzM0MjViMWU5YTA5ODM5MTkiLCJhdXRoX3RpbWUiOiIxNTg3MDY3ODI5IiwiZXhwIjoxNTg3MDY5MTY5LCJpYXQiOjE1ODcwNjgyNjksImVtYWlsIjoia3RoYXJlMTBAZW1haWwudW5jLmVkdSIsImdpdmVuX25hbWUiOiJLb21hbCIsImZhbWlseV9uYW1lIjoiVGhhcmVqYSIsImNlcnRfc3ViamVjdF9kbiI6Ii9EQz1vcmcvREM9Y2lsb2dvbi9DPVVTL089VW5pdmVyc2l0eSBvZiBOb3J0aCBDYXJvbGluYSBhdCBDaGFwZWwgSGlsbC9DTj1Lb21hbCBUaGFyZWphIEExMTkwNDEwNiIsImlkcCI6InVybjptYWNlOmluY29tbW9uOnVuYy5lZHUiLCJpZHBfbmFtZSI6IlVuaXZlcnNpdHkgb2YgTm9ydGggQ2Fyb2xpbmEgYXQgQ2hhcGVsIEhpbGwiLCJlcHBuIjoia3RoYXJlMTBAdW5jLmVkdSIsImFmZmlsaWF0aW9uIjoiZW1wbG95ZWVAdW5jLmVkdTtzdGFmZkB1bmMuZWR1O21lbWJlckB1bmMuZWR1IiwibmFtZSI6IktvbWFsIFRoYXJlamEiLCJhY3IiOiJ1cm46b2FzaXM6bmFtZXM6dGM6U0FNTDoyLjA6YWM6Y2xhc3NlczpQYXNzd29yZFByb3RlY3RlZFRyYW5zcG9yd CIsImVudGl0bGVtZW50IjoidXJuOm1hY2U6ZGlyOmVudGl0bGVtZW50OmNvbW1vbi1saWItdGVybXMifQ.                IDEAV3yQAtgToQyf4G8CSiIVugXBUfF55xHB6R2eI17QSo4W08x0Y5fnWFbZpajqsaNRNm6L5XKKn110oHha8LH2NzGAbwehf8yvG-                      TP7dCn8LsBTZmunds8mdAx3OuGxLCnUNwZdF6D-                                                                                   zYJG3QsvTvcQAdLvZaPXBx4RssDOWqxzNSAWsY8NYfjvWRaMjNP139ycjwEt8uIkZvLOrG39ZlgXq_3g4Wy63OjeZPmHgZKn6e256P55pTlZ0SojFrukh3EkaxiZq-  ennW7z8zlXYLAH7-z2qQf94Fc6IDn8gK1q2RxB6U7gTmX0hG08lMnx2lx8ECcNRiXNKaSyd6Nuw"
+ }'
+HTTP/1.0 200 OK
+Content-Type: application/json
+Content-Length: 1624
+Server: Werkzeug/1.0.0 Python/3.6.8
+Date: Mon, 16 Mar 2020 18:30:23 GMT
+
+{
+  "status": 200,
+  "value": {
+    "id_token": "eyJ0eXAiOiJKV1QiLCJraWQiOiIyNDRCMjM1RjZCMjhFMzQxMDhEMTAxRUFDNzM2MkM0RSIsImFsZyI6IlJTMjU2In0.eyJpc3MiOiJodHRwczovL2NpbG9nb24ub3JnIiwic3ViIjoiaHR0cDovL2NpbG9nb24ub3JnL3NlcnZlckEvdXNlcnMvMTE5MDQxMDEiLCJhdWQiOiJjaWxvZ29uOi9jbGllbnRfaWQvNzdlMWFlYTAyMGE0Njc2OTM3ZWFhMjJkZjFkNDMyZDgiLCJhdXRoX3RpbWUiOiIxNTg0MzgzMzg3IiwiZXhwIjoxNTg0Mzg0Mjg3LCJpYXQiOjE1ODQzODMzODcsImVtYWlsIjoia3RoYXJlMTBAZW1haWwudW5jLmVkdSIsImdpdmVuX25hbWUiOiJLb21hbCIsImZhbWlseV9uYW1lIjoiVGhhcmVqYSIsImNlcnRfc3ViamVjdF9kbiI6Ii9EQz1vcmcvREM9Y2lsb2dvbi9DPVVTL089VW5pdmVyc2l0eSBvZiBOb3J0aCBDYXJvbGluYSBhdCBDaGFwZWwgSGlsbC9DTj1Lb21hbCBUaGFyZWphIEExMTkwNDEwNiIsImlkcCI6InVybjptYWNlOmluY29tbW9uOnVuYy5lZHUiLCJpZHBfbmFtZSI6IlVuaXZlcnNpdHkgb2YgTm9ydGggQ2Fyb2xpbmEgYXQgQ2hhcGVsIEhpbGwiLCJlcHBuIjoia3RoYXJlMTBAdW5jLmVkdSIsImFmZmlsaWF0aW9uIjoiZW1wbG95ZWVAdW5jLmVkdTtzdGFmZkB1bmMuZWR1O21lbWJlckB1bmMuZWR1IiwibmFtZSI6IktvbWFsIFRoYXJlamEiLCJhY3IiOiJ1cm46b2FzaXM6bmFtZXM6dGM6U0FNTDoyLjA6YWM6Y2xhc3NlczpQYXNzd29yZFByb3RlY3RlZFRyYW5zcG9ydCIsImVudGl0bGVtZW50IjoidXJuOm1hY2U6ZGlyOmVudGl0bGVtZW50OmNvbW1vbi1saWItdGVybXMifQ.d18gtV85V0ik4jfKyalguSgnmlszz--cNrQ4fWY2c29POQf1LgaMKpDlLrR_eQ1sz1TOMMtrqhgJ764CsJIVTqVtWEqL7vQsPFffRcO5rT80OdeOyKH5jQirbWEgGomEOzZg1GCtW9KFh88aVQtV6nnxhGD0Lua7tUJMzAfMm7_2exTw3EehqOt0thPVzKsOPlGCQ_iuc3FRDI2vMNbzpTsSXfgqpTAwwD9DXcSf9QfmuvwFaKIjOQAywR-HJBZ1TwFAZVIAeGzyR-2XuofX8TaAWZDfDyppe8q8-bf-_3-XhjBHtMJ8Z87SaiIfHyDdk4sG7SJoxx7Ry3DS5VPO6Q"
+  }
+}
+```
+
 ### Get token for userId '7016315FF8EF4D7F9E0A7550730A256D'
 ```bash
 curl -X GET -i "localhost:8082/fabric/credmgr/get?userId=7016315FF8EF4D7F9E0A7550730A256D" -H "accept: application/json"
