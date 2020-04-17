@@ -24,27 +24,25 @@
 # Author Komal Thareja (kthare10@renci.org)
 import logging
 
-
-from sqlalchemy import create_engine, Column, String, Integer, Sequence
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
-
 from credmgr import LOGGER, CONFIG
+from credmgr.utils import db_engine, IdTokens
 
-Base = declarative_base()
+from contextlib import contextmanager
+from sqlalchemy.orm import scoped_session, sessionmaker
 
 
-class IdTokens(Base):
-    """
-    Represents IdTokens Database Table
-    """
-    __tablename__ = 'IdTokens'
-    id = Column(Integer, Sequence('id_token_id', start=1, increment=1), autoincrement=True, unique=True)
-    user_id = Column(String, primary_key=True)
-    project = Column(String)
-    scope = Column(String)
-    id_token = Column(String)
-    refresh_token = Column(String)
+@contextmanager
+def session_scope(db_engine):
+    """Provide a transactional scope around a series of operations."""
+    session = scoped_session(sessionmaker(db_engine))
+    try:
+        yield session
+        session.commit()
+    except:
+        session.rollback()
+        raise
+    finally:
+        session.close()
 
 
 class Database:
@@ -59,19 +57,7 @@ class Database:
         @params password: database user password
         @params database: database name
         """
-        if user is None:
-            user = CONFIG.get('database', 'db-user')
-        if password is None:
-            password = CONFIG.get('database', 'db-password')
-        if database is None:
-            database = CONFIG.get('database', 'db-name')
-
-        # Connecting to PostgreSQL server at localhost using psycopg2 DBAPI
-        self.db = create_engine("postgresql+psycopg2://{}:{}@database/{}".format(user, password, database))
-        Session = sessionmaker(self.db)
-        self.session = Session()
-        Base.metadata.create_all(self.db)
-        self.log = logging.getLogger(LOGGER + '.' + __class__.__name__ )
+        self.log = logging.getLogger(LOGGER + '.' + __class__.__name__)
 
     def create_tokens(self, user_id:str, token:dict, project="all", scope="all"):
         """
@@ -101,13 +87,15 @@ class Database:
             # Save the token in the database
             id_obj = IdTokens(user_id=user_id, project=project, scope=scope, id_token= id_token_string,
                               refresh_token=refresh_token_string)
-            self.session.add(id_obj)
-            self.session.commit()
+            with session_scope(db_engine) as session:
+                session.add(id_obj)
+
+            self.log.debug("Added token to database!")
         except Exception as e:
             self.log.error("Exception occurred " + str(e))
             raise e
 
-    def read_tokens(self, user_id:dict) -> IdTokens:
+    def read_token(self, user_id:dict) -> dict:
         """
         Fetch token from database for a given user_id
         @params user_id: user id identifying a  user
@@ -117,40 +105,29 @@ class Database:
         """
         # Read
         try:
-            id_token = self.session.query(IdTokens).filter(IdTokens.user_id==user_id).all()
-            if id_token is None or len(id_token) != 1:
-                raise DatabaseError("Token not found for user_id {}".format(user_id))
-            return id_token[0]
+            with session_scope(db_engine) as session:
+                id_token = session.query(IdTokens).get(user_id)
+                if id_token is None:
+                    raise DatabaseError("Token not found for user_id {}".format(user_id))
+                result = {"user_id": id_token.user_id, "id_token": id_token.id_token, "refresh_token": id_token.refresh_token}
+                return result
         except Exception as e:
             self.log.error("Exception occurred " + str(e))
             raise e
 
-    def read_all_tokens(self):
-        """
-        Read all tokens from database
-
-        @return return list of IdTokens
-        @raises Exception in case of error
-        """
-        # Read
-        try:
-            tokens = self.session.query(IdTokens).all()
-            return tokens
-        except Exception as e:
-            self.log.error("Exception occurred " + str(e))
-            raise e
-
-    def delete_tokens(self, token):
+    def delete_token(self, user_id: str):
         """
         Delete a token
-        @params token: token to be deleted
+        @params user_id: user_id for token to be deleted
 
         @raises Exception in case of error
         """
         # Delete
         try:
-            self.session.delete(token)
-            self.session.commit()
+            with session_scope(db_engine) as session:
+                id_token = session.query(IdTokens).get(user_id)
+                if id_token is not None:
+                    session.delete(id_token)
         except Exception as e:
             self.log.error("Exception occurred " + str(e))
             raise e

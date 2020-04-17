@@ -3,7 +3,7 @@ version: '3.6'
 services:
     database:
         image: postgres:10
-        container_name: database
+        container_name: cred_database
         restart: always
         environment:
         - POSTGRES_PASSWORD=credmgr

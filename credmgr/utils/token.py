@@ -51,6 +51,7 @@ class FabricToken:
             raise FabricTokenError("Missing required parameters id_token or project or scope")
 
         self.log = logging.getLogger(LOGGER + '.' + __class__.__name__ )
+        self.log.debug("id_token {}".format(id_token))
         self.jwks_url = CONFIG.get("oauth", "oauth-jwks-url")
         self.public_key = CONFIG.get("jwt", "jwt-public-key")
         self.private_key = CONFIG.get("jwt", "jwt-private-key")
@@ -124,6 +125,7 @@ class FabricToken:
             self.log.debug(json.dumps(self.claims))
         except Exception as e:
             self.log.error(e)
+            raise e
 
     def __repr__(self) -> str:
         return self.__str__()

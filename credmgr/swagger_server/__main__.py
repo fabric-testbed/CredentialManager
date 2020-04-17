@@ -40,7 +40,7 @@ def main():
         app = connexion.App(__name__, specification_dir='swagger/')
         app.app.json_encoder = encoder.JSONEncoder
         app.add_api('swagger.yaml', arguments={'title': 'Fabric Credential Manager API'}, pythonic_params=True)
-        OAuthCredmgrSingleton.get()
+        #OAuthCredmgrSingleton.get()
         port = CONFIG.get('runtime','rest-port')
         app.run(port=port)
     except Exception as e:

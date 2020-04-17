@@ -28,7 +28,7 @@ from credmgr.CredentialManagers.AbstractCredentialManager import AbstractCredent
 from credmgr.utils import generate_user_key, get_providers
 import socket
 
-from credmgr.utils.database import Database, IdTokens
+from credmgr.utils.database import IdTokens, Database
 from credmgr.utils.token import FabricToken
 
 try:
@@ -63,12 +63,12 @@ class OAuthCredmgr(AbstractCredentialManager):
         Scan the Credential Directory to cleanup the old key files or delete the expired tokens from database
         """
         # loop over all tokens in the database
-        db = Database()
-        tokens = db.read_all_tokens()
-        for token in tokens:
-            if self.should_delete(token):
-                self.log.info('%s tokens for user %s are marked for deletion', token.refresh_token, token.user_id)
-                db.delete_tokens(token)
+        #db = Database()
+        #tokens = db.read_all_tokens()
+        #for token in tokens:
+        #    if self.should_delete(token):
+        #        self.log.info('%s tokens for user %s are marked for deletion', token.refresh_token, token.user_id)
+        #        db.delete_tokens(token)
 
         # also cleanup any stale key files
         self.cleanup_key_files()
@@ -125,7 +125,7 @@ class OAuthCredmgr(AbstractCredentialManager):
         self.log.info(result)
         return result
 
-    def refresh_token(self, user_id, refresh_token):
+    def refresh_token(self, refresh_token, project, scope):
         """
         Refreshes a token from CILogon and generates Fabric token using project and scope saved in Database
 
@@ -135,12 +135,6 @@ class OAuthCredmgr(AbstractCredentialManager):
 
         if OAuth2Session is None or refresh_token is None:
             raise ImportError("No module named OAuth2Session or refresh_token not provided")
-
-        database = Database()
-        tokens = database.read_tokens(user_id)
-
-        if tokens.refresh_token != refresh_token:
-            raise OAuthCredMgrError("Refresh token invalid, does not match!")
 
         provider = CONFIG.get('oauth', "oauth-provider")
         providers = get_providers()
@@ -160,17 +154,17 @@ class OAuthCredmgr(AbstractCredentialManager):
             return None
 
         self.log.debug("Before: {}".format(id_token))
-        fabric_token = FabricToken(id_token, tokens.project, tokens.scope)
+        fabric_token = FabricToken(id_token, project, scope)
         fabric_token.decode()
         fabric_token.update()
         id_token = fabric_token.encode()
         self.log.debug("After: {}".format(id_token))
 
-        result = {"user_id": user_id, "id_token": id_token, "refresh_token":refresh_token}
+        result = {"id_token": id_token, "refresh_token":refresh_token}
 
         return result
 
-    def revoke_token(self, user_id, refresh_token):
+    def revoke_token(self, refresh_token):
         """
         Revoke a refresh token
 
@@ -179,12 +173,6 @@ class OAuthCredmgr(AbstractCredentialManager):
         """
         if OAuth2Session is None or refresh_token is None:
             raise ImportError("No module named OAuth2Session or revoke_token not provided")
-
-        database = Database()
-        token = database.read_tokens(user_id)
-
-        if token is None or token.refresh_token != refresh_token:
-            self.log.error("Refresh token not found in DB or does not match with DB!")
 
         provider = CONFIG.get('oauth', "oauth-provider")
         providers = get_providers()
@@ -204,9 +192,7 @@ class OAuthCredmgr(AbstractCredentialManager):
         self.log.debug("Response Status={}".format(response.status_code))
         self.log.debug("Response Reason={}".format(response.reason))
         self.log.debug(str(response.content,  "utf-8"))
-        if response.status_code == 200:
-            database.delete_tokens(token)
-        else:
+        if response.status_code != 200:
             raise OAuthCredMgrError(str(response.content,  "utf-8"))
 
     def get_token(self, user_id) -> dict:
@@ -219,8 +205,42 @@ class OAuthCredmgr(AbstractCredentialManager):
             raise OAuthCredMgrError("CredMgr: Cannot request to get a token, Missing required parameter 'user_id'!")
 
         db = Database()
-        token = db.read_tokens(user_id)
-        result = {"user_id": token.user_id, "id_token": token.id_token, "refresh_token": token.refresh_token}
+        result = db.read_token(user_id)
+        if result is None:
+            raise OAuthCredMgrError("CredMgr: Token not found for 'user_id'={}!".format(user_id))
+        db.delete_token(user_id)
+
+        return result
+
+    def create_token_from_id_token(self, project, scope, id_token):
+        """
+        Generates fabric token provided Ci logon token (used by jupyter hub)
+
+        @param project: Project for which token is requested, by default it is set to 'all'
+        @param scope: Scope of the requested token, by default it is set to 'all'
+        @param body: Identity Token
+
+        @returns dictionary containing token and user_id
+        @raises Exception in case of error
+        """
+
+        if project is None or scope is None or id_token is None:
+            raise OAuthCredMgrError("CredMgr: Cannot request to create a token, Missing required parameter 'project' or 'scope' or 'id_token'!")
+
+        user_id = generate_user_key(project, scope, False)
+        token_dict = {'id_token': id_token}
+
+        db = Database()
+        db.create_tokens(user_id, token_dict, project, scope)
+
+        self.log.debug("Before: {}".format(id_token))
+        fabric_token = FabricToken(id_token, project, scope)
+        fabric_token.decode()
+        fabric_token.update()
+        fabric_id_token = fabric_token.encode()
+        self.log.debug("After: {}".format(fabric_id_token))
+
+        result = {"user_id": user_id, "id_token": fabric_id_token}
 
         return result
 
