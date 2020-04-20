@@ -98,8 +98,6 @@ class CredMgrResponseValue(Model):
         :param user_id: The user_id of this CredMgrResponseValue.
         :type user_id: str
         """
-        if user_id is None:
-            raise ValueError("Invalid value for `user_id`, must not be `None`")  # noqa: E501
 
         self._user_id = user_id
 

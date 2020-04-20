@@ -246,7 +246,7 @@ def get_providers():
     return providers
 
 
-def generate_user_key(project, scope):
+def generate_user_key(project, scope, create_file=True):
     """
     Return user key file to be returned when access token is requested
     """
@@ -254,21 +254,22 @@ def generate_user_key(project, scope):
 
     filename = uuid.uuid4().hex[:64].upper()
 
-    keyfile = os.path.join(CONFIG.get("runtime", "credentials-directory"), filename)
+    if create_file:
+        keyfile = os.path.join(CONFIG.get("runtime", "credentials-directory"), filename)
 
-    try:
-        with open(keyfile, 'w+') as fp:
-            print("[user]", file=fp)
-            print("user-name = " + filename, file=fp)
-            print("project = " + project, file=fp)
-            print("scope = " + scope, file=fp)
-
-        os.chmod(keyfile, stat.S_IWUSR| stat.S_IREAD)
-    except Exception as e:
-        logger.exception("Failed to create a user key file at %s (%s);", keyfile, str(e))
         try:
-            os.unlink(keyfile)
-        except OSError:
-            pass
-        return None
+            with open(keyfile, 'w+') as fp:
+                print("[user]", file=fp)
+                print("user-name = " + filename, file=fp)
+                print("project = " + project, file=fp)
+                print("scope = " + scope, file=fp)
+
+            os.chmod(keyfile, stat.S_IWUSR| stat.S_IREAD)
+        except Exception as e:
+            logger.exception("Failed to create a user key file at %s (%s);", keyfile, str(e))
+            try:
+                os.unlink(keyfile)
+            except OSError:
+                pass
+            return None
     return filename

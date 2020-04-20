@@ -22,4 +22,29 @@
 # SOFTWARE.
 #
 # Author Komal Thareja (kthare10@renci.org)
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import Column, String, Integer, Sequence
+
 from credmgr.utils.utils import *
+
+Base = declarative_base()
+
+class IdTokens(Base):
+    """
+    Represents IdTokens Database Table
+    """
+    __tablename__ = 'IdTokens'
+    id = Column(Integer, Sequence('id_token_id', start=1, increment=1), autoincrement=True, unique=True)
+    user_id = Column(String, primary_key=True)
+    project = Column(String)
+    scope = Column(String)
+    id_token = Column(String)
+    refresh_token = Column(String)
+
+# Connecting to PostgreSQL server at localhost using psycopg2 DBAPI
+user = CONFIG.get('database', 'db-user')
+password = CONFIG.get('database', 'db-password')
+database = CONFIG.get('database', 'db-name')
+db_engine = create_engine("postgresql+psycopg2://{}:{}@cred_database/{}".format(user, password, database))
+Base.metadata.create_all(db_engine)
