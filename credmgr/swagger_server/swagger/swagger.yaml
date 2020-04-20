@@ -343,8 +343,6 @@ components:
           type: string
           description: Identity Token
     credMgrResponse_value:
-      required:
-      - user_id
       type: object
       properties:
         authorization_url:
