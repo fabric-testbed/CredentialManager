@@ -69,71 +69,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/credMgrResponse'
       x-openapi-router-controller: credmgr.swagger_server.controllers.default_controller
-  /createWithIdToken:
-    post:
-      summary: Generate OAuth tokens for an user provided CILogon ID Token
-      description: |
-        Request to generate OAuth tokens for an user provided CILogon ID Token
-      operationId: create_with_id_token_post
-      parameters:
-      - name: projectName
-        in: query
-        schema:
-          type: string
-          default: all
-      - name: scope
-        in: query
-        schema:
-          type: string
-          default: all
-          enum:
-          - measurement
-          - all
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/create_Request'
-        required: true
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/credMgrResponse'
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/credMgrResponse'
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/credMgrResponse'
-        "404":
-          description: Not Found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/credMgrResponse'
-        "500":
-          description: Internal Server Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/credMgrResponse'
-        default:
-          description: Unexpected Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/credMgrResponse'
-      x-codegen-request-body-name: string
-      x-openapi-router-controller: credmgr.swagger_server.controllers.default_controller
   /refresh:
     post:
       summary: Refresh OAuth tokens for an user
@@ -334,14 +269,6 @@ components:
         refresh_token:
           type: string
           description: Refresh Token
-    create_Request:
-      required:
-      - id_token
-      type: object
-      properties:
-        id_token:
-          type: string
-          description: Identity Token
     credMgrResponse_value:
       type: object
       properties:

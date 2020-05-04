@@ -212,38 +212,5 @@ class OAuthCredmgr(AbstractCredentialManager):
 
         return result
 
-    def create_token_from_id_token(self, project, scope, id_token):
-        """
-        Generates fabric token provided Ci logon token (used by jupyter hub)
-
-        @param project: Project for which token is requested, by default it is set to 'all'
-        @param scope: Scope of the requested token, by default it is set to 'all'
-        @param body: Identity Token
-
-        @returns dictionary containing token and user_id
-        @raises Exception in case of error
-        """
-
-        if project is None or scope is None or id_token is None:
-            raise OAuthCredMgrError("CredMgr: Cannot request to create a token, Missing required parameter 'project' or 'scope' or 'id_token'!")
-
-        user_id = generate_user_key(project, scope, False)
-        token_dict = {'id_token': id_token}
-
-        db = Database()
-        db.create_tokens(user_id, token_dict, project, scope)
-
-        self.log.debug("Before: {}".format(id_token))
-        fabric_token = FabricToken(id_token, project, scope)
-        fabric_token.decode()
-        fabric_token.update()
-        fabric_id_token = fabric_token.encode()
-        self.log.debug("After: {}".format(fabric_id_token))
-
-        result = {"user_id": user_id, "id_token": fabric_id_token}
-
-        return result
-
-
 class OAuthCredMgrError(Exception):
     pass

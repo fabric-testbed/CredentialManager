@@ -51,7 +51,6 @@ import six
 from credmgr import LOGGER
 from credmgr.CredentialManagers.OAuthCredmgrSingleton import OAuthCredmgrSingleton
 from credmgr.swagger_server.models import CredMgrResponseValue
-from credmgr.swagger_server.models.create_request import CreateRequest
 from credmgr.swagger_server.models.cred_mgr_response import CredMgrResponse
 from credmgr.swagger_server.models.refresh_revoke_request import RefreshRevokeRequest  # noqa: E501
 from credmgr.swagger_server import util
@@ -75,38 +74,6 @@ def create_post(project_name=None, scope=None):  # noqa: E501
         result = OAuthCredmgrSingleton.get().create_token(project_name, scope)
         response.message = "Please visit {}! Use {} to retrieve the token after authentication".format(result["authorization_url"],
                                                                                                     result["user_id"])
-        response.value = CredMgrResponseValue.from_dict(result)
-        logger.debug(result)
-        logger.debug(response.value)
-        response.status = 200
-    except Exception as e:
-        response.message = str(e)
-        response.status = 500
-        logger.exception(e)
-    return response
-
-def create_with_id_token_post(body, project_name=None, scope=None):  # noqa: E501
-    """Generate OAuth tokens for an user provided CILogon ID Token
-
-    Request to generate OAuth tokens for an user provided CILogon ID Token  # noqa: E501
-
-    :param body:
-    :type body: dict | bytes
-    :param project_name:
-    :type project_name: str
-    :param scope:
-    :type scope: str
-
-    :rtype: CredMgrResponse
-    """
-    logger = logging.getLogger(LOGGER + '.' + __file__)
-    response = CredMgrResponse()
-
-    if connexion.request.is_json:
-        body = CreateRequest.from_dict(connexion.request.get_json())  # noqa: E501
-
-    try:
-        result = OAuthCredmgrSingleton.get().create_token_from_id_token(project_name, scope, body.id_token)
         response.value = CredMgrResponseValue.from_dict(result)
         logger.debug(result)
         logger.debug(response.value)
