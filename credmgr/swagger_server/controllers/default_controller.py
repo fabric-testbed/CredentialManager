@@ -53,7 +53,7 @@ from credmgr.CredentialManagers.OAuthCredmgrSingleton import OAuthCredmgrSinglet
 from credmgr.swagger_server.models import CredMgrResponseValue
 from credmgr.swagger_server.models.cred_mgr_response import CredMgrResponse
 from credmgr.swagger_server.models.refresh_revoke_request import RefreshRevokeRequest  # noqa: E501
-from credmgr.swagger_server import util
+from credmgr.swagger_server import util, received_counter, success_counter, failure_counter
 
 
 def create_post(project_name=None, scope=None):  # noqa: E501
@@ -68,6 +68,7 @@ def create_post(project_name=None, scope=None):  # noqa: E501
 
     :rtype: CredMgrResponse
     """
+    received_counter.labels('post', '/fabric/credmgr/create').inc()
     logger = logging.getLogger(LOGGER + '.' + __file__)
     response = CredMgrResponse()
     try:
@@ -78,10 +79,12 @@ def create_post(project_name=None, scope=None):  # noqa: E501
         logger.debug(result)
         logger.debug(response.value)
         response.status = 200
+        success_counter.labels('post', '/fabric/credmgr/create').inc()
     except Exception as e:
         response.message = str(e)
         response.status = 500
         logger.exception(e)
+        failure_counter.labels('post', '/fabric/credmgr/create').inc()
     return response
 
 def get_get(user_id):  # noqa: E501
@@ -94,15 +97,18 @@ def get_get(user_id):  # noqa: E501
 
     :rtype: CredMgrResponse
     """
+    received_counter.labels('get', '/fabric/credmgr/get').inc()
     logger = logging.getLogger(LOGGER + '.' + __file__)
     response = CredMgrResponse()
     try:
         response.value = CredMgrResponseValue.from_dict(OAuthCredmgrSingleton.get().get_token(user_id))
         response.status = 200
+        success_counter.labels('get', '/fabric/credmgr/get').inc()
     except Exception as e:
         logger.exception(e)
         response.message = str(e)
         response.status = 500
+        failure_counter.labels('get', '/fabric/credmgr/get').inc()
     return response
 
 
@@ -120,6 +126,7 @@ def refresh_post(body, project_name=None, scope=None):  # noqa: E501
 
     :rtype: CredMgrResponse
     """
+    received_counter.labels('post', '/fabric/credmgr/refresh').inc()
     if connexion.request.is_json:
         body = RefreshRevokeRequest.from_dict(connexion.request.get_json())  # noqa: E501
     logger = logging.getLogger(LOGGER + '.' + __file__)
@@ -128,10 +135,12 @@ def refresh_post(body, project_name=None, scope=None):  # noqa: E501
         response.value = CredMgrResponseValue.from_dict(OAuthCredmgrSingleton.get().refresh_token(body.refresh_token,
                                                                                                   project_name, scope))
         response.status = 200
+        success_counter.labels('post', '/fabric/credmgr/refresh').inc()
     except Exception as e:
         response.message = str(e)
         response.status = 500
         logger.exception(e)
+        failure_counter.labels('post', '/fabric/credmgr/refresh').inc()
     return response
 
 
@@ -145,6 +154,7 @@ def revoke_post(body):  # noqa: E501
 
     :rtype: CredMgrResponse
     """
+    received_counter.labels('post', '/fabric/credmgr/revoke').inc()
     if connexion.request.is_json:
         body = RefreshRevokeRequest.from_dict(connexion.request.get_json())  # noqa: E501
     logger = logging.getLogger(LOGGER + '.' + __file__)
@@ -153,8 +163,10 @@ def revoke_post(body):  # noqa: E501
         OAuthCredmgrSingleton.get().revoke_token(body.refresh_token)
         response.message = "Token revoked successfully"
         response.status = 200
+        success_counter.labels('post', '/fabric/credmgr/revoke').inc()
     except Exception as e:
         response.message = str(e)
         response.status = 500
         logger.exception(e)
+        failure_counter.labels('post', '/fabric/credmgr/revoke').inc()
     return response

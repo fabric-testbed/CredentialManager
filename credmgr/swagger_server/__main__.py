@@ -26,6 +26,8 @@ import os
 import signal
 
 import connexion
+import waitress
+import prometheus_client
 from flask import jsonify
 
 from credmgr import CONFIG
@@ -42,10 +44,17 @@ def main():
         app.add_api('swagger.yaml', arguments={'title': 'Fabric Credential Manager API'}, pythonic_params=True)
         OAuthCredmgrSingleton.get()
         port = CONFIG.get('runtime','rest-port')
-        app.run(port=port)
+
+        # prometheus server
+        prometheus_port = int(CONFIG.get('runtime', 'prometheus-port'))
+        prometheus_client.start_http_server(prometheus_port)
+
+        # Start up the server to expose the metrics.
+        waitress.serve(app, port=port)
     except Exception as e:
-        log.error("Exception occurred while starting Flask app")
-        log.error(e)
+       log.error("Exception occurred while starting Flask app")
+       log.error(e)
+       raise (e)
 
     @app.route('/stopServer', methods=['GET'])
     def stopServer():

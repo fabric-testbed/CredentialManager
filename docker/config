@@ -35,6 +35,7 @@
 credentials-directory = /var/lib/credmgr/credentials
 port = 443
 rest-port = 8080
+prometheus-port = 8100
 
 [logging]
 ## The directory in which credmgr should create log files.
