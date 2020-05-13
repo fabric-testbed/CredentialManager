@@ -50,12 +50,9 @@ class Database:
     Implements the database interface to IdTokens
     """
 
-    def __init__(self, user=None, password=None, database=None):
+    def __init__(self):
         """
         Constructor
-        @params user: database user
-        @params password: database user password
-        @params database: database name
         """
         self.log = logging.getLogger(LOGGER + '.' + __class__.__name__)
 

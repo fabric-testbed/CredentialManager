@@ -50,7 +50,10 @@ REQUIRES = [
         'psycopg2',
         'sqlalchemy',
         'PyJWT >=1.7.1',
-        'ldap3==2.6'
+        'ldap3==2.6',
+        'prometheus_client',
+        'waitress',
+        'connexion[swagger-ui]'
         ]
 
 setup(

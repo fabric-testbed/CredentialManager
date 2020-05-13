@@ -212,5 +212,6 @@ class OAuthCredmgr(AbstractCredentialManager):
 
         return result
 
+
 class OAuthCredMgrError(Exception):
     pass
