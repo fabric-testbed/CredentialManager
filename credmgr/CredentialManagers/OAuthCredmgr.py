@@ -24,8 +24,6 @@
 # Author Komal Thareja (kthare10@renci.org)
 import base64
 
-from prometheus_client import Counter
-
 from credmgr.CredentialManagers.AbstractCredentialManager import AbstractCredentialManager
 from credmgr.utils import generate_user_key, get_providers
 import socket
