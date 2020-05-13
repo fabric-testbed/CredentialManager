@@ -103,7 +103,8 @@ Update the docker-compose.yml for database user, password, and database name. Al
             - "./docker/self.signed.key:/etc/credmgr/hostkey.pem"        
         ports:
         - "8082:8080"
-        - "443:443"            
+        - "443:443"        
+        - "8100:8100"
 ```
 To run the server on a Docker container, please execute the following from the root directory:
 
@@ -114,6 +115,41 @@ To run the server on a Docker container, please execute the following from the r
  # bring using via docker-compose
  docker-compose up -d
  ```
+## Metrics
+Credential Manager is integrated to following metrics collected by Prometheus. User can view the metrics by 'http://localhost:8100/' once the container is running.
+- Requests_Received : HTTP Requests received
+- Requests_Success : HTTP Requests processed successfully
+- Requests_Failed : HTTP Requests failed
+
+### Sample output
+```
+# HELP Requests_Received_total HTTP Requests
+# TYPE Requests_Received_total counter
+Requests_Received_total{endpoint="/fabric/credmgr/create",method="post"} 1.0
+Requests_Received_total{endpoint="/fabric/credmgr/get",method="get"} 1.0
+Requests_Received_total{endpoint="/fabric/credmgr/refresh",method="post"} 1.0
+Requests_Received_total{endpoint="/fabric/credmgr/revoke",method="post"} 1.0
+# TYPE Requests_Received_created gauge
+Requests_Received_created{endpoint="/fabric/credmgr/create",method="post"} 1.5893885201837184e+09
+Requests_Received_created{endpoint="/fabric/credmgr/get",method="get"} 1.5893885393205898e+09
+Requests_Received_created{endpoint="/fabric/credmgr/refresh",method="post"} 1.589388545705302e+09
+Requests_Received_created{endpoint="/fabric/credmgr/revoke",method="post"} 1.589388551077782e+09
+# HELP Requests_Success_total HTTP Success
+# TYPE Requests_Success_total counter
+Requests_Success_total{endpoint="/fabric/credmgr/create",method="post"} 1.0
+# TYPE Requests_Success_created gauge
+Requests_Success_created{endpoint="/fabric/credmgr/create",method="post"} 1.589388520186303e+09
+# HELP Requests_Failed_total HTTP Failures
+# TYPE Requests_Failed_total counter
+Requests_Failed_total{endpoint="/fabric/credmgr/get",method="get"} 1.0
+Requests_Failed_total{endpoint="/fabric/credmgr/refresh",method="post"} 1.0
+Requests_Failed_total{endpoint="/fabric/credmgr/revoke",method="post"} 1.0
+# TYPE Requests_Failed_created gauge
+Requests_Failed_created{endpoint="/fabric/credmgr/get",method="get"} 1.5893885393271635e+09
+Requests_Failed_created{endpoint="/fabric/credmgr/refresh",method="post"} 1.5893885458823338e+09
+Requests_Failed_created{endpoint="/fabric/credmgr/revoke",method="post"} 1.58938855169857e+09
+```
+
 ## API Examples
 
 ### Create a tokens with projectName=all and scope=all
