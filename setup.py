@@ -47,7 +47,7 @@ REQUIRES = [
         'setuptools >= 21.0.0',
         'mod-wsgi',
         'python-daemon',
-        'psycopg2',
+        'psycopg2-binary',
         'sqlalchemy',
         'PyJWT >=1.7.1',
         'ldap3==2.6',
@@ -75,4 +75,10 @@ setup(
     scripts = ['bin/credmgrd'],
     entry_points={
         'console_scripts': ['credmgr.swagger_server=credmgr.swagger_server.__main__:main']},
+    classifiers=[
+                  "Programming Language :: Python :: 3",
+                  "License :: OSI Approved :: MIT License",
+                  "Operating System :: OS Independent",
+              ],
+    python_requires='>=3.6'
 )

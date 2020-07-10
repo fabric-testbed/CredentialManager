@@ -83,3 +83,4 @@ jwt-private-key = /etc/credmgr/hostkey.pem
 db-user = credmgr
 db-password = credmgr
 db-name = credmgr
+db-host = creddb:9432

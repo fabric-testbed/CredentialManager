@@ -3,14 +3,15 @@ version: '3.6'
 services:
     database:
         image: postgres:10
-        container_name: cred_database
+        container_name: creddb
+        hostname: creddb
         restart: always
         environment:
         - POSTGRES_PASSWORD=credmgr
         - POSTGRES_USER=credmgr
         - POSTGRES_DB=credmgr
         ports:
-        - 5432:${POSTGRES_PORT:-5432}
+        - 9432:${POSTGRES_PORT:-5432}
     credmgr:
         container_name: credmgr
         hostname: credmgr

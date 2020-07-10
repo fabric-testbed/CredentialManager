@@ -101,7 +101,7 @@ def setup_logging(log_path = None, log_level = None):
     # Set up the root logger
     log = logging.getLogger(LOGGER)
     log.setLevel(log_level)
-    log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    log_format = '%(asctime)s - %(name)s - {%(filename)s:%(lineno)d} - %(levelname)s - %(message)s'
     logging.basicConfig(format=log_format, filename=log_path)
 
     return log

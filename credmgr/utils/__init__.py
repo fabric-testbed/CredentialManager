@@ -46,5 +46,6 @@ class IdTokens(Base):
 user = CONFIG.get('database', 'db-user')
 password = CONFIG.get('database', 'db-password')
 database = CONFIG.get('database', 'db-name')
-db_engine = create_engine("postgresql+psycopg2://{}:{}@cred_database/{}".format(user, password, database))
+db_host = CONFIG.get('database', 'db-host')
+db_engine = create_engine("postgresql+psycopg2://{}:{}@{}/{}".format(user, password, db_host, database))
 Base.metadata.create_all(db_engine)
