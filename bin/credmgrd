@@ -23,8 +23,8 @@
 #
 # Author Komal Thareja (kthare10@renci.org)
 from daemon.runner import DaemonRunnerStopFailureError, DaemonRunner
-from credmgr.CredentialManagers.OAuthCredmgr import OAuthCredmgr
-from credmgr.utils import *
+from fabric.credmgr.credential_managers.oauth_credmgr import OAuthCredmgr
+from fabric.credmgr import *
 import signal
 import sys
 from functools import partial

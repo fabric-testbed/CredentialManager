@@ -1,12 +1,12 @@
 [Unit]
-Description=credmgr.swagger_server.service
+Description=fabric.credmgr.swagger_server.service
 
 [Service]
 User=credmgr
 Type=oneshot
 RemainAfterExit=yes
 StandardOutput=journal+console
-ExecStart=/bin/python3 -m credmgr.swagger_server </dev/null &>/dev/null &
+ExecStart=/bin/python3 -m fabric.credmgr.swagger_server </dev/null &>/dev/null &
 ExecStop=/usr/bin/curl localhost:8080/stopServer
 
 [Install]

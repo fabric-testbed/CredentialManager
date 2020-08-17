@@ -1,6 +1,6 @@
-include credmgr/CredentialManagers/OAuthCredmgrWebserver/static/*.js
-include credmgr/CredentialManagers/OAuthCredmgrWebserver/static/images/*.png
-include credmgr/CredentialManagers/OAuthCredmgrWebserver/templates/*.html
+include fabric/credmgr/credential_managers/oauth_credmgr_webserver/static/*.js
+include fabric/credmgr/credential_managers/oauth_credmgr_webserver/static/images/*.png
+include fabric/credmgr/credential_managers/oauth_credmgr_webserver/templates/*.html
 recursive-include examples *
 include README.md
 include LICENSE

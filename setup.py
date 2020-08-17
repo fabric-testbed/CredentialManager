@@ -24,9 +24,8 @@
 # Author Komal Thareja (kthare10@renci.org)
 # coding: utf-8
 
-import sys
 from setuptools import setup, find_packages
-from credmgr import *
+from fabric.credmgr import *
 
 NAME = "credmgr"
 VERSION = "1.0.0"
@@ -74,7 +73,7 @@ setup(
     data_files = [(ConfDir, [ConfFile]), (LogDir, []), (HttpConfDir, [HttpConfFile]), (WsgiDir, [WsgiFile]), (SystemdDir, [CredmgrInitScript, CredmgrSwaggerInitScript])],
     scripts = ['bin/credmgrd'],
     entry_points={
-        'console_scripts': ['credmgr.swagger_server=credmgr.swagger_server.__main__:main']},
+        'console_scripts': ['fabric.credmgr.swagger_server=fabric.credmgr.swagger_server.__main__:main']},
     classifiers=[
                   "Programming Language :: Python :: 3",
                   "License :: OSI Approved :: MIT License",
