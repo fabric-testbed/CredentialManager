@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # MIT License
 #
 # Copyright (c) 2020 FABRIC Testbed
@@ -21,21 +22,3 @@
 # SOFTWARE.
 #
 # Author Komal Thareja (kthare10@renci.org)
-
-from fabric.credmgr.utils.utils import *
-import os
-
-logger = setup_logging(log_path='/var/log/credmgr/cred_wsgi.log')
-
-#
-# Load the session key
-#
-mykey = generate_secret_key()
-
-#
-# Start Service
-#
-from fabric.credmgr.credential_managers.oauth_credmgr_webserver.oauth_credmgr_webserver import app
-app.secret_key = mykey
-
-application = app

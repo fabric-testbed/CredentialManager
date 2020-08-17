@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # MIT License
 #
 # Copyright (c) 2020 FABRIC Testbed
@@ -21,21 +22,26 @@
 # SOFTWARE.
 #
 # Author Komal Thareja (kthare10@renci.org)
+from fabric.credmgr.credential_managers.oauth_credmgr import OAuthCredmgr
+from fabric.credmgr.utils.utils import get_cred_dir, setup_logging
 
-from fabric.credmgr.utils.utils import *
-import os
 
-logger = setup_logging(log_path='/var/log/credmgr/cred_wsgi.log')
+class OAuthCredmgrSingleton:
+    __instance = None
 
-#
-# Load the session key
-#
-mykey = generate_secret_key()
+    def __init__(self):
+        if self.__instance is not None:
+            raise Exception("Singleton can't be created twice !")
 
-#
-# Start Service
-#
-from fabric.credmgr.credential_managers.oauth_credmgr_webserver.oauth_credmgr_webserver import app
-app.secret_key = mykey
+    def get(self):
+        """
+        Actually create an instance
+        """
+        if self.__instance is None:
+            self.cred_dir = get_cred_dir()
+            self.log = setup_logging()
+            self.__instance = OAuthCredmgr(self.cred_dir)
+            self.log.debug("OAuthCredmgrSingleton initialised")
+        return self.__instance
 
-application = app
+    get = classmethod(get)

@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # MIT License
 #
 # Copyright (c) 2020 FABRIC Testbed
@@ -21,21 +22,30 @@
 # SOFTWARE.
 #
 # Author Komal Thareja (kthare10@renci.org)
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import Column, String, Integer, Sequence
 
-from fabric.credmgr.utils.utils import *
-import os
+from fabric.credmgr import *
 
-logger = setup_logging(log_path='/var/log/credmgr/cred_wsgi.log')
+Base = declarative_base()
 
-#
-# Load the session key
-#
-mykey = generate_secret_key()
+class IdTokens(Base):
+    """
+    Represents IdTokens Database Table
+    """
+    __tablename__ = 'IdTokens'
+    id = Column(Integer, Sequence('id_token_id', start=1, increment=1), autoincrement=True, unique=True)
+    user_id = Column(String, primary_key=True)
+    project = Column(String)
+    scope = Column(String)
+    id_token = Column(String)
+    refresh_token = Column(String)
 
-#
-# Start Service
-#
-from fabric.credmgr.credential_managers.oauth_credmgr_webserver.oauth_credmgr_webserver import app
-app.secret_key = mykey
-
-application = app
+# Connecting to PostgreSQL server at localhost using psycopg2 DBAPI
+user = CONFIG.get('database', 'db-user')
+password = CONFIG.get('database', 'db-password')
+database = CONFIG.get('database', 'db-name')
+db_host = CONFIG.get('database', 'db-host')
+db_engine = create_engine("postgresql+psycopg2://{}:{}@{}/{}".format(user, password, db_host, database))
+Base.metadata.create_all(db_engine)
