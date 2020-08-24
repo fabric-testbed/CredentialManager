@@ -32,6 +32,7 @@ from threading import Event
 from optparse import OptionParser
 import logging
 
+from fabric.credmgr.utils.utils import get_cred_dir, get_logger, get_log_file, get_log_level
 
 sleeper = Event()
 
@@ -101,7 +102,7 @@ def main():
             sys.exit(1)
 
         cred_dir = get_cred_dir(cred_dir = options.cred_dir)
-        logger = setup_logging(log_path = options.log_file, log_level = options.log_level)
+        logger = get_logger(log_path = options.log_file, log_level = options.log_level)
 
         log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         logger.info('Starting credmgr and registering signals')

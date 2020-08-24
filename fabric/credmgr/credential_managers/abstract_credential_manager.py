@@ -24,7 +24,7 @@
 # Author Komal Thareja (kthare10@renci.org)
 import six
 from abc import ABCMeta, abstractmethod
-from fabric.credmgr.utils.utils import get_cred_dir
+from fabric.credmgr.utils.utils import get_cred_dir, get_logger
 from fabric.credmgr import LOGGER
 import logging
 
@@ -45,7 +45,7 @@ class AbstractCredentialManager:
         """
         Returns a child logger object specific to its class
         """
-        logger = logging.getLogger(LOGGER + '.' + self.__class__.__name__)
+        logger = get_logger()
         return logger
 
     @abstractmethod

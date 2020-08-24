@@ -38,6 +38,7 @@ rest-port = 8080
 prometheus-port = 8100
 
 [logging]
+logger = credmgr
 ## The directory in which credmgr should create log files.
 ## This directory will be automatically created if it does not exist.
 log-directory = /var/log/credmgr

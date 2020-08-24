@@ -33,11 +33,11 @@ from flask import jsonify
 from fabric.credmgr import CONFIG
 from fabric.credmgr.credential_managers.oauth_credmgr_singleton import OAuthCredmgrSingleton
 from fabric.credmgr.swagger_server import encoder
-from fabric.credmgr.utils.utils import setup_logging
+from fabric.credmgr.utils.utils import get_logger
 
 
 def main():
-    log = setup_logging()
+    log = get_logger()
     try:
         app = connexion.App(__name__, specification_dir='swagger/')
         app.app.json_encoder = encoder.JSONEncoder

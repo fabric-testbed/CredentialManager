@@ -30,6 +30,7 @@ import requests
 
 from fabric.credmgr import LOGGER, CONFIG
 from fabric.credmgr.utils.ldap import get_active_projects_from_ldap
+from fabric.credmgr.utils.utils import get_logger
 
 
 class FabricToken:
@@ -50,7 +51,7 @@ class FabricToken:
         if id_token is None or project is None or scope is None:
             raise FabricTokenError("Missing required parameters id_token or project or scope")
 
-        self.log = logging.getLogger(LOGGER + '.' + __class__.__name__ )
+        self.log = get_logger()
         self.log.debug("id_token {}".format(id_token))
         self.jwks_url = CONFIG.get("oauth", "oauth-jwks-url")
         self.public_key = CONFIG.get("jwt", "jwt-public-key")
