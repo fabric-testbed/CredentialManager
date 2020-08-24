@@ -25,7 +25,7 @@
 from fabric.credmgr.utils.utils import *
 import os
 
-logger = setup_logging(log_path='/var/log/credmgr/cred_wsgi.log')
+logger = get_logger(log_path='/var/log/credmgr/cred_wsgi.log')
 
 #
 # Load the session key

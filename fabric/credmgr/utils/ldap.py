@@ -28,6 +28,7 @@ import logging
 from ldap3 import Connection, Server, ALL
 
 from fabric.credmgr import CONFIG, LOGGER
+from fabric.credmgr.utils.utils import get_logger
 
 ldap_host = CONFIG.get('ldap', 'ldap-host')
 ldap_user = CONFIG.get('ldap', 'ldap-user')
@@ -36,7 +37,7 @@ ldap_search_base = CONFIG.get('ldap', 'ldap-search-base')
 
 server = Server(ldap_host, use_ssl=True, get_info=ALL)
 
-logger = logging.getLogger(LOGGER + '.' + __file__)
+logger = get_logger()
 
 def get_active_projects_from_ldap(eppn, email):
     """

@@ -30,7 +30,7 @@ import stat
 import tempfile
 import errno
 import uuid
-from fabric.credmgr import CONFIG, LOGGER
+from fabric.credmgr import CONFIG
 
 
 def atomic_output(file_contents, output_fname, mode=stat.S_IRUSR):
@@ -73,7 +73,7 @@ def get_log_level(log_level = None):
     return log_level
 
 
-def setup_logging(log_path = None, log_level = None):
+def get_logger(log_path = None, log_level = None):
     '''
     Detects the path and level for the log file from the credmgr config and sets
     up a logger. Instead of detecting the path and/or level from the
@@ -98,8 +98,10 @@ def setup_logging(log_path = None, log_level = None):
     if log_level is None:
         log_level = logging.INFO
 
+    logger = CONFIG.get('logging', 'logger')
+
     # Set up the root logger
-    log = logging.getLogger(LOGGER)
+    log = logging.getLogger(logger)
     log.setLevel(log_level)
     log_format = '%(asctime)s - %(name)s - {%(filename)s:%(lineno)d} - %(levelname)s - %(message)s'
     logging.basicConfig(format=log_format, filename=log_path)
@@ -149,6 +151,7 @@ def atomic_rename(tmp_file, target_file, mode=stat.S_IRUSR):
     os.chmod(tmp_file, mode)
     os.rename(tmp_file, target_file)
 
+
 def atomic_output_json(output_object, output_fname):
     """
     Take a Python object and attempt to serialize it to JSON and write
@@ -177,11 +180,12 @@ def atomic_output_json(output_object, output_fname):
         except OSError:
             pass
 
+
 def generate_secret_key():
     """
     Return a secret key that is common across all sessions
     """
-    logger = logging.getLogger(LOGGER + '.' + __file__)
+    logger = get_logger()
 
     if not CONFIG:
         logger.warning("Credmgr module is missing will use a non-persistent WSGI session key")
@@ -250,7 +254,7 @@ def generate_user_key(project, scope, create_file=True):
     """
     Return user key file to be returned when access token is requested
     """
-    logger = logging.getLogger(LOGGER + '.' + __file__)
+    logger = get_logger()
 
     filename = uuid.uuid4().hex[:64].upper()
 

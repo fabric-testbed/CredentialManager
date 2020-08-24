@@ -48,16 +48,13 @@ import sys
 from flask import Flask, request, redirect, render_template, session, url_for, jsonify
 from requests_oauthlib import OAuth2Session
 import os
-from fabric.credmgr import LOGGER
-
 import re
-import logging
 
 from fabric.credmgr.utils.database import Database
 from fabric.credmgr.utils.token import FabricToken
-from fabric.credmgr.utils.utils import get_cred_dir, get_providers
+from fabric.credmgr.utils.utils import get_cred_dir, get_providers, get_logger
 
-log = logging.getLogger(LOGGER + '.' + __file__)
+log = get_logger()
 
 # initialize Flask
 app = Flask(__name__)

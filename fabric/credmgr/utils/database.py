@@ -30,6 +30,8 @@ from fabric.credmgr.utils import db_engine, IdTokens
 from contextlib import contextmanager
 from sqlalchemy.orm import scoped_session, sessionmaker
 
+from fabric.credmgr.utils.utils import get_logger
+
 
 @contextmanager
 def session_scope(db_engine):
@@ -54,7 +56,7 @@ class Database:
         """
         Constructor
         """
-        self.log = logging.getLogger(LOGGER + '.' + __class__.__name__)
+        self.log = get_logger()
 
     def create_tokens(self, user_id:str, token:dict, project="all", scope="all"):
         """

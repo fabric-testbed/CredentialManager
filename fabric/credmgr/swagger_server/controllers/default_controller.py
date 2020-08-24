@@ -53,6 +53,7 @@ from fabric.credmgr.swagger_server.models.cred_mgr_response_value import CredMgr
 from fabric.credmgr.swagger_server.models.cred_mgr_response import CredMgrResponse
 from fabric.credmgr.swagger_server.models.refresh_revoke_request import RefreshRevokeRequest  # noqa: E501
 from fabric.credmgr.swagger_server import received_counter, success_counter, failure_counter
+from fabric.credmgr.utils.utils import get_logger
 
 
 def create_post(project_name=None, scope=None):  # noqa: E501
@@ -68,7 +69,7 @@ def create_post(project_name=None, scope=None):  # noqa: E501
     :rtype: CredMgrResponse
     """
     received_counter.labels('post', '/fabric/credmgr/create').inc()
-    logger = logging.getLogger(LOGGER + '.' + __file__)
+    logger = get_logger()
     response = CredMgrResponse()
     try:
         result = OAuthCredmgrSingleton.get().create_token(project_name, scope)
@@ -97,7 +98,7 @@ def get_get(user_id):  # noqa: E501
     :rtype: CredMgrResponse
     """
     received_counter.labels('get', '/fabric/credmgr/get').inc()
-    logger = logging.getLogger(LOGGER + '.' + __file__)
+    logger = get_logger()
     response = CredMgrResponse()
     try:
         response.value = CredMgrResponseValue.from_dict(OAuthCredmgrSingleton.get().get_token(user_id))
@@ -128,7 +129,7 @@ def refresh_post(body, project_name=None, scope=None):  # noqa: E501
     received_counter.labels('post', '/fabric/credmgr/refresh').inc()
     if connexion.request.is_json:
         body = RefreshRevokeRequest.from_dict(connexion.request.get_json())  # noqa: E501
-    logger = logging.getLogger(LOGGER + '.' + __file__)
+    logger = get_logger()
     response = CredMgrResponse()
     try:
         response.value = CredMgrResponseValue.from_dict(OAuthCredmgrSingleton.get().refresh_token(body.refresh_token,
@@ -156,7 +157,7 @@ def revoke_post(body):  # noqa: E501
     received_counter.labels('post', '/fabric/credmgr/revoke').inc()
     if connexion.request.is_json:
         body = RefreshRevokeRequest.from_dict(connexion.request.get_json())  # noqa: E501
-    logger = logging.getLogger(LOGGER + '.' + __file__)
+    logger = get_logger()
     response = CredMgrResponse()
     try:
         OAuthCredmgrSingleton.get().revoke_token(body.refresh_token)

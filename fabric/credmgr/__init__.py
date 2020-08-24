@@ -48,7 +48,7 @@ LogLevel = 'DEBUG'
 LogRetain = '5'
 LogFileSize = '5000000'
 
-LOGGER = 'credmgr_logger'
+LOGGER = 'logger'
 
 CONFIG = configparser.ConfigParser()
 CONFIG.add_section('runtime')
@@ -62,6 +62,7 @@ CONFIG.set('runtime', 'rest-port', RestPort)
 
 CONFIG.set('oauth', 'oauth-credmgr-token-lifetime', OAuthCredMgrTokenLifeTime)
 
+CONFIG.set('logging', 'logger', LOGGER)
 CONFIG.set('logging', 'log-directory', LogDir)
 CONFIG.set('logging', 'log-file', LogFile)
 CONFIG.set('logging', 'log-level', LogLevel)
