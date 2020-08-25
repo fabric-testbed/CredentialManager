@@ -115,6 +115,49 @@ To run the server on a Docker container, please execute the following from the r
  # bring using via docker-compose
  docker-compose up -d
  ```
+
+## Logging
+Credential Manager logs can be sent to ELK using filebeat and logstash either directly or via Kafka.
+
+### Filebeat Configuration
+Filebeat inputs should be configured as follows for Credential Manager. Path should be updated as per the location on the system running Credential Manager.
+```
+filebeat.inputs:
+
+# Each - is an input. Most options can be set at the input level, so
+# you can use different inputs for various configurations.
+# Below are the input specific configurations.
+
+- type: log
+
+  # Change to true to enable this input configuration.
+  enabled: true
+
+  # Paths that should be crawled and fetched. Glob based paths.
+  paths:
+    - /opt/CredentialManager/log/credmgr/*.log
+    - /opt/CredentialManager/log/httpd/credmgr*.log
+```
+
+# Logstash Filters
+Credential Manager requires following filters to be configured in logstash.
+```
+filter {
+  grok {
+        pattern_definitions => { "GREEDYMULTILINE" => "(.|\n)*"
+                                 "SYSTIME" => "%{SYSLOGTIMESTAMP}%{SPACE}%{YEAR}" }
+        match => {
+          "message" => [
+                          "%{TIMESTAMP_ISO8601:fabric_log_timestamp}%{SPACE}-%{SPACE}%{NOTSPACE:fabric_component}%{SPACE}-%{SPACE}%{NOTSPACE:fabric_location}%{SPACE}-%{SPACE}%{NOTSPACE:fabric_log_level}%{SPACE}-%{SPACE}%{GREEDYMULTILINE:fabric_log_message}",
+                          "%{TIMESTAMP_ISO8601:fabric_log_timestamp}%{SPACE}-%{SPACE}%{NOTSPACE:fabric_component}%{SPACE}-%{SPACE}%{NOTSPACE:fabric_log_level}%{SPACE}-%{SPACE}%{GREEDYMULTILINE:fabric_log_message}",
+                          "%{DAY}%{SPACE}%{SYSTIME:syslog_timestamp}]?%{SPACE}\[?%{PROG:syslog_program}\]?%{SPACE}\[?%{WORD}%{SPACE}%{WORD:syslog_pid}\]?%{GREEDYDATA:syslog_message}",
+                          "%{COMMONAPACHELOG}"
+                       ]
+        }
+      }
+  }
+```
+
 ## Metrics
 Credential Manager is integrated to following metrics collected by Prometheus. User can view the metrics by 'http://localhost:8100/' once the container is running.
 - Requests_Received : HTTP Requests received
