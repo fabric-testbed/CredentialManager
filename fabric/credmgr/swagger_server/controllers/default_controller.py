@@ -77,7 +77,6 @@ def create_post(project_name=None, scope=None):  # noqa: E501
                                                                                                     result["user_id"])
         response.value = CredMgrResponseValue.from_dict(result)
         logger.debug(result)
-        logger.debug(response.value)
         response.status = 200
         success_counter.labels('post', '/fabric/credmgr/create').inc()
     except Exception as e:

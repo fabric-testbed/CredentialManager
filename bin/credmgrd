@@ -56,7 +56,6 @@ class CredMgrDaemon:
                 cred_mgr.scan_tokens()
             except Exception as e:
                 self.logger.exception(e)
-            self.logger.info('Sleeping for 60 seconds')
             sleeper.clear()
             sleeper.wait(60)
 
@@ -103,9 +102,14 @@ def main():
 
         cred_dir = get_cred_dir(cred_dir = options.cred_dir)
         logger = get_logger(log_path = options.log_file, log_level = options.log_level)
+        handler = logging.handlers.RotatingFileHandler(
+                 get_log_file(),
+                 backupCount=int(CONFIG.get('logging', 'log-retain')),
+                 maxBytes=int(CONFIG.get('logging', 'log-size')))
+        handler.setLevel(get_log_level())
 
-        log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-        logger.info('Starting credmgr and registering signals')
+        logger.addHandler(handler)
+        logger.propagate = False
 
         # catch signals
         signal.signal(signal.SIGHUP, partial(signal_handler, logger))
@@ -115,18 +119,6 @@ def main():
 
         app = CredMgrDaemon(logger, cred_dir)
         daemon_runner = DaemonRunner(app)
-
-        handler = logging.handlers.RotatingFileHandler(
-                 get_log_file(),
-                 backupCount=int(CONFIG.get('logging', 'log-retain')),
-                 maxBytes=int(CONFIG.get('logging', 'log-size')))
-        handler.setLevel(get_log_level())
-        formatter = logging.Formatter(log_format)
-        handler.setFormatter(formatter)
-
-        logger.addHandler(handler)
-        logger.propagate = False
-        logger.info('Logging Started')
 
         daemon_runner.daemon_context.files_preserve = [
                  handler.stream,
