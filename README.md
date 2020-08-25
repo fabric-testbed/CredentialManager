@@ -139,7 +139,7 @@ filebeat.inputs:
     - /opt/CredentialManager/log/httpd/credmgr*.log
 ```
 
-# Logstash Filters
+### Logstash Filters
 Credential Manager requires following filters to be configured in logstash.
 ```
 filter {
