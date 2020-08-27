@@ -159,9 +159,9 @@ filter {
                                  "SYSTIME" => "%{SYSLOGTIMESTAMP}%{SPACE}%{YEAR}" }
         match => {
           "message" => [
-                          "%{TIMESTAMP_ISO8601:fabric_log_timestamp}%{SPACE}-%{SPACE}%{NOTSPACE:fabric_component}%{SPACE}-%{SPACE}%{NOTSPACE:fabric_location}%{SPACE}-%{SPACE}%{NOTSPACE:fabric_log_level}%{SPACE}-%{SPACE}%{GREEDYMULTILINE:fabric_log_message}",
-                          "%{TIMESTAMP_ISO8601:fabric_log_timestamp}%{SPACE}-%{SPACE}%{NOTSPACE:fabric_component}%{SPACE}-%{SPACE}%{NOTSPACE:fabric_log_level}%{SPACE}-%{SPACE}%{GREEDYMULTILINE:fabric_log_message}",
-                          "%{DAY}%{SPACE}%{SYSTIME:syslog_timestamp}]?%{SPACE}\[?%{PROG:syslog_program}\]?%{SPACE}\[?%{WORD}%{SPACE}%{WORD:syslog_pid}\]?%{GREEDYDATA:syslog_message}",
+                          "%{TIMESTAMP_ISO8601:credmgr_log_timestamp}%{SPACE}-%{SPACE}%{NOTSPACE:credmgr_component}%{SPACE}-%{SPACE}%{NOTSPACE:credmgr_location}%{SPACE}-%{SPACE}%{NOTSPACE:credmgr_log_level}%{SPACE}-%{SPACE}%{GREEDYMULTILINE:credmgr_log_message}",
+                          "%{TIMESTAMP_ISO8601:credmgr_log_timestamp}%{SPACE}-%{SPACE}%{NOTSPACE:credmgr_component}%{SPACE}-%{SPACE}%{NOTSPACE:credmgr_log_level}%{SPACE}-%{SPACE}%{GREEDYMULTILINE:credmgr_log_message}",
+                          "%{DAY}%{SPACE}%{SYSTIME:credmgr_timestamp}]?%{SPACE}\[?%{PROG:credmgr_program}\]?%{SPACE}\[?%{WORD}%{SPACE}%{WORD:credmgr_pid}\]?%{GREEDYDATA:credmgr_message}",
                           "%{COMMONAPACHELOG}"
                        ]
         }
