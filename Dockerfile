@@ -39,6 +39,27 @@ RUN mkdir -p /usr/src/app
 COPY . /usr/src/app
 WORKDIR /usr/src/app
 
+RUN yum install -y epel-release gcc httpd mod_ssl mod_wsgi httpd-devel python3-devel;\
+yum install -y postgresql postgresql-devel;\
+pip3 install --no-cache-dir -r requirements.txt;\
+groupadd credmgr;\
+useradd credmgr -g credmgr;\
+mkdir -p "/var/www/documents";\
+mkdir -p "/var/www/cgi-bin/wsgi/credmgr";\
+mkdir -p "/var/lib/credmgr";\
+chown -R credmgr:credmgr "/var/lib/credmgr";\
+mkdir -p "/var/log/credmgr";\
+chown -R credmgr:credmgr "/var/log/credmgr";\
+pip3 install .;\
+mod_wsgi-express install-module > /etc/httpd/conf.modules.d/02-wsgi.conf;\
+sed -i "s/REPLACE_WITH_FQDN/credmgr/g" /etc/httpd/conf.d/credmgr.conf;\
+sed -i 's/w+t/wb+/g' /usr/local/lib/python3*/site-packages/daemon/runner.py;\
+systemctl enable httpd;\
+systemctl enable credmgrd;\
+systemctl enable credmgr.swagger_server;\
+echo "Setup credmgr daemon and credmgr swagger_server complete";
+
 EXPOSE 8080 443
 
-CMD ["./docker-entrypoint.sh"]
+#CMD ["./docker-entrypoint.sh"]
+CMD ["/usr/sbin/init"]

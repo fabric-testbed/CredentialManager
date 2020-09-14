@@ -36,9 +36,9 @@ credentials-directory = /var/lib/credmgr/credentials
 port = 443
 rest-port = 8080
 prometheus-port = 8100
+fqdn = 127.0.0.1
 
 [logging]
-logger = credmgr
 ## The directory in which credmgr should create log files.
 ## This directory will be automatically created if it does not exist.
 log-directory = /var/log/credmgr
@@ -77,8 +77,8 @@ ldap-password =
 ldap-search-base = 
 
 [jwt]
-jwt-public-key = /etc/credmgr/hostcert.pem
-jwt-private-key = /etc/credmgr/hostkey.pem
+jwt-public-key = /etc/credmgr/public.pem
+jwt-private-key = /etc/credmgr/private.pem
 
 [database]
 db-user = credmgr

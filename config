@@ -36,6 +36,7 @@ credentials-directory = /var/lib/credmgr/credentials
 port = 443
 rest-port = 8080
 prometheus-port = 8100
+fqdn = 127.0.0.1
 
 [logging]
 logger = credmgr
@@ -77,8 +78,8 @@ ldap-password =
 ldap-search-base = 
 
 [jwt]
-jwt-public-key = /etc/credmgr/hostcert.pem
-jwt-private-key = /etc/credmgr/hostkey.pem
+jwt-public-key = /etc/credmgr/public.pem
+jwt-private-key = /etc/credmgr/public.pem
 
 [database]
 db-user = credmgr

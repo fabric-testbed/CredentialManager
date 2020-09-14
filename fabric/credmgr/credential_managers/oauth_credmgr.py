@@ -120,7 +120,8 @@ class OAuthCredmgr(AbstractCredentialManager):
         if user_file is None:
             raise OAuthCredMgrError("CredMgr:user_file could not be generate!")
         port = CONFIG.get("runtime", "port")
-        url = "https://{}:{}/key/{}".format(socket.getfqdn(), port, user_file)
+        fqdn = CONFIG.get("runtime", "fqdn")
+        url = "https://{}:{}/key/{}".format(fqdn, port, user_file)
         result = {"authorization_url": url, "user_id": user_file}
         self.log.info(result)
         return result

@@ -28,9 +28,11 @@ services:
         volumes:
             - /sys/fs/cgroup:/sys/fs/cgroup:ro
             - ./log:/var/log
-            - "./docker/config:/etc/credmgr/config_docker"
+            - "./docker/config:/etc/credmgr/config"
             - "./docker/self.signed.crt:/etc/credmgr/hostcert.pem"
             - "./docker/self.signed.key:/etc/credmgr/hostkey.pem"
+            - "./docker/public.pem:/etc/credmgr/public.pem"
+            - "./docker/private.pem:/etc/credmgr/private.pem"
         ports:
         - "8082:8080"
         - "443:443"

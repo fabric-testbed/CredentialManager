@@ -36,14 +36,14 @@ A file named swagger-client-generated.zip should be downloaded. This file will c
 $ swagger-codegen generate -i swagger.json -l python-flask -o credmgr
 ```
 
-## Usage
+## Usage without docker
 To run the Credential Manager, please execute the following from the root directory:
 
  ```
  git clone https://github.com/fabric-testbed/CredentialManager.git 
  ./install.sh
  ```
-## Running with Docker
+## Usage with Docker (Recommended)
 User is expected to update following in docker/config file:
 ```
 oauth-client-id = 
@@ -90,7 +90,9 @@ Update the docker-compose.yml for database user, password, and database name. Al
             - ./log:/var/log
             - "./docker/config:/etc/credmgr/config_docker"
             - "./docker/self.signed.crt:/etc/credmgr/hostcert.pem"
-            - "./docker/self.signed.key:/etc/credmgr/hostkey.pem"        
+            - "./docker/self.signed.key:/etc/credmgr/hostkey.pem"
+            - "./docker/public.pem:/etc/credmgr/public.pem"
+            - "./docker/private.pem.crt:/etc/credmgr/private.pem"        
         ports:
         - "8082:8080"
         - "443:443"        
@@ -99,6 +101,9 @@ Update the docker-compose.yml for database user, password, and database name. Al
 To run the server on a Docker container, please execute the following from the root directory:
 
  ```bash
+ # generate certificates
+ ./generate-certificates.sh
+ cp certs/* docker/
  # building the image
  docker build -t credmgr .
 

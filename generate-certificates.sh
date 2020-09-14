@@ -33,7 +33,20 @@ fi
 
 cd $ROOT_DIR/certs
 openssl req -x509 -newkey rsa:2048 -sha256 -days 365 -nodes \
-  -keyout self.signed.key -out self.signed.crt -config $ROOT_DIR/req.cnf 
+  -keyout self.signed.key -out self.signed.crt -config $ROOT_DIR/req.cnf
+
+KEYLENGTH=2048
+pubprivfile=combined.pem
+pubfile=public.pem
+keyfile=private.pem
+
+# generate combined private+public key
+openssl genpkey -algorithm rsa -pkeyopt rsa_keygen_bits:${KEYLENGTH} -outform pem -out ${pubprivfile} >& /dev/null
+
+# split up into private and public keys
+openssl rsa -in ${pubprivfile} -outform PEM -pubout -out ${pubfile} >& /dev/null
+openssl rsa -in ${pubprivfile} -outform PEM -out ${keyfile} >& /dev/null
+
 cd -
 
 exit 0;
