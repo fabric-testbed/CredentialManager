@@ -23,12 +23,13 @@
 #
 # Author Komal Thareja (kthare10@renci.org)
 import json
-import logging
+from datetime import datetime
 
 import jwt
 import requests
+from dateutil import tz
 
-from fabric.credmgr import LOGGER, CONFIG
+from fabric.credmgr import CONFIG
 from fabric.credmgr.utils.ldap import get_active_projects_from_ldap
 from fabric.credmgr.utils.utils import get_logger
 
@@ -60,10 +61,13 @@ class FabricToken:
         self.project = project
         self.scope = scope
         self.claims = None
+        self.unset = True
+        self.encoded = False
+        self.jwt = None
 
-    def update(self):
+    def set_claims(self):
         """
-        Update the claims for the Token by adding membership, project and scope
+        Set the claims for the Token by adding membership, project and scope
         """
         eppn = self.claims.get("eppn")
         email = self.claims.get("email")
@@ -83,6 +87,7 @@ class FabricToken:
         self.claims["scope"] = self.scope
         self.claims["project"] = self.project
         self.log.debug(self.claims)
+        self.unset = False
 
     def encode(self) -> str:
         """
@@ -90,25 +95,31 @@ class FabricToken:
 
         @return Returns the encoded string for the Fabric token
         """
-        if self.claims is None:
-            raise FabricTokenError("Claims not initialized, unable to encode")
+        if self.unset:
+            raise Exception("Claims not initialized, unable to encode")
+
+        if self.encoded:
+            self.log.info("Returning previously encoded token for project %s user %s" % (self.project, self.scope))
+            return self.jwt
 
         with open(self.private_key) as f:
-            privateKey = f.read()
+            private_key = f.read()
 
-        self.jwt = str(jwt.encode(self.claims, privateKey, algorithm='RS256'), 'utf-8')
+        self.jwt = str(jwt.encode(self.claims, private_key, algorithm='RS256'), 'utf-8')
+        self.encoded = True
         return self.jwt
 
-    def decode(self, cilogon=True):
+    def decode(self, ci_logon: bool = True, verify: bool = True):
         """
         Decode token
 
-        @param cilogon: true if CI Logon id token to be decoded; false is Fabric token to be decoded
+        @param ci_logon: true if CI Logon id token to be decoded; false is Fabric token to be decoded
+        @param verify: verify signature and expiration date if True
         """
         try:
-            if cilogon:
+            if ci_logon:
                 response = requests.get(self.jwks_url)
-                if response.status_code !=  200:
+                if response.status_code != 200:
                     return
                 jwks = response.json()
                 public_keys = {}
@@ -119,28 +130,54 @@ class FabricToken:
                 kid = jwt.get_unverified_header(self.id_token)['kid']
                 key = public_keys[kid]
             else:
+                if self.unset:
+                    return "JWT not initialized"
+
+                if not self.encoded:
+                    raise Exception("Token already in decoded form")
+
+                if self.public_key is None:
+                    self.log.info("Decoding token without verification of origin or date")
+                    verify = False
+
                 with open(self.public_key) as f:
                     key = f.read()
+
             options = {'verify_aud': False}
-            self.claims = jwt.decode(self.id_token, key=key, algorithms=['RS256'], options=options)
-            self.log.debug(json.dumps(self.claims))
+            self.claims = jwt.decode(self.id_token, key=key, verify=verify, algorithms=['RS256'], options=options)
+
+            self.log.debug("Decoded Token {}".format(json.dumps(self.claims)))
         except Exception as e:
             self.log.error(e)
             raise e
+
+    def valid_until(self) -> datetime:
+        if self.unset:
+            raise Exception("Claims not initialized")
+
+        if 'exp' in self.claims:
+            return self.get_local_from_UTC(self.claims['exp'])
+        else:
+            raise Exception("Expiration claim not present")
+
+    def get_local_from_UTC(self, utc: int) -> datetime:
+        """ convert UTC in claims (iat and exp) into a python
+        datetime object """
+        return datetime.fromtimestamp(utc, tz.tzlocal())
 
     def __repr__(self) -> str:
         return self.__str__()
 
     def __str__(self) -> str:
-        if self.claims is None:
+        if self.unset:
             return "JWT not initialized"
 
         fstring = f"Token for {self.claims['sub']}/{self.claims['name']}:"
 
         if 'iat' in self.claims:
-            fstring += f"\n\tIssued on: {self.getLocalFromUTC(self.claims['iat']).strftime('%Y-%m-%d %H:%M:%S')}"
+            fstring += f"\n\tIssued on: {self.get_local_from_UTC(self.claims['iat']).strftime('%Y-%m-%d %H:%M:%S')}"
         if 'exp' in self.claims:
-            fstring += f"\n\tExpires on: {self.getLocalFromUTC(self.claims['exp']).strftime('%Y-%m-%d %H:%M:%S')}"
+            fstring += f"\n\tExpires on: {self.get_local_from_UTC(self.claims['exp']).strftime('%Y-%m-%d %H:%M:%S')}"
 
         return fstring
 
@@ -155,7 +192,7 @@ def main():
     tok = FabricToken(id_token)
     tok.decode()
     print(tok)
-    tok.update()
+    tok.set_claims()
     print(tok)
 
 

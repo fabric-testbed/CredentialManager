@@ -226,7 +226,7 @@ def oauth_return(provider):
     # Sign with Fabric Certs
     fabric_token = FabricToken(id_token_string, session['local_project'], session['local_scope'])
     fabric_token.decode()
-    fabric_token.update()
+    fabric_token.set_claims()
     id_token_string = fabric_token.encode()
     log.debug("After: {}".format(id_token_string))
     token['id_token'] = id_token_string

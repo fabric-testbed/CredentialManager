@@ -94,7 +94,7 @@ class Database:
             self.log.error("Exception occurred " + str(e))
             raise e
 
-    def read_token(self, user_id:dict) -> dict:
+    def read_token(self, user_id: str) -> dict:
         """
         Fetch token from database for a given user_id
         @params user_id: user id identifying a  user

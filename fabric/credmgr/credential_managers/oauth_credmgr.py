@@ -102,7 +102,7 @@ class OAuthCredmgr(AbstractCredentialManager):
                 except OSError as os_error:
                     self.log.error('Could not remove key file %s: %s', key_file, os_error)
 
-    def create_token(self, project, scope):
+    def create_token(self, project: str, scope: str):
         """
         Generates key file and return authorization url for user to authenticate itself and also returns user id
 
@@ -125,7 +125,7 @@ class OAuthCredmgr(AbstractCredentialManager):
         self.log.info(result)
         return result
 
-    def refresh_token(self, refresh_token, project, scope):
+    def refresh_token(self, refresh_token: str, project: str, scope: str) -> dict:
         """
         Refreshes a token from CILogon and generates Fabric token using project and scope saved in Database
 
@@ -144,8 +144,8 @@ class OAuthCredmgr(AbstractCredentialManager):
         # refresh the token (provides both new refresh and access tokens)
         oauth_client = OAuth2Session(providers[provider]['client_id'], token = refresh_token_dict)
         new_token = oauth_client.refresh_token(providers[provider]['token_uri'],
-                                                   client_id = providers[provider]['client_id'],
-                                                   client_secret = providers[provider]['client_secret'])
+                                               client_id = providers[provider]['client_id'],
+                                               client_secret = providers[provider]['client_secret'])
         try:
             refresh_token = new_token.pop('refresh_token')
             id_token = new_token.pop('id_token')
@@ -156,7 +156,7 @@ class OAuthCredmgr(AbstractCredentialManager):
         self.log.debug("Before: {}".format(id_token))
         fabric_token = FabricToken(id_token, project, scope)
         fabric_token.decode()
-        fabric_token.update()
+        fabric_token.set_claims()
         id_token = fabric_token.encode()
         self.log.debug("After: {}".format(id_token))
 
@@ -164,7 +164,7 @@ class OAuthCredmgr(AbstractCredentialManager):
 
         return result
 
-    def revoke_token(self, refresh_token):
+    def revoke_token(self, refresh_token: str):
         """
         Revoke a refresh token
 
@@ -195,7 +195,7 @@ class OAuthCredmgr(AbstractCredentialManager):
         if response.status_code != 200:
             raise OAuthCredMgrError(str(response.content,  "utf-8"))
 
-    def get_token(self, user_id) -> dict:
+    def get_token(self, user_id: str) -> dict:
         """
         Returns the token for user_id returned via Create API after authentication
 

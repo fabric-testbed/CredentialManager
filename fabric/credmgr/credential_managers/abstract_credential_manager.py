@@ -69,7 +69,7 @@ class AbstractCredentialManager:
         raise NotImplementedError
 
     @abstractmethod
-    def refresh_token(self, user_id:str, refresh_token:dict) -> dict:
+    def refresh_token(self, refresh_token: str, project: str, scope: str) -> dict:
         """
         Refreshes a token from CILogon and generates Fabric token using project and scope saved in Database
 
@@ -79,7 +79,7 @@ class AbstractCredentialManager:
         raise NotImplementedError
 
     @abstractmethod
-    def revoke_token(self, user_id:str, refresh_token:dict):
+    def revoke_token(self, refresh_token: str):
         """
         Revoke a refresh token
 
