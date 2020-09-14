@@ -14,16 +14,6 @@ This package includes:
 - Python 3.6+
 - HTTPS-enabled web server 
 - WSGI server
-```
-yum install httpd
-yum install mod_wsgi
-yum install mod_ssl
-yum install httpd-devel
-yum install python3
-yum install python3-devel
-pip3 install mod-wsgi
-mod_wsgi-express install-module > /etc/httpd/conf.modules.d/02-wsgi.conf
-```
 
 ## API
 API Documentation can be found [here](https://app.swaggerhub.com/apis-docs/kthare10/credmgr/1.0.0#/)
@@ -139,6 +129,27 @@ filebeat.inputs:
     - /opt/CredentialManager/log/httpd/credmgr*.log
 ```
 
+Filebeat output for logstash
+```
+output.logstash:
+  # The Logstash hosts
+  hosts: ["logstash:5044"]
+
+  username: "<username>"
+  password: "<password>"
+
+  ssl.certificate_authorities: ["/etc/pki/root/ca.crt"]
+```
+
+Filebeat output for kafka
+```
+output.kafka:
+  hosts: ["kafka:9092"]
+  topic: "credmgr"
+  codec.json:
+    pretty: false
+```
+
 ### Logstash Filters
 Credential Manager requires following filters to be configured in logstash.
 ```
@@ -148,14 +159,25 @@ filter {
                                  "SYSTIME" => "%{SYSLOGTIMESTAMP}%{SPACE}%{YEAR}" }
         match => {
           "message" => [
-                          "%{TIMESTAMP_ISO8601:fabric_log_timestamp}%{SPACE}-%{SPACE}%{NOTSPACE:fabric_component}%{SPACE}-%{SPACE}%{NOTSPACE:fabric_location}%{SPACE}-%{SPACE}%{NOTSPACE:fabric_log_level}%{SPACE}-%{SPACE}%{GREEDYMULTILINE:fabric_log_message}",
-                          "%{TIMESTAMP_ISO8601:fabric_log_timestamp}%{SPACE}-%{SPACE}%{NOTSPACE:fabric_component}%{SPACE}-%{SPACE}%{NOTSPACE:fabric_log_level}%{SPACE}-%{SPACE}%{GREEDYMULTILINE:fabric_log_message}",
-                          "%{DAY}%{SPACE}%{SYSTIME:syslog_timestamp}]?%{SPACE}\[?%{PROG:syslog_program}\]?%{SPACE}\[?%{WORD}%{SPACE}%{WORD:syslog_pid}\]?%{GREEDYDATA:syslog_message}",
+                          "%{TIMESTAMP_ISO8601:credmgr_log_timestamp}%{SPACE}-%{SPACE}%{NOTSPACE:credmgr_component}%{SPACE}-%{SPACE}%{NOTSPACE:credmgr_location}%{SPACE}-%{SPACE}%{NOTSPACE:credmgr_log_level}%{SPACE}-%{SPACE}%{GREEDYMULTILINE:credmgr_log_message}",
+                          "%{TIMESTAMP_ISO8601:credmgr_log_timestamp}%{SPACE}-%{SPACE}%{NOTSPACE:credmgr_component}%{SPACE}-%{SPACE}%{NOTSPACE:credmgr_log_level}%{SPACE}-%{SPACE}%{GREEDYMULTILINE:credmgr_log_message}",
+                          "%{DAY}%{SPACE}%{SYSTIME:credmgr_timestamp}]?%{SPACE}\[?%{PROG:credmgr_program}\]?%{SPACE}\[?%{WORD}%{SPACE}%{WORD:credmgr_pid}\]?%{GREEDYDATA:credmgr_message}",
                           "%{COMMONAPACHELOG}"
                        ]
         }
       }
   }
+```
+Logstash input:
+```
+  beats {
+    port => 5000
+  }
+   kafka {
+            bootstrap_servers => "kafka:9092"
+            topics => ["credmgr"]
+            codec => json
+    }
 ```
 
 ## Metrics
