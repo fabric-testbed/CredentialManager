@@ -57,6 +57,10 @@ sed -i 's/w+t/wb+/g' /usr/local/lib/python3*/site-packages/daemon/runner.py;\
 systemctl enable httpd;\
 systemctl enable credmgrd;\
 systemctl enable credmgr.swagger_server;\
+touch /etc/credmgr/public.pem;\
+touch /etc/credmgr/private.pem;\
+touch /etc/credmgr/hostcert.pem;\
+touch /etc/credmgr/hostkey.pem;\
 echo "Setup credmgr daemon and credmgr swagger_server complete";
 
 EXPOSE 8080 443
