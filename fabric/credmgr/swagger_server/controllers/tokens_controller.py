@@ -109,17 +109,13 @@ def tokens_user_idget(user_id):  # noqa: E501
     """
     received_counter.labels('get', '/tokens/{}'.format(user_id)).inc()
     response = Success()
-    LOG.debug("I am here1")
     try:
-        LOG.debug("I am here2")
         response.value = SuccessValue.from_dict(OAuthCredmgrSingleton.get().get_token(user_id))
         response.status = 200
         success_counter.labels('get', '/tokens/{}'.format(user_id)).inc()
     except Exception as e:
-        LOG.debug("I am here3")
         LOG.exception(e)
         response.message = str(e)
         response.status = 500
         failure_counter.labels('get', '/tokens/{}'.format(user_id)).inc()
-    LOG.debug("I am here4")
     return response
