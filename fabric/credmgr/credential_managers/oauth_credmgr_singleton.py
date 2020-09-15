@@ -23,7 +23,8 @@
 #
 # Author Komal Thareja (kthare10@renci.org)
 from fabric.credmgr.credential_managers.oauth_credmgr import OAuthCredmgr
-from fabric.credmgr.utils.utils import get_cred_dir, get_logger
+from fabric.credmgr.utils import LOG
+from fabric.credmgr.utils.utils import get_cred_dir
 
 
 class OAuthCredmgrSingleton:
@@ -39,7 +40,7 @@ class OAuthCredmgrSingleton:
         """
         if self.__instance is None:
             self.cred_dir = get_cred_dir()
-            self.log = get_logger()
+            self.log = LOG
             self.__instance = OAuthCredmgr(self.cred_dir)
             self.log.debug("OAuthCredmgrSingleton initialised")
         return self.__instance

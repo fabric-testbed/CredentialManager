@@ -24,15 +24,14 @@
 # Author Komal Thareja (kthare10@renci.org)
 from daemon.runner import DaemonRunnerStopFailureError, DaemonRunner
 from fabric.credmgr.credential_managers.oauth_credmgr import OAuthCredmgr
-from fabric.credmgr import *
 import signal
 import sys
 from functools import partial
 from threading import Event
 from optparse import OptionParser
-import logging
 
-from fabric.credmgr.utils.utils import get_cred_dir, get_logger, get_log_file, get_log_level
+from fabric.credmgr.utils import LOG, FILE_HANDLER
+from fabric.credmgr.utils.utils import get_cred_dir
 
 sleeper = Event()
 
@@ -78,13 +77,6 @@ def main():
     try:
         usagestr = 'Usage: %prog start|stop|restart options'
         parser = OptionParser(usage=usagestr)
-        parser.add_option('-c', '--cred-dir', action='store', type='string', dest='cred_dir',
-                          help='Path to credential directory')
-        parser.add_option('-l', '--log-file', action='store', type='string',
-                          dest='log_file', help='Path to log file')
-        parser.add_option('-d', '--debug', action='store_const', dest='log_level',
-                          const=logging.DEBUG, default=logging.INFO,
-                          help='Set log level to DEBUG')
 
         (options, args) = parser.parse_args()
 
@@ -100,43 +92,35 @@ def main():
             parser.print_help()
             sys.exit(1)
 
-        cred_dir = get_cred_dir(cred_dir = options.cred_dir)
-        logger = get_logger(log_path = options.log_file, log_level = options.log_level)
-        handler = logging.handlers.RotatingFileHandler(
-                 get_log_file(),
-                 backupCount=int(CONFIG.get('logging', 'log-retain')),
-                 maxBytes=int(CONFIG.get('logging', 'log-size')))
-        handler.setLevel(get_log_level())
-
-        logger.addHandler(handler)
-        logger.propagate = False
+        LOG.propagate = False
 
         # catch signals
-        signal.signal(signal.SIGHUP, partial(signal_handler, logger))
-        signal.signal(signal.SIGTERM, partial(signal_handler, logger))
-        signal.signal(signal.SIGINT, partial(signal_handler, logger))
-        signal.signal(signal.SIGQUIT, partial(signal_handler, logger))
+        signal.signal(signal.SIGHUP, partial(signal_handler, LOG))
+        signal.signal(signal.SIGTERM, partial(signal_handler, LOG))
+        signal.signal(signal.SIGINT, partial(signal_handler, LOG))
+        signal.signal(signal.SIGQUIT, partial(signal_handler, LOG))
 
-        app = CredMgrDaemon(logger, cred_dir)
+        cred_dir = get_cred_dir()
+        app = CredMgrDaemon(LOG, cred_dir)
         daemon_runner = DaemonRunner(app)
 
         daemon_runner.daemon_context.files_preserve = [
-                 handler.stream,
+                 FILE_HANDLER.stream,
              ]
 
-        logger.info('Administrative operation: %s' % args[0])
+        LOG.info('Administrative operation: %s' % args[0])
         daemon_runner.do_action()
-        logger.info('Administrative after action: %s' % args[0])
+        LOG.info('Administrative after action: %s' % args[0])
 
     except DaemonRunnerStopFailureError as drsfe:
-        logger.exception(drsfe)
-        logger.propagate = True
-        logger.error('Unable to stop service; reason was: %s' % str(drsfe))
-        logger.error('Exiting...')
+        LOG.exception(drsfe)
+        LOG.propagate = True
+        LOG.error('Unable to stop service; reason was: %s' % str(drsfe))
+        LOG.error('Exiting...')
         sys.exit(1)
     except Exception as e:
-        logger.exception(e)
-        logger.error('Unable to stop service; reason was: %s' % str(e))
+        LOG.exception(e)
+        LOG.error('Unable to stop service; reason was: %s' % str(e))
         sys.exit(-1)
     sys.exit(0)
 

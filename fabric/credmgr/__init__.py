@@ -82,7 +82,6 @@ config_file = ConfDir + '/' + ConfFile
 try:
     files_read = CONFIG.read(config_file)
     if len(files_read) == 0:
-        sys.stderr.write('Configuration file could not be read; ' +
-                 'proceeding with default settings.')
+        sys.stderr.write('Configuration file could not be read; proceeding with default settings.')
 except Exception as e:
     raise RuntimeError('Unable to parse configuration file')

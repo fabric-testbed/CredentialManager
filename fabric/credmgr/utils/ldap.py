@@ -27,8 +27,8 @@ import logging
 
 from ldap3 import Connection, Server, ALL
 
-from fabric.credmgr import CONFIG, LOGGER
-from fabric.credmgr.utils.utils import get_logger
+from fabric.credmgr import CONFIG
+from fabric.credmgr.utils import LOG
 
 ldap_host = CONFIG.get('ldap', 'ldap-host')
 ldap_user = CONFIG.get('ldap', 'ldap-user')
@@ -36,8 +36,6 @@ ldap_password = CONFIG.get('ldap', 'ldap-password')
 ldap_search_base = CONFIG.get('ldap', 'ldap-search-base')
 
 server = Server(ldap_host, use_ssl=True, get_info=ALL)
-
-logger = get_logger()
 
 def get_active_projects_from_ldap(eppn, email):
     """
@@ -51,11 +49,11 @@ def get_active_projects_from_ldap(eppn, email):
         ldap_search_filter = '(eduPersonPrincipalName=' + eppn + ')'
     else:
         ldap_search_filter = '(mail=' + email + ')'
-    logger.debug("ldap_host:{}".format(ldap_host))
-    logger.debug("ldap_user:{}".format(ldap_user))
-    logger.debug("ldap_password:{}".format(ldap_password))
-    logger.debug("ldap_search_base:{}".format(ldap_search_base))
-    logger.debug("ldap_search_filter:{}".format(ldap_search_filter))
+    LOG.debug("ldap_host:{}".format(ldap_host))
+    LOG.debug("ldap_user:{}".format(ldap_user))
+    LOG.debug("ldap_password:{}".format(ldap_password))
+    LOG.debug("ldap_search_base:{}".format(ldap_search_base))
+    LOG.debug("ldap_search_filter:{}".format(ldap_search_filter))
     conn = Connection(server, ldap_user, ldap_password, auto_bind=True)
     profile_found = conn.search(ldap_search_base,
                                 ldap_search_filter,
@@ -68,5 +66,5 @@ def get_active_projects_from_ldap(eppn, email):
     else:
         attributes = None
     conn.unbind()
-    logger.debug(attributes)
+    LOG.debug(attributes)
     return attributes

@@ -1,200 +1,174 @@
-openapi: 3.0.1
+openapi: 3.0.3
 info:
   title: Fabric Credential Manager API
   description: This is Fabric Credential Manager API
+  termsOfService: None
   contact:
-    email: kthare10@renci.org
+    name: Komal Thareja
+    email: kthare10@unc.edu
   license:
-    name: Apache 2.0
-    url: http://www.apache.org/licenses/LICENSE-2.0.html
-  version: 1.0.0
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  version: 1.0.1
 servers:
-- url: https://virtserver.swaggerhub.com/fabric/credmgr
+- url: http://127.0.0.1:8100/
+  description: local development
+- url: https://virtserver.swaggerhub.com/kthare10/credmgr/1.0.0
+  description: SwaggerHub API Auto Mocking
+tags:
+- name: tokens
+  description: Tokens in FABRIC
 paths:
-  /create:
-    post:
-      summary: Generate OAuth tokens for an user
-      description: |
-        Request to generate OAuth tokens for an user
-      operationId: create_post
-      parameters:
-      - name: projectName
-        in: query
-        schema:
-          type: string
-          default: all
-      - name: scope
-        in: query
-        schema:
-          type: string
-          default: all
-          enum:
-          - measurement
-          - all
+  /version:
+    get:
+      tags:
+      - default
+      summary: version
+      description: Version
+      operationId: version_get
       responses:
         "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/credMgrResponse'
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/credMgrResponse'
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/credMgrResponse'
-        "404":
-          description: Not Found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/credMgrResponse'
-        "500":
-          description: Internal Server Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/credMgrResponse'
-        default:
-          description: Unexpected Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/credMgrResponse'
+                $ref: '#/components/schemas/Version'
       x-openapi-router-controller: fabric.credmgr.swagger_server.controllers.default_controller
-  /refresh:
+  /tokens/create:
     post:
-      summary: Refresh OAuth tokens for an user
+      tags:
+      - tokens
+      summary: Generate Fabric OAuth tokens for an user
+      description: |
+        Request to generate Fabric OAuth tokens for an user
+      operationId: tokens_create_post
+      parameters:
+      - name: projectName
+        in: query
+        description: Project Name
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+          default: all
+      - name: scope
+        in: query
+        description: Scope for which token is requested
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+          enum:
+          - measurement
+          - all
+          default: all
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/success'
+        "400":
+          description: Bad request
+        "401":
+          description: Authorization information is missing or invalid
+        "404":
+          description: Token not found
+        "5XX":
+          description: Unexpected error
+      x-openapi-router-controller: fabric.credmgr.swagger_server.controllers.tokens_controller
+  /tokens/refresh:
+    post:
+      tags:
+      - tokens
+      summary: Refresh FABRIC OAuth tokens for an user
       description: |
         Request to refresh OAuth tokens for an user
-      operationId: refresh_post
+      operationId: tokens_refresh_post
       parameters:
       - name: projectName
         in: query
+        description: Project Name
+        required: false
+        style: form
+        explode: true
         schema:
           type: string
           default: all
       - name: scope
         in: query
+        description: Scope for which token is requested
+        required: false
+        style: form
+        explode: true
         schema:
           type: string
-          default: all
           enum:
           - measurement
           - all
+          default: all
       requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/refresh_revoke_Request'
-        required: true
+        $ref: '#/components/requestBodies/refresh_revoke_request'
       responses:
         "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/credMgrResponse'
+                $ref: '#/components/schemas/success'
         "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/credMgrResponse'
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/credMgrResponse'
+          description: Bad request
+        "401":
+          description: Authorization information is missing or invalid
         "404":
-          description: Not Found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/credMgrResponse'
-        "500":
-          description: Internal Server Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/credMgrResponse'
-        default:
-          description: Unexpected Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/credMgrResponse'
-      x-codegen-request-body-name: string
-      x-openapi-router-controller: fabric.credmgr.swagger_server.controllers.default_controller
-  /revoke:
+          description: Token not found
+        "5XX":
+          description: Unexpected error
+      x-openapi-router-controller: fabric.credmgr.swagger_server.controllers.tokens_controller
+  /tokens/revoke:
     post:
+      tags:
+      - tokens
       summary: Revoke a refresh token for an user
       description: |
         Request to revoke a refresh token for an user
-      operationId: revoke_post
+      operationId: tokens_revoke_post
       requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/refresh_revoke_Request'
-        required: true
+        $ref: '#/components/requestBodies/refresh_revoke_request'
       responses:
         "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/credMgrResponse'
+                $ref: '#/components/schemas/success'
         "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/credMgrResponse'
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/credMgrResponse'
+          description: Bad request
+        "401":
+          description: Authorization information is missing or invalid
         "404":
-          description: Not Found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/credMgrResponse'
-        "500":
-          description: Internal Server Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/credMgrResponse'
-        default:
-          description: Unexpected Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/credMgrResponse'
-      x-codegen-request-body-name: string
-      x-openapi-router-controller: fabric.credmgr.swagger_server.controllers.default_controller
-  /get:
+          description: Token not found
+        "5XX":
+          description: Unexpected error
+      x-openapi-router-controller: fabric.credmgr.swagger_server.controllers.tokens_controller
+  /tokens/{userID}:
     get:
+      tags:
+      - tokens
       summary: get tokens for an user
       description: |
         Request to get tokens for an user
-      operationId: get_get
+      operationId: tokens_user_idget
       parameters:
-      - name: userId
-        in: query
+      - name: userID
+        in: path
+        description: User identifier returned in Create
         required: true
+        style: simple
+        explode: false
         schema:
           type: string
       responses:
@@ -203,41 +177,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/credMgrResponse'
+                $ref: '#/components/schemas/success'
         "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/credMgrResponse'
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/credMgrResponse'
+          description: Bad request
+        "401":
+          description: Authorization information is missing or invalid
         "404":
-          description: Not Found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/credMgrResponse'
-        "500":
-          description: Internal Server Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/credMgrResponse'
-        default:
-          description: Unexpected Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/credMgrResponse'
-      x-openapi-router-controller: fabric.credmgr.swagger_server.controllers.default_controller
+          description: Token not found
+        "5XX":
+          description: Unexpected error
+      x-openapi-router-controller: fabric.credmgr.swagger_server.controllers.tokens_controller
 components:
   schemas:
-    credMgrResponse:
+    success:
       type: object
       properties:
         status:
@@ -248,7 +200,7 @@ components:
           type: string
           description: status message
         value:
-          $ref: '#/components/schemas/credMgrResponse_value'
+          $ref: '#/components/schemas/success_value'
         version:
           type: string
           description: Actor version
@@ -261,7 +213,7 @@ components:
           id_token: id_token
         version: version
         status: 0
-    refresh_revoke_Request:
+    refresh_revoke_request:
       required:
       - refresh_token
       type: object
@@ -269,7 +221,16 @@ components:
         refresh_token:
           type: string
           description: Refresh Token
-    credMgrResponse_value:
+    Version:
+      properties:
+        version:
+          type: string
+        gitsha1:
+          type: string
+      example:
+        gitsha1: gitsha1
+        version: version
+    success_value:
       type: object
       properties:
         authorization_url:
@@ -292,24 +253,42 @@ components:
         id_token: id_token
   parameters:
     userId:
-      name: userId
-      in: query
+      name: userID
+      in: path
+      description: User identifier returned in Create
       required: true
+      style: simple
+      explode: false
       schema:
         type: string
     projectName:
       name: projectName
       in: query
+      description: Project Name
+      required: false
+      style: form
+      explode: true
       schema:
         type: string
         default: all
     scope:
       name: scope
       in: query
+      description: Scope for which token is requested
+      required: false
+      style: form
+      explode: true
       schema:
         type: string
-        default: all
         enum:
         - measurement
         - all
+        default: all
+  requestBodies:
+    refresh_revoke_request:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/refresh_revoke_request'
+      required: true
 

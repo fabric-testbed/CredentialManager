@@ -50,11 +50,12 @@ from requests_oauthlib import OAuth2Session
 import os
 import re
 
+from fabric.credmgr.utils import LOG
 from fabric.credmgr.utils.database import Database
 from fabric.credmgr.utils.token import FabricToken
-from fabric.credmgr.utils.utils import get_cred_dir, get_providers, get_logger
+from fabric.credmgr.utils.utils import get_cred_dir, get_providers
 
-log = get_logger()
+log = LOG
 
 # initialize Flask
 app = Flask(__name__)

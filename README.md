@@ -195,29 +195,29 @@ Credential Manager is integrated to following metrics collected by Prometheus. U
 ```
 # HELP Requests_Received_total HTTP Requests
 # TYPE Requests_Received_total counter
-Requests_Received_total{endpoint="/fabric/credmgr/create",method="post"} 1.0
-Requests_Received_total{endpoint="/fabric/credmgr/get",method="get"} 1.0
-Requests_Received_total{endpoint="/fabric/credmgr/refresh",method="post"} 1.0
-Requests_Received_total{endpoint="/fabric/credmgr/revoke",method="post"} 1.0
+Requests_Received_total{endpoint="/tokens/create",method="post"} 1.0
+Requests_Received_total{endpoint="/tokens/{userID}",method="get"} 1.0
+Requests_Received_total{endpoint="/tokens/refresh",method="post"} 1.0
+Requests_Received_total{endpoint="/tokens/revoke",method="post"} 1.0
 # TYPE Requests_Received_created gauge
-Requests_Received_created{endpoint="/fabric/credmgr/create",method="post"} 1.5893885201837184e+09
-Requests_Received_created{endpoint="/fabric/credmgr/get",method="get"} 1.5893885393205898e+09
-Requests_Received_created{endpoint="/fabric/credmgr/refresh",method="post"} 1.589388545705302e+09
-Requests_Received_created{endpoint="/fabric/credmgr/revoke",method="post"} 1.589388551077782e+09
+Requests_Received_created{endpoint="/tokens/create",method="post"} 1.5893885201837184e+09
+Requests_Received_created{endpoint="/tokens/{userID}",method="get"} 1.5893885393205898e+09
+Requests_Received_created{endpoint="/tokens/refresh",method="post"} 1.589388545705302e+09
+Requests_Received_created{endpoint="/tokens/revoke",method="post"} 1.589388551077782e+09
 # HELP Requests_Success_total HTTP Success
 # TYPE Requests_Success_total counter
-Requests_Success_total{endpoint="/fabric/credmgr/create",method="post"} 1.0
+Requests_Success_total{endpoint="/tokens/create",method="post"} 1.0
 # TYPE Requests_Success_created gauge
-Requests_Success_created{endpoint="/fabric/credmgr/create",method="post"} 1.589388520186303e+09
+Requests_Success_created{endpoint="/tokens/create",method="post"} 1.589388520186303e+09
 # HELP Requests_Failed_total HTTP Failures
 # TYPE Requests_Failed_total counter
-Requests_Failed_total{endpoint="/fabric/credmgr/get",method="get"} 1.0
-Requests_Failed_total{endpoint="/fabric/credmgr/refresh",method="post"} 1.0
-Requests_Failed_total{endpoint="/fabric/credmgr/revoke",method="post"} 1.0
+Requests_Failed_total{endpoint="/tokens/{userID}",method="get"} 1.0
+Requests_Failed_total{endpoint="/tokens/refresh",method="post"} 1.0
+Requests_Failed_total{endpoint="/tokens/revoke",method="post"} 1.0
 # TYPE Requests_Failed_created gauge
-Requests_Failed_created{endpoint="/fabric/credmgr/get",method="get"} 1.5893885393271635e+09
-Requests_Failed_created{endpoint="/fabric/credmgr/refresh",method="post"} 1.5893885458823338e+09
-Requests_Failed_created{endpoint="/fabric/credmgr/revoke",method="post"} 1.58938855169857e+09
+Requests_Failed_created{endpoint="/tokens/{userID}",method="get"} 1.5893885393271635e+09
+Requests_Failed_created{endpoint="/tokens/refresh",method="post"} 1.5893885458823338e+09
+Requests_Failed_created{endpoint="/tokens/revoke",method="post"} 1.58938855169857e+09
 ```
 
 ## API Examples
@@ -225,7 +225,7 @@ Requests_Failed_created{endpoint="/fabric/credmgr/revoke",method="post"} 1.58938
 ### Create a tokens with projectName=all and scope=all
 NOTE: In this case, it is not required to pass projectName and scope in query parameters as they default to all.
 ```bash
-curl -X POST -i "localhost:8082/fabric/credmgr/create?projectName=all&scope=all" -H "accept: application/json"
+curl -X POST -i "localhost:8082/tokens/create?projectName=all&scope=all" -H "accept: application/json"
 HTTP/1.0 200 OK
 Content-Type: application/json
 Content-Length: 340
@@ -243,7 +243,7 @@ Date: Thu, 19 Mar 2020 02:01:25 GMT
 ```
 ### Create Token for projectName=RENCI-TEST and scope=measurement
 ```
-curl -X POST -i "localhost:8082/fabric/credmgr/create?projectName=RENCI-TEST&scope=measurement" -H "accept: application/json"
+curl -X POST -i "localhost:8082/tokens/create?projectName=RENCI-TEST&scope=measurement" -H "accept: application/json"
 HTTP/1.0 200 OK
 Content-Type: application/json
 Content-Length: 340
@@ -262,7 +262,7 @@ Date: Thu, 19 Mar 2020 02:06:43 GMT
 
 ### Get token for userId '7016315FF8EF4D7F9E0A7550730A256D'
 ```bash
-curl -X GET -i "localhost:8082/fabric/credmgr/get?userId=7016315FF8EF4D7F9E0A7550730A256D" -H "accept: application/json"
+curl -X GET -i "localhost:8082/tokens/7016315FF8EF4D7F9E0A7550730A256D" -H "accept: application/json"
 HTTP/1.0 200 OK
 Content-Type: application/json
 Content-Length: 1624
@@ -280,7 +280,7 @@ Date: Mon, 16 Mar 2020 18:30:23 GMT
 ```
 ### Refresh token with projectName=all and scope=all
 ```bash
-curl -X POST -i "localhost:8082/fabric/credmgr/refresh?projectName=all&scope=all" -H "accept: application/json" -H "Content-Type: application/json" -d '{"refresh_token": "https://cilogon.org/oauth2/refreshToken/46438248f4b7691a851f88b0849d9687/1584383387474"}'
+curl -X POST -i "localhost:8082/tokens/refresh?projectName=all&scope=all" -H "accept: application/json" -H "Content-Type: application/json" -d '{"refresh_token": "https://cilogon.org/oauth2/refreshToken/46438248f4b7691a851f88b0849d9687/1584383387474"}'
 HTTP/1.0 200 OK
 Content-Type: application/json
 Content-Length: 1624
@@ -298,7 +298,7 @@ Date: Mon, 16 Mar 2020 18:32:06 GMT
 
 ### Revoke token 
 ```bash
-curl -X POST -i "localhost:8082/fabric/credmgr/revoke" -H "accept: application/json" -H "Content-Type: application/json" -d '{"refresh_token": "https://cilogon.org/oauth2/refreshToken/46438248f4b7691a851f88b0849d9687/1584383387474"}'
+curl -X POST -i "localhost:8082/tokens/revoke" -H "accept: application/json" -H "Content-Type: application/json" -d '{"refresh_token": "https://cilogon.org/oauth2/refreshToken/46438248f4b7691a851f88b0849d9687/1584383387474"}'
 HTTP/1.0 200 OK
 Content-Type: application/json
 Content-Length: 106

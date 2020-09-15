@@ -1,6 +1,9 @@
 # coding: utf-8
 
 from __future__ import absolute_import
+from datetime import date, datetime  # noqa: F401
+
+from typing import List, Dict  # noqa: F401
 
 from fabric.credmgr.swagger_server.models.base_model_ import Model
 from fabric.credmgr.swagger_server import util
@@ -32,7 +35,7 @@ class RefreshRevokeRequest(Model):
 
         :param dikt: A dict.
         :type: dict
-        :return: The refresh_revoke_Request of this RefreshRevokeRequest.  # noqa: E501
+        :return: The refresh_revoke_request of this RefreshRevokeRequest.  # noqa: E501
         :rtype: RefreshRevokeRequest
         """
         return util.deserialize_model(dikt, cls)

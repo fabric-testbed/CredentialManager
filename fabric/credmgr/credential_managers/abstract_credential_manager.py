@@ -24,9 +24,10 @@
 # Author Komal Thareja (kthare10@renci.org)
 import six
 from abc import ABCMeta, abstractmethod
-from fabric.credmgr.utils.utils import get_cred_dir, get_logger
-from fabric.credmgr import LOGGER
-import logging
+
+from fabric.credmgr.utils import LOG
+from fabric.credmgr.utils.utils import get_cred_dir
+
 
 @six.add_metaclass(ABCMeta)
 class AbstractCredentialManager:
@@ -39,14 +40,13 @@ class AbstractCredentialManager:
 
     def __init__(self, cred_dir = None):
         self.cred_dir = get_cred_dir(cred_dir)
-        self.log = self.get_logger()
+        self.log = LOG
 
     def get_logger(self):
         """
         Returns a child logger object specific to its class
         """
-        logger = get_logger()
-        return logger
+        return LOG
 
     @abstractmethod
     def scan_tokens(self):

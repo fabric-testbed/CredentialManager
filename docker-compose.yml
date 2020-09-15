@@ -27,7 +27,8 @@ services:
             - /run/lock
         volumes:
             - /sys/fs/cgroup:/sys/fs/cgroup:ro
-            - ./log:/var/log
+            - ./log/credmgr:/var/log/credmgr
+            - ./log/httpd:/var/log/httpd
             - "./docker/config:/etc/credmgr/config"
             - "./docker/self.signed.crt:/etc/credmgr/hostcert.pem"
             - "./docker/self.signed.key:/etc/credmgr/hostkey.pem"

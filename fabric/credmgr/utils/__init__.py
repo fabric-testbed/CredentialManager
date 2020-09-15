@@ -27,6 +27,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, String, Integer, Sequence
 
 from fabric.credmgr import *
+from fabric.credmgr.utils.log import get_logger
 
 Base = declarative_base()
 
@@ -49,3 +50,5 @@ database = CONFIG.get('database', 'db-name')
 db_host = CONFIG.get('database', 'db-host')
 db_engine = create_engine("postgresql+psycopg2://{}:{}@{}/{}".format(user, password, db_host, database))
 Base.metadata.create_all(db_engine)
+
+LOG, FILE_HANDLER = get_logger()

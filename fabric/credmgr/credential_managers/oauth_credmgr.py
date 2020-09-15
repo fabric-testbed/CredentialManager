@@ -114,7 +114,8 @@ class OAuthCredmgr(AbstractCredentialManager):
         """
 
         if project is None or scope is None:
-            raise OAuthCredMgrError("CredMgr: Cannot request to create a token, Missing required parameter 'project' or 'scope'!")
+            raise OAuthCredMgrError("CredMgr: Cannot request to create a token, "
+                                    "Missing required parameter 'project' or 'scope'!")
 
         user_file = generate_user_key(project, scope)
         if user_file is None:

@@ -24,13 +24,13 @@
 # Author Komal Thareja (kthare10@renci.org)
 import os
 import json
-import logging
-import logging.handlers
+
 import stat
 import tempfile
 import errno
 import uuid
 from fabric.credmgr import CONFIG
+from fabric.credmgr.utils import LOG
 
 
 def atomic_output(file_contents, output_fname, mode=stat.S_IRUSR):
@@ -53,60 +53,6 @@ def atomic_output(file_contents, output_fname, mode=stat.S_IRUSR):
             os.unlink(tmp_file_name)
         except OSError:
             pass
-
-
-def get_log_file(log_path = None):
-    if (log_path is None) and (CONFIG is not None) and ('logging' in CONFIG) \
-            and ('log-directory' in CONFIG['logging']) and ('log-file' in CONFIG['logging']):
-        log_path = CONFIG.get('logging', "log-directory") + '/' + CONFIG.get('logging', "log-file")
-    elif (log_path is None):
-        raise RuntimeError('The log file path must be specified in config or passed as an argument')
-    return log_path
-
-
-def get_log_level(log_level = None):
-    # Get the log level
-    if (log_level is None) and (CONFIG is not None) and ('logging' in CONFIG) and ('log-level' in CONFIG['logging']):
-        log_level = CONFIG.get('logging', "log-level")
-    if log_level is None:
-        log_level = logging.INFO
-    return log_level
-
-
-def get_logger(log_path = None, log_level = None):
-    '''
-    Detects the path and level for the log file from the credmgr config and sets
-    up a logger. Instead of detecting the path and/or level from the
-    credmgr config, a custom path and/or level for the log file can be passed as
-    optional arguments.
-
-    :param log_path: Path to custom log file
-    :param log_level: Custom log level
-    :return: logging.Logger object
-    '''
-
-    # Get the log path
-    if (log_path is None) and (CONFIG is not None) and ('logging' in CONFIG) \
-            and ('log-directory' in CONFIG['logging']) and ('log-file' in CONFIG['logging']):
-        log_path = CONFIG.get('logging', "log-directory") + '/' + CONFIG.get('logging', "log-file")
-    elif (log_path is None):
-        raise RuntimeError('The log file path must be specified in config or passed as an argument')
-
-    # Get the log level
-    if (log_level is None) and (CONFIG is not None) and ('logging' in CONFIG) and ('log-level' in CONFIG['logging']):
-        log_level = CONFIG.get('logging', "log-level")
-    if log_level is None:
-        log_level = logging.INFO
-
-    logger = CONFIG.get('logging', 'logger')
-
-    # Set up the root logger
-    log = logging.getLogger(logger)
-    log.setLevel(log_level)
-    log_format = '%(asctime)s - %(name)s - {%(filename)s:%(lineno)d} - %(levelname)s - %(message)s'
-    logging.basicConfig(format=log_format, filename=log_path)
-
-    return log
 
 def get_cred_dir(cred_dir = None):
     '''
@@ -185,10 +131,10 @@ def generate_secret_key():
     """
     Return a secret key that is common across all sessions
     """
-    logger = get_logger()
+
 
     if not CONFIG:
-        logger.warning("Credmgr module is missing will use a non-persistent WSGI session key")
+        LOG.warning("Credmgr module is missing will use a non-persistent WSGI session key")
         return os.urandom(16)
 
     keyfile = os.path.join(CONFIG.get("runtime", "credentials-directory"), "wsgi_session_key")
@@ -199,7 +145,7 @@ def generate_secret_key():
     except OSError as os_error:
         # An exception will be thrown if the file already exists, and that's fine and good.
         if not (os_error.errno == errno.EEXIST):
-            logger.warning("Unable to access WSGI session key at %s (%s);  will use a non-persistent key.", keyfile, str(os_error))
+            LOG.warning("Unable to access WSGI session key at %s (%s);  will use a non-persistent key.", keyfile, str(os_error))
             return os.urandom(16)
 
     # Open the secret key file.
@@ -207,12 +153,12 @@ def generate_secret_key():
         with open(keyfile, 'rb') as f:
             current_key = f.read(24)
     except IOError as e:
-        logger.warning("Unable to access WSGI session key at %s (%s); will use a non-persistent key.", keyfile, str(e))
+        LOG.warning("Unable to access WSGI session key at %s (%s); will use a non-persistent key.", keyfile, str(e))
         return os.urandom(16)
 
     # Make sure the key string isn't empty or truncated.
     if len(current_key) >= 16:
-        logger.debug("Using the persistent WSGI session key")
+        LOG.debug("Using the persistent WSGI session key")
         return current_key
 
     # We are responsible for generating the keyfile for this webapp to use.
@@ -220,9 +166,9 @@ def generate_secret_key():
     try:
         # Use atomic output so the file is only ever read-only
         atomic_output(new_key, keyfile, stat.S_IRUSR)
-        logger.info("Successfully created a new persistent WSGI session key for credmgr application at %s.", keyfile)
+        LOG.info("Successfully created a new persistent WSGI session key for credmgr application at %s.", keyfile)
     except Exception as e:
-        logger.exception("Failed to atomically create a new persistent WSGI session key at %s (%s); will use a transient one.", keyfile, str(e))
+        LOG.exception("Failed to atomically create a new persistent WSGI session key at %s (%s); will use a transient one.", keyfile, str(e))
         return new_key
     return new_key
 
@@ -254,7 +200,6 @@ def generate_user_key(project, scope, create_file=True):
     """
     Return user key file to be returned when access token is requested
     """
-    logger = get_logger()
 
     filename = uuid.uuid4().hex[:64].upper()
 
@@ -270,7 +215,7 @@ def generate_user_key(project, scope, create_file=True):
 
             os.chmod(keyfile, stat.S_IWUSR| stat.S_IREAD)
         except Exception as e:
-            logger.exception("Failed to create a user key file at %s (%s);", keyfile, str(e))
+            LOG.exception("Failed to create a user key file at %s (%s);", keyfile, str(e))
             try:
                 os.unlink(keyfile)
             except OSError:

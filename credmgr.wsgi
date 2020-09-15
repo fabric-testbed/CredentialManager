@@ -23,6 +23,7 @@
 # Author Komal Thareja (kthare10@renci.org)
 
 from fabric.credmgr.utils.utils import *
+from fabric.credmgr.utils.log import get_logger
 import os
 
 logger = get_logger(log_path='/var/log/credmgr/cred_wsgi.log')

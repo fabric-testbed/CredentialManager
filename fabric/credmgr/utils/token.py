@@ -30,8 +30,8 @@ import requests
 from dateutil import tz
 
 from fabric.credmgr import CONFIG
+from fabric.credmgr.utils import LOG
 from fabric.credmgr.utils.ldap import get_active_projects_from_ldap
-from fabric.credmgr.utils.utils import get_logger
 
 
 class FabricToken:
@@ -52,8 +52,7 @@ class FabricToken:
         if id_token is None or project is None or scope is None:
             raise FabricTokenError("Missing required parameters id_token or project or scope")
 
-        self.log = get_logger()
-        self.log.debug("id_token {}".format(id_token))
+        LOG.debug("id_token {}".format(id_token))
         self.jwks_url = CONFIG.get("oauth", "oauth-jwks-url")
         self.public_key = CONFIG.get("jwt", "jwt-public-key")
         self.private_key = CONFIG.get("jwt", "jwt-private-key")
@@ -73,20 +72,20 @@ class FabricToken:
         email = self.claims.get("email")
 
         projects = get_active_projects_from_ldap(eppn, email)
-        self.log.debug(projects)
+        LOG.debug(projects)
 
         project_list = []
         for p in projects:
-            self.log.debug("Processing {}".format(p))
+            LOG.debug("Processing {}".format(p))
             if self.project == "all":
                 project_list.append(p)
             elif self.project in p:
                 project_list.append(p)
-        self.log.debug(project_list)
+        LOG.debug(project_list)
         self.claims["isMemberOf"] = project_list
         self.claims["scope"] = self.scope
         self.claims["project"] = self.project
-        self.log.debug(self.claims)
+        LOG.debug(self.claims)
         self.unset = False
 
     def encode(self) -> str:
@@ -99,7 +98,7 @@ class FabricToken:
             raise Exception("Claims not initialized, unable to encode")
 
         if self.encoded:
-            self.log.info("Returning previously encoded token for project %s user %s" % (self.project, self.scope))
+            LOG.info("Returning previously encoded token for project %s user %s" % (self.project, self.scope))
             return self.jwt
 
         with open(self.private_key) as f:
@@ -137,7 +136,7 @@ class FabricToken:
                     raise Exception("Token already in decoded form")
 
                 if self.public_key is None:
-                    self.log.info("Decoding token without verification of origin or date")
+                    LOG.info("Decoding token without verification of origin or date")
                     verify = False
 
                 with open(self.public_key) as f:
@@ -146,9 +145,9 @@ class FabricToken:
             options = {'verify_aud': False}
             self.claims = jwt.decode(self.id_token, key=key, verify=verify, algorithms=['RS256'], options=options)
 
-            self.log.debug("Decoded Token {}".format(json.dumps(self.claims)))
+            LOG.debug("Decoded Token {}".format(json.dumps(self.claims)))
         except Exception as e:
-            self.log.error(e)
+            LOG.error(e)
             raise e
 
     def valid_until(self) -> datetime:
