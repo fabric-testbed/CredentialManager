@@ -5,7 +5,6 @@ import requests
 class TestCredmgr(unittest.TestCase):
     base_url = "http://localhost:8082/tokens/"
     create_url = base_url + "create"
-    get_url = base_url + "get/"
     refresh_url = base_url + "refresh"
     revoke_url = base_url + "revoke"
 
@@ -30,7 +29,7 @@ class TestCredmgr(unittest.TestCase):
         self.assertIsNotNone(authorization_url)
 
         # get token with user id but without authentication
-        response = requests.get(url=self.get_url + user_id, headers=self.headers)
+        response = requests.get(url=self.base_url + user_id, headers=self.headers)
         self.assertIsNone(response.json().get('value', None))
         self.assertIsNotNone(response.json().get('message', None))
 
@@ -70,7 +69,7 @@ class TestCredmgr(unittest.TestCase):
         self.assertIsNotNone(authorization_url)
 
         # get token with user id but without authentication
-        response = requests.get(url=self.get_url + user_id, headers=self.headers)
+        response = requests.get(url=self.base_url + user_id, headers=self.headers)
         self.assertIsNone(response.json().get('value', None))
         self.assertIsNotNone(response.json().get('message', None))
 
