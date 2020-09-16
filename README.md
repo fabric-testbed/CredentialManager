@@ -29,13 +29,13 @@ In a browser, go to [Swagger definition](https://app.swaggerhub.com/apis/kthare1
 
 From the generate code icon (downward facing arrow), select Download API > JSON Resolved
 
-A file named swagger-client-generated.zip should be downloaded. This file will contain openapi.json. Extract the json file from the openapi-client-generated.zip and run the following command to generate the Flask based server.
+A file named kthare10-credmgr-1.0.1-resolved.json should be downloaded. Rename it as openapi.json and copy it to CredentialManager/fabric/credmgr. Run the following command to generate the Flask based server.
 
 ```bash
-$ swagger-codegen generate -i openapi.json -l python-flask -o credmgr
+$ cp kthare10-credmgr-1.0.1-resolved.json openapi.json
+$ ./update_swagger_stub.sh
 ```
-
-Copy the generated code in credmgr/swagger_server and replace fabric/credmgr/swagger_server. default_controller.py and tokens_controller.py would need to merged before replace. In addition, package name needs to be replaced with fabric.credmgr.swagger_server instead of swagger_server.
+Remove existing swagger_server directory and move my_server/swagger_server to swagger_server after verifying all changes are as expected.
 
 ## Usage with Docker (Recommended)
 User is expected to update following in docker/config file:
