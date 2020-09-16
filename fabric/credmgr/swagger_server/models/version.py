@@ -40,7 +40,7 @@ class Version(Model):
 
         :param dikt: A dict.
         :type: dict
-        :return: The Version of this Version.  # noqa: E501
+        :return: The version of this Version.  # noqa: E501
         :rtype: Version
         """
         return util.deserialize_model(dikt, cls)

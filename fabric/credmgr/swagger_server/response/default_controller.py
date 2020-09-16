@@ -3,7 +3,6 @@ import six
 
 from fabric.credmgr.swagger_server.models.version import Version  # noqa: E501
 from fabric.credmgr.swagger_server import util
-from fabric.credmgr.swagger_server.response import default_controller as rc
 
 
 def version_get():  # noqa: E501
@@ -14,4 +13,7 @@ def version_get():  # noqa: E501
 
     :rtype: Version
     """
-    return 'do some magic!'
+    response = Version()
+    response.version = '1.0.0'
+    response.gitsha1 = 'temp'
+    return response

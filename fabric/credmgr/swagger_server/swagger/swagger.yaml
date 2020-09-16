@@ -32,7 +32,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Version'
+                $ref: '#/components/schemas/version'
       x-openapi-router-controller: fabric.credmgr.swagger_server.controllers.default_controller
   /tokens/create:
     post:
@@ -60,10 +60,10 @@ paths:
         explode: true
         schema:
           type: string
+          default: all
           enum:
           - measurement
           - all
-          default: all
       responses:
         "200":
           description: OK
@@ -106,12 +106,15 @@ paths:
         explode: true
         schema:
           type: string
+          default: all
           enum:
           - measurement
           - all
-          default: all
       requestBody:
-        $ref: '#/components/requestBodies/refresh_revoke_request'
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/refresh_revoke_request'
       responses:
         "200":
           description: OK
@@ -137,7 +140,10 @@ paths:
         Request to revoke a refresh token for an user
       operationId: tokens_revoke_post
       requestBody:
-        $ref: '#/components/requestBodies/refresh_revoke_request'
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/refresh_revoke_request'
       responses:
         "200":
           description: OK
@@ -221,7 +227,7 @@ components:
         refresh_token:
           type: string
           description: Refresh Token
-    Version:
+    version:
       properties:
         version:
           type: string
@@ -280,15 +286,8 @@ components:
       explode: true
       schema:
         type: string
+        default: all
         enum:
         - measurement
         - all
-        default: all
-  requestBodies:
-    refresh_revoke_request:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/refresh_revoke_request'
-      required: true
 

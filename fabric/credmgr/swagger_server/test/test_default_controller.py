@@ -5,6 +5,7 @@ from __future__ import absolute_import
 from flask import json
 from six import BytesIO
 
+from fabric.credmgr.swagger_server.models.version import Version  # noqa: E501
 from fabric.credmgr.swagger_server.test import BaseTestCase
 
 

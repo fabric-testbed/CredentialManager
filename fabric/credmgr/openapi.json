@@ -1,0 +1,386 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Fabric Credential Manager API",
+    "description": "This is Fabric Credential Manager API",
+    "termsOfService": "None",
+    "contact": {
+      "name": "Komal Thareja",
+      "email": "kthare10@unc.edu"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    },
+    "version": "1.0.1"
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:8100/",
+      "description": "local development"
+    },
+    {
+      "url": "https://virtserver.swaggerhub.com/kthare10/credmgr/1.0.0",
+      "description": "SwaggerHub API Auto Mocking"
+    }
+  ],
+  "tags": [
+    {
+      "name": "tokens",
+      "description": "Tokens in FABRIC"
+    }
+  ],
+  "paths": {
+    "/version": {
+      "get": {
+        "tags": [
+          "default"
+        ],
+        "summary": "version",
+        "description": "Version",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/version"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tokens/create": {
+      "post": {
+        "tags": [
+          "tokens"
+        ],
+        "summary": "Generate Fabric OAuth tokens for an user",
+        "description": "Request to generate Fabric OAuth tokens for an user\n",
+        "parameters": [
+          {
+            "name": "projectName",
+            "in": "query",
+            "description": "Project Name",
+            "required": false,
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "string",
+              "default": "all"
+            }
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "description": "Scope for which token is requested",
+            "required": false,
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "measurement",
+                "all"
+              ],
+              "default": "all"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/success"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Authorization information is missing or invalid"
+          },
+          "404": {
+            "description": "Token not found"
+          },
+          "5XX": {
+            "description": "Unexpected error"
+          }
+        }
+      }
+    },
+    "/tokens/refresh": {
+      "post": {
+        "tags": [
+          "tokens"
+        ],
+        "summary": "Refresh FABRIC OAuth tokens for an user",
+        "description": "Request to refresh OAuth tokens for an user\n",
+        "parameters": [
+          {
+            "name": "projectName",
+            "in": "query",
+            "description": "Project Name",
+            "required": false,
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "string",
+              "default": "all"
+            }
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "description": "Scope for which token is requested",
+            "required": false,
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "measurement",
+                "all"
+              ],
+              "default": "all"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/refresh_revoke_request"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/success"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Authorization information is missing or invalid"
+          },
+          "404": {
+            "description": "Token not found"
+          },
+          "5XX": {
+            "description": "Unexpected error"
+          }
+        }
+      }
+    },
+    "/tokens/revoke": {
+      "post": {
+        "tags": [
+          "tokens"
+        ],
+        "summary": "Revoke a refresh token for an user",
+        "description": "Request to revoke a refresh token for an user\n",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/refresh_revoke_request"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/success"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Authorization information is missing or invalid"
+          },
+          "404": {
+            "description": "Token not found"
+          },
+          "5XX": {
+            "description": "Unexpected error"
+          }
+        }
+      }
+    },
+    "/tokens/{userID}": {
+      "get": {
+        "tags": [
+          "tokens"
+        ],
+        "summary": "get tokens for an user",
+        "description": "Request to get tokens for an user\n",
+        "parameters": [
+          {
+            "name": "userID",
+            "in": "path",
+            "description": "User identifier returned in Create",
+            "required": true,
+            "style": "simple",
+            "explode": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/success"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Authorization information is missing or invalid"
+          },
+          "404": {
+            "description": "Token not found"
+          },
+          "5XX": {
+            "description": "Unexpected error"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "success": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "minimum": 0,
+            "type": "integer",
+            "description": "status code"
+          },
+          "message": {
+            "type": "string",
+            "description": "status message"
+          },
+          "value": {
+            "type": "object",
+            "properties": {
+              "authorization_url": {
+                "type": "string",
+                "description": "Authorization Url user must visit to authenticate"
+              },
+              "user_id": {
+                "type": "string",
+                "description": "Unique id to identify the user to which token was issued"
+              },
+              "id_token": {
+                "type": "string",
+                "description": "Identity Token"
+              },
+              "refresh_token": {
+                "type": "string",
+                "description": "Refresh Token"
+              }
+            },
+            "description": "JSON object"
+          },
+          "version": {
+            "type": "string",
+            "description": "Actor version"
+          }
+        }
+      },
+      "refresh_revoke_request": {
+        "required": [
+          "refresh_token"
+        ],
+        "type": "object",
+        "properties": {
+          "refresh_token": {
+            "type": "string",
+            "description": "Refresh Token"
+          }
+        }
+      },
+      "version": {
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "gitsha1": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "parameters": {
+      "userId": {
+        "name": "userID",
+        "in": "path",
+        "description": "User identifier returned in Create",
+        "required": true,
+        "style": "simple",
+        "explode": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "projectName": {
+        "name": "projectName",
+        "in": "query",
+        "description": "Project Name",
+        "required": false,
+        "style": "form",
+        "explode": true,
+        "schema": {
+          "type": "string",
+          "default": "all"
+        }
+      },
+      "scope": {
+        "name": "scope",
+        "in": "query",
+        "description": "Scope for which token is requested",
+        "required": false,
+        "style": "form",
+        "explode": true,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "measurement",
+            "all"
+          ],
+          "default": "all"
+        }
+      }
+    }
+  }
+}
