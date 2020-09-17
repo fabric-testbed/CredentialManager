@@ -14,4 +14,4 @@ def version_get():  # noqa: E501
 
     :rtype: Version
     """
-    return 'do some magic!'
+    return rc.version_get()

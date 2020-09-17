@@ -19,7 +19,7 @@ def tokens_create_post(project_name=None, scope=None):  # noqa: E501
 
     :rtype: Success
     """
-    return 'do some magic!'
+    return rc.tokens_create_post(project_name, scope)
 
 
 def tokens_refresh_post(body=None, project_name=None, scope=None):  # noqa: E501
@@ -38,7 +38,7 @@ def tokens_refresh_post(body=None, project_name=None, scope=None):  # noqa: E501
     """
     if connexion.request.is_json:
         body = RefreshRevokeRequest.from_dict(connexion.request.get_json())  # noqa: E501
-    return 'do some magic!'
+    return rc.tokens_refresh_post(body, project_name, scope)
 
 
 def tokens_revoke_post(body=None):  # noqa: E501
@@ -53,7 +53,7 @@ def tokens_revoke_post(body=None):  # noqa: E501
     """
     if connexion.request.is_json:
         body = RefreshRevokeRequest.from_dict(connexion.request.get_json())  # noqa: E501
-    return 'do some magic!'
+    return rc.tokens_revoke_post(body)
 
 
 def tokens_user_idget(user_id):  # noqa: E501
@@ -66,4 +66,4 @@ def tokens_user_idget(user_id):  # noqa: E501
 
     :rtype: Success
     """
-    return 'do some magic!'
+    return rc.tokens_user_idget(user_id)
