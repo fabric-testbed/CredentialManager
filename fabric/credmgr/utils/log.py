@@ -55,9 +55,10 @@ def get_logger(log_path = None, log_level = None):
     log.setLevel(log_level)
     log_format = '%(asctime)s - %(name)s - {%(filename)s:%(lineno)d} - %(levelname)s - %(message)s'
     os.makedirs(os.path.dirname(log_path), exist_ok=True)
-    logging.basicConfig(format=log_format, filename=log_path)
+
     file_handler = RotatingFileHandler(log_path, backupCount=int(CONFIG.get('logging', 'log-retain')),
                                        maxBytes=int(CONFIG.get('logging', 'log-size')))
-    log.addHandler(file_handler)
+
+    logging.basicConfig(handlers=[file_handler], format=log_format)
 
     return log, file_handler
