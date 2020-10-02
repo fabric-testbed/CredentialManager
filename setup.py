@@ -39,20 +39,18 @@ VERSION = "1.0.0"
 REQUIRES = [
         'requests',
         'requests_oauthlib',
-        'six',
-        'flask',
-        'connexion == 2.6.0',
-        'python_dateutil == 2.6.0',
-        'setuptools >= 21.0.0',
-        'mod-wsgi',
-        'python-daemon',
+        'connexion',
+        'swagger-ui-bundle',
+        'python_dateutil',
+        'setuptools',
         'psycopg2-binary',
         'sqlalchemy',
-        'PyJWT >=1.7.1',
-        'ldap3==2.6',
+        'PyJWT',
+        'ldap3',
         'prometheus_client',
         'waitress',
-        'connexion[swagger-ui]'
+        'six',
+        'cryptography'
         ]
 
 setup(
@@ -70,8 +68,7 @@ setup(
     packages=find_packages(),
     package_data={'': ['swagger/swagger.yaml']},
     include_package_data=True,
-    data_files = [(ConfDir, [ConfFile]), (LogDir, []), (HttpConfDir, [HttpConfFile]), (WsgiDir, [WsgiFile]), (SystemdDir, [CredmgrInitScript, CredmgrSwaggerInitScript])],
-    scripts = ['bin/credmgrd'],
+    data_files = [(ConfDir, [ConfFile]), (LogDir, [])],
     entry_points={
         'console_scripts': ['fabric.credmgr.swagger_server=fabric.credmgr.swagger_server.__main__:main']},
     classifiers=[

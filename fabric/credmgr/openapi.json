@@ -16,7 +16,7 @@
   },
   "servers": [
     {
-      "url": "http://127.0.0.1:8100/",
+      "url": "http://127.0.0.1:7000/",
       "description": "local development"
     },
     {
@@ -57,8 +57,8 @@
         "tags": [
           "tokens"
         ],
-        "summary": "Generate Fabric OAuth tokens for an user",
-        "description": "Request to generate Fabric OAuth tokens for an user\n",
+        "summary": "Generate tokens for an user",
+        "description": "Request to generate tokens for an user\n",
         "parameters": [
           {
             "name": "projectName",
@@ -81,10 +81,6 @@
             "explode": true,
             "schema": {
               "type": "string",
-              "enum": [
-                "measurement",
-                "all"
-              ],
               "default": "all"
             }
           }
@@ -120,7 +116,7 @@
         "tags": [
           "tokens"
         ],
-        "summary": "Refresh FABRIC OAuth tokens for an user",
+        "summary": "Refresh tokens for an user",
         "description": "Request to refresh OAuth tokens for an user\n",
         "parameters": [
           {
@@ -144,10 +140,6 @@
             "explode": true,
             "schema": {
               "type": "string",
-              "enum": [
-                "measurement",
-                "all"
-              ],
               "default": "all"
             }
           }
@@ -156,7 +148,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/refresh_revoke_request"
+                "$ref": "#/components/schemas/request"
               }
             }
           }
@@ -198,67 +190,14 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/refresh_revoke_request"
+                "$ref": "#/components/schemas/request"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/success"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "401": {
-            "description": "Authorization information is missing or invalid"
-          },
-          "404": {
-            "description": "Token not found"
-          },
-          "5XX": {
-            "description": "Unexpected error"
-          }
-        }
-      }
-    },
-    "/tokens/{userID}": {
-      "get": {
-        "tags": [
-          "tokens"
-        ],
-        "summary": "get tokens for an user",
-        "description": "Request to get tokens for an user\n",
-        "parameters": [
-          {
-            "name": "userID",
-            "in": "path",
-            "description": "User identifier returned in Create",
-            "required": true,
-            "style": "simple",
-            "explode": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/success"
-                }
-              }
-            }
+            "description": "OK"
           },
           "400": {
             "description": "Bad request"
@@ -281,44 +220,17 @@
       "success": {
         "type": "object",
         "properties": {
-          "status": {
-            "minimum": 0,
-            "type": "integer",
-            "description": "status code"
-          },
-          "message": {
+          "id_token": {
             "type": "string",
-            "description": "status message"
+            "description": "Identity Token"
           },
-          "value": {
-            "type": "object",
-            "properties": {
-              "authorization_url": {
-                "type": "string",
-                "description": "Authorization Url user must visit to authenticate"
-              },
-              "user_id": {
-                "type": "string",
-                "description": "Unique id to identify the user to which token was issued"
-              },
-              "id_token": {
-                "type": "string",
-                "description": "Identity Token"
-              },
-              "refresh_token": {
-                "type": "string",
-                "description": "Refresh Token"
-              }
-            },
-            "description": "JSON object"
-          },
-          "version": {
+          "refresh_token": {
             "type": "string",
-            "description": "Actor version"
+            "description": "Refresh Token"
           }
         }
       },
-      "refresh_revoke_request": {
+      "request": {
         "required": [
           "refresh_token"
         ],
@@ -342,17 +254,6 @@
       }
     },
     "parameters": {
-      "userId": {
-        "name": "userID",
-        "in": "path",
-        "description": "User identifier returned in Create",
-        "required": true,
-        "style": "simple",
-        "explode": false,
-        "schema": {
-          "type": "string"
-        }
-      },
       "projectName": {
         "name": "projectName",
         "in": "query",
@@ -374,10 +275,6 @@
         "explode": true,
         "schema": {
           "type": "string",
-          "enum": [
-            "measurement",
-            "all"
-          ],
           "default": "all"
         }
       }

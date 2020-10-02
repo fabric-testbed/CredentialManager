@@ -5,7 +5,7 @@ from __future__ import absolute_import
 from flask import json
 from six import BytesIO
 
-from fabric.credmgr.swagger_server.models.refresh_revoke_request import RefreshRevokeRequest  # noqa: E501
+from fabric.credmgr.swagger_server.models.request import Request  # noqa: E501
 from fabric.credmgr.swagger_server.models.success import Success  # noqa: E501
 from fabric.credmgr.swagger_server.test import BaseTestCase
 
@@ -16,7 +16,7 @@ class TestTokensController(BaseTestCase):
     def test_tokens_create_post(self):
         """Test case for tokens_create_post
 
-        Generate Fabric OAuth tokens for an user
+        Generate tokens for an user
         """
         query_string = [('project_name', 'all'),
                         ('scope', 'all')]
@@ -30,9 +30,9 @@ class TestTokensController(BaseTestCase):
     def test_tokens_refresh_post(self):
         """Test case for tokens_refresh_post
 
-        Refresh FABRIC OAuth tokens for an user
+        Refresh tokens for an user
         """
-        body = RefreshRevokeRequest()
+        body = Request()
         query_string = [('project_name', 'all'),
                         ('scope', 'all')]
         response = self.client.open(
@@ -49,23 +49,12 @@ class TestTokensController(BaseTestCase):
 
         Revoke a refresh token for an user
         """
-        body = RefreshRevokeRequest()
+        body = Request()
         response = self.client.open(
             '//tokens/revoke',
             method='POST',
             data=json.dumps(body),
             content_type='application/json')
-        self.assert200(response,
-                       'Response body is : ' + response.data.decode('utf-8'))
-
-    def test_tokens_user_idget(self):
-        """Test case for tokens_user_idget
-
-        get tokens for an user
-        """
-        response = self.client.open(
-            '//tokens/{userID}'.format(user_id='user_id_example'),
-            method='GET')
         self.assert200(response,
                        'Response body is : ' + response.data.decode('utf-8'))
 

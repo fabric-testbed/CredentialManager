@@ -37,6 +37,7 @@ ldap_search_base = CONFIG.get('ldap', 'ldap-search-base')
 
 server = Server(ldap_host, use_ssl=True, get_info=ALL)
 
+
 def get_active_projects_from_ldap(eppn, email):
     """
     Return active projects for a user identified by eppn or email

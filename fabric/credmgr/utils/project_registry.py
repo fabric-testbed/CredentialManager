@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env python3
 # MIT License
 #
 # Copyright (c) 2020 FABRIC Testbed
@@ -22,35 +22,33 @@
 # SOFTWARE.
 #
 # Author Komal Thareja (kthare10@renci.org)
+import requests
 
-# Install the required packages
-yum install -y epel-release gcc httpd mod_ssl mod_wsgi httpd-devel python3-devel
-yum install -y postgresql postgresql-devel
-pip3 install --no-cache-dir -r requirements.txt
 
-# Create credmgr user
-groupadd credmgr
-useradd credmgr -g credmgr
+class ProjectRegistry:
+    def __init__(self, api_server: str, cookie: str):
+        self.api_server = api_server
+        self.cookie = cookie
 
-mkdir -p "/var/www/documents"
-mkdir -p "/var/www/cgi-bin/wsgi/credmgr"
-mkdir -p "/var/lib/credmgr"
-chown -R credmgr:credmgr "/var/lib/credmgr"
-mkdir -p "/var/log/credmgr"
-chown -R credmgr:credmgr "/var/log/credmgr"
+    def _headers(self):
+        headers = {
+            'Accept': 'application/json',
+            'Content-Type': "application/json",
+        }
+        return headers
 
-# Install Credmgr
-pip3 install .
+    def get_roles(self, sub: str):
+        if self.api_server is None or self.cookie is None:
+            raise Exception("Project Registry URL: {} or Cookie: {} not available".format(self.api_server, self.cookie))
+        url = self.api_server + "/people/oidc_claim_sub?oidc_claim_sub={}".format(sub)
+        response = requests.get(url, headers=self._headers())
 
-# Generate mod_wsgi config
-mod_wsgi-express install-module > /etc/httpd/conf.modules.d/02-wsgi.conf
-cp /etc/credmgr/config_docker /etc/credmgr/config
-sed -i "s/REPLACE_WITH_FQDN/credmgr/g" /etc/httpd/conf.d/credmgr.conf
-sed -i 's/w+t/wb+/g' /usr/local/lib/python3*/site-packages/daemon/runner.py
+        if response.status_code != 200:
+            raise ProjectRegistryError("Project Registry error occurred status_code: {} message: {}".format(
+                response.status_code, response.content))
 
-systemctl enable httpd
-systemctl enable credmgrd
-systemctl enable credmgr.swagger_server
-echo "Setup credmgr daemon and credmgr swagger_server complete"
+        return response.json()['roles']
 
-exec /usr/sbin/init
+
+class ProjectRegistryError(Exception):
+    pass

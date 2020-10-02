@@ -11,7 +11,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: 1.0.1
 servers:
-- url: http://127.0.0.1:8100/
+- url: http://127.0.0.1:7000/
   description: local development
 - url: https://virtserver.swaggerhub.com/kthare10/credmgr/1.0.0
   description: SwaggerHub API Auto Mocking
@@ -38,9 +38,9 @@ paths:
     post:
       tags:
       - tokens
-      summary: Generate Fabric OAuth tokens for an user
+      summary: Generate tokens for an user
       description: |
-        Request to generate Fabric OAuth tokens for an user
+        Request to generate tokens for an user
       operationId: tokens_create_post
       parameters:
       - name: projectName
@@ -61,9 +61,6 @@ paths:
         schema:
           type: string
           default: all
-          enum:
-          - measurement
-          - all
       responses:
         "200":
           description: OK
@@ -84,7 +81,7 @@ paths:
     post:
       tags:
       - tokens
-      summary: Refresh FABRIC OAuth tokens for an user
+      summary: Refresh tokens for an user
       description: |
         Request to refresh OAuth tokens for an user
       operationId: tokens_refresh_post
@@ -107,14 +104,11 @@ paths:
         schema:
           type: string
           default: all
-          enum:
-          - measurement
-          - all
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/refresh_revoke_request'
+              $ref: '#/components/schemas/request'
       responses:
         "200":
           description: OK
@@ -143,47 +137,10 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/refresh_revoke_request'
+              $ref: '#/components/schemas/request'
       responses:
         "200":
           description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/success'
-        "400":
-          description: Bad request
-        "401":
-          description: Authorization information is missing or invalid
-        "404":
-          description: Token not found
-        "5XX":
-          description: Unexpected error
-      x-openapi-router-controller: fabric.credmgr.swagger_server.controllers.tokens_controller
-  /tokens/{userID}:
-    get:
-      tags:
-      - tokens
-      summary: get tokens for an user
-      description: |
-        Request to get tokens for an user
-      operationId: tokens_user_idget
-      parameters:
-      - name: userID
-        in: path
-        description: User identifier returned in Create
-        required: true
-        style: simple
-        explode: false
-        schema:
-          type: string
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/success'
         "400":
           description: Bad request
         "401":
@@ -198,28 +155,16 @@ components:
     success:
       type: object
       properties:
-        status:
-          minimum: 0
-          type: integer
-          description: status code
-        message:
+        id_token:
           type: string
-          description: status message
-        value:
-          $ref: '#/components/schemas/success_value'
-        version:
+          description: Identity Token
+        refresh_token:
           type: string
-          description: Actor version
+          description: Refresh Token
       example:
-        message: message
-        value:
-          refresh_token: refresh_token
-          user_id: user_id
-          authorization_url: authorization_url
-          id_token: id_token
-        version: version
-        status: 0
-    refresh_revoke_request:
+        refresh_token: refresh_token
+        id_token: id_token
+    request:
       required:
       - refresh_token
       type: object
@@ -236,37 +181,7 @@ components:
       example:
         gitsha1: gitsha1
         version: version
-    success_value:
-      type: object
-      properties:
-        authorization_url:
-          type: string
-          description: Authorization Url user must visit to authenticate
-        user_id:
-          type: string
-          description: Unique id to identify the user to which token was issued
-        id_token:
-          type: string
-          description: Identity Token
-        refresh_token:
-          type: string
-          description: Refresh Token
-      description: JSON object
-      example:
-        refresh_token: refresh_token
-        user_id: user_id
-        authorization_url: authorization_url
-        id_token: id_token
   parameters:
-    userId:
-      name: userID
-      in: path
-      description: User identifier returned in Create
-      required: true
-      style: simple
-      explode: false
-      schema:
-        type: string
     projectName:
       name: projectName
       in: query
@@ -287,7 +202,4 @@ components:
       schema:
         type: string
         default: all
-        enum:
-        - measurement
-        - all
 

@@ -6,7 +6,6 @@ from datetime import date, datetime  # noqa: F401
 from typing import List, Dict  # noqa: F401
 
 from fabric.credmgr.swagger_server.models.base_model_ import Model
-from fabric.credmgr.swagger_server.models.success_value import SuccessValue  # noqa: F401,E501
 from fabric.credmgr.swagger_server import util
 
 
@@ -15,35 +14,25 @@ class Success(Model):
 
     Do not edit the class manually.
     """
-    def __init__(self, status: int=None, message: str=None, value: SuccessValue=None, version: str=None):  # noqa: E501
+    def __init__(self, id_token: str=None, refresh_token: str=None):  # noqa: E501
         """Success - a model defined in Swagger
 
-        :param status: The status of this Success.  # noqa: E501
-        :type status: int
-        :param message: The message of this Success.  # noqa: E501
-        :type message: str
-        :param value: The value of this Success.  # noqa: E501
-        :type value: SuccessValue
-        :param version: The version of this Success.  # noqa: E501
-        :type version: str
+        :param id_token: The id_token of this Success.  # noqa: E501
+        :type id_token: str
+        :param refresh_token: The refresh_token of this Success.  # noqa: E501
+        :type refresh_token: str
         """
         self.swagger_types = {
-            'status': int,
-            'message': str,
-            'value': SuccessValue,
-            'version': str
+            'id_token': str,
+            'refresh_token': str
         }
 
         self.attribute_map = {
-            'status': 'status',
-            'message': 'message',
-            'value': 'value',
-            'version': 'version'
+            'id_token': 'id_token',
+            'refresh_token': 'refresh_token'
         }
-        self._status = status
-        self._message = message
-        self._value = value
-        self._version = version
+        self._id_token = id_token
+        self._refresh_token = refresh_token
 
     @classmethod
     def from_dict(cls, dikt) -> 'Success':
@@ -57,91 +46,47 @@ class Success(Model):
         return util.deserialize_model(dikt, cls)
 
     @property
-    def status(self) -> int:
-        """Gets the status of this Success.
+    def id_token(self) -> str:
+        """Gets the id_token of this Success.
 
-        status code  # noqa: E501
+        Identity Token  # noqa: E501
 
-        :return: The status of this Success.
-        :rtype: int
-        """
-        return self._status
-
-    @status.setter
-    def status(self, status: int):
-        """Sets the status of this Success.
-
-        status code  # noqa: E501
-
-        :param status: The status of this Success.
-        :type status: int
-        """
-
-        self._status = status
-
-    @property
-    def message(self) -> str:
-        """Gets the message of this Success.
-
-        status message  # noqa: E501
-
-        :return: The message of this Success.
+        :return: The id_token of this Success.
         :rtype: str
         """
-        return self._message
+        return self._id_token
 
-    @message.setter
-    def message(self, message: str):
-        """Sets the message of this Success.
+    @id_token.setter
+    def id_token(self, id_token: str):
+        """Sets the id_token of this Success.
 
-        status message  # noqa: E501
+        Identity Token  # noqa: E501
 
-        :param message: The message of this Success.
-        :type message: str
+        :param id_token: The id_token of this Success.
+        :type id_token: str
         """
 
-        self._message = message
+        self._id_token = id_token
 
     @property
-    def value(self) -> SuccessValue:
-        """Gets the value of this Success.
+    def refresh_token(self) -> str:
+        """Gets the refresh_token of this Success.
 
+        Refresh Token  # noqa: E501
 
-        :return: The value of this Success.
-        :rtype: SuccessValue
-        """
-        return self._value
-
-    @value.setter
-    def value(self, value: SuccessValue):
-        """Sets the value of this Success.
-
-
-        :param value: The value of this Success.
-        :type value: SuccessValue
-        """
-
-        self._value = value
-
-    @property
-    def version(self) -> str:
-        """Gets the version of this Success.
-
-        Actor version  # noqa: E501
-
-        :return: The version of this Success.
+        :return: The refresh_token of this Success.
         :rtype: str
         """
-        return self._version
+        return self._refresh_token
 
-    @version.setter
-    def version(self, version: str):
-        """Sets the version of this Success.
+    @refresh_token.setter
+    def refresh_token(self, refresh_token: str):
+        """Sets the refresh_token of this Success.
 
-        Actor version  # noqa: E501
+        Refresh Token  # noqa: E501
 
-        :param version: The version of this Success.
-        :type version: str
+        :param refresh_token: The refresh_token of this Success.
+        :type refresh_token: str
         """
 
-        self._version = version
+        self._refresh_token = refresh_token
