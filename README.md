@@ -31,6 +31,8 @@ This package includes:
  - Swagger generated REST Server which supports APIs to create/refresh/revoke tokens
  - Uses Vouch-Proxy (with Nginx) to enable authentication using CILogon
  
+ Credential Manager can roles directly from CoManage via ldap queries or via project registry. This is a configurable option. For now, by default it is configured to use LDAP queries.
+ 
  ![Component Diagram](./images/credmgr.png)
 
 ## <a name="requirements"></a>Requirements
