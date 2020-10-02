@@ -56,18 +56,13 @@ log-retain = 5
 log-size = 5000000
 
 [oauth]
-oauth-credmgr-token-lifetime = 60
 oauth-provider = cilogon
-oauth-authorization-url = https://cilogon.org/authorize
 oauth-token-url = https://cilogon.org/oauth2/token
 oauth-revoke-url = https://cilogon.org/oauth2/revoke
-oauth-user-url = https://cilogon.org/oauth2/userinfo
-oauth-scope = openid email profile org.cilogon.userinfo
 oauth-jwks-url = https://cilogon.org/oauth2/certs
 
 oauth-client-id = 
-oauth-client-secret = 
-oauth-return-url = 
+oauth-client-secret =
 
 [ldap]
 ldap-host = 
