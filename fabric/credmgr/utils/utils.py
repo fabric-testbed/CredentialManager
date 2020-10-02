@@ -35,14 +35,9 @@ def get_providers():
     providers = {}
     provider = CONFIG.get('oauth', "oauth-provider")
     providers[provider] = {}
-    providers[provider]['logged_in'] = False
     providers[provider]['client_id'] = CONFIG.get('oauth', "oauth-client-id")
-    providers[provider]['redirect_uri'] = CONFIG.get('oauth', "oauth-return-url")
-    providers[provider]['url'] = CONFIG.get('oauth', "oauth-authorization-url")
     providers[provider]['client_secret'] = CONFIG.get('oauth', "oauth-client-secret")
     providers[provider]['token_uri'] = CONFIG.get('oauth', "oauth-token-url")
     providers[provider]['revoke_uri'] = CONFIG.get('oauth', "oauth-revoke-url")
-    providers[provider]['user_uri'] = CONFIG.get('oauth', "oauth-user-url")
-    providers[provider]['scope'] = CONFIG.get('oauth', "oauth-scope")
 
     return providers
