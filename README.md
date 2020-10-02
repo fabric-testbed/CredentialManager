@@ -10,6 +10,8 @@
  - [Swagger Server](#swagger)
    - [Generate a new Server Stub](#generate)   
  - [Usage](#usage)
+   - [Configuration](#config)
+   - [Deployment](#deploy)
  - [Logging](#logging)
    - [Filebeat Configuration](#filebeat)
    - [Logstash Filters](#logstash)
@@ -37,8 +39,6 @@ This package includes:
 
 ## <a name="requirements"></a>Requirements
 - Python 3.6+
-- HTTPS-enabled web server 
-- WSGI server
 
 ## <a name="apispec"></a>API
 API Documentation can be found [here](https://app.swaggerhub.com/apis-docs/kthare10/credmgr/1.0.1)
@@ -102,11 +102,35 @@ $ ./update_swagger_stub.sh
 Remove existing swagger_server directory and move my_server/swagger_server to swagger_server after verifying all changes are as expected.
 
 ## <a name="usage"></a>Usage
-Copy config file as config_template. Update the config_template for the following parameters:
+### <a name="config"></a>Configuration
+#### CILogon Client Registration
+- To get started, register your client at https://cilogon.org/oauth2/register and wait for notice of approval. Please register your callback URLs on that page with care. They are the only callback URLs that may be used by your client unless you later contact help@cilogon.org and request a change to your registration.
+- Upon completion the user will be issued a `CILOGON_CLIENT_ID` and `CILOGON_CLIENT_SECRET`.
+NOTE: Callback url should match the url specified in Vouch Proxy Config
+#### Vouch Config
+Copy the vouch/config_template as vouch/config and update that file with the `CILOGON_CLIENT_ID` and `CILOGON_CLIENT_SECRET` information as provided by CILogon.
+```
+ oauth:
+   # Generic OpenID Connect
+   # including okta
+   provider: oidc
+   client_id: CILOGON_CLIENT_ID
+   client_secret: CILOGON_CLIENT_SECRET
+   auth_url: https://cilogon.org/authorize
+   token_url: https://cilogon.org/oauth2/token
+   user_info_url: https://cilogon.org/oauth2/userinfo
+   scopes:
+     - openid
+     - email
+     - profile
+   callback_url: http://127.0.0.1:9090/auth
+```
+
+#### Credmr Config
+Copy `config` file as `config_template`. Update the `config_template` for the following parameters:
 ```
 oauth-client-id = 
 oauth-client-secret = 
-oauth-return-url = 
 
 ldap-host = 
 ldap-user = 
@@ -119,6 +143,8 @@ enable-project-registry = False
 # Life time of the Fabric Identity Token specified in minutes
 token-lifetime = 60
 ```
+### <a name="deploy"></a>Deployment
+
 Once the config file has been updated, bring up the containers. By default, self-signed certificates kept in ssl directory are used and refered in docker-compose.yml. For production, signed certificates must be used. 
 
 ```bash
