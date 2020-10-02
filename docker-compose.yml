@@ -1,40 +1,40 @@
 version: '3.6'
 
 services:
-    database:
-        image: postgres:10
-        container_name: creddb
-        hostname: creddb
-        restart: always
-        environment:
-        - POSTGRES_PASSWORD=credmgr
-        - POSTGRES_USER=credmgr
-        - POSTGRES_DB=credmgr
+    nginx:
+        image: library/nginx:1
+        container_name: nginx
         ports:
-        - 9432:${POSTGRES_PORT:-5432}
+            - 8443:443
+        volumes:
+            - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+            - ./ssl:/etc/ssl
+        restart: unless-stopped
+    vouch-proxy:
+        container_name: vouch-proxy
+        image: kthare10/vouch-proxy:refresh_token
+        ports:
+        - 9090:9090
+        volumes:
+        - ./vouch:/config
+        - ./data:/data
+        restart: unless-stopped
     credmgr:
+        build:
+            context: ./
+            dockerfile: Dockerfile
         container_name: credmgr
         hostname: credmgr
         image: credmgr:latest
-        restart: always
-        privileged: true
-        cap_add:
-            - SYS_ADMIN
-        security_opt:
-            - seccomp:unconfined
-        tmpfs:
-            - /run
-            - /run/lock
+        restart: on-failure
+        depends_on:
+            - nginx
+            - vouch-proxy
         volumes:
-            - /sys/fs/cgroup:/sys/fs/cgroup:ro
             - ./log/credmgr:/var/log/credmgr
-            - ./log/httpd:/var/log/httpd
-            - "./docker/config:/etc/credmgr/config"
-            - "./docker/self.signed.crt:/etc/credmgr/hostcert.pem"
-            - "./docker/self.signed.key:/etc/credmgr/hostkey.pem"
-            - "./docker/public.pem:/etc/credmgr/public.pem"
-            - "./docker/private.pem:/etc/credmgr/private.pem"
+            - ./config_template:/etc/credmgr/config
+            - ./ssl/pubkey.pem:/etc/credmgr/public.pem
+            - ./ssl/privkey.pem:/etc/credmgr/private.pem
         ports:
-        - "8082:8080"
-        - "443:443"
-        - "8100:8100"
+            - 7000:7000
+            - 8100:8100

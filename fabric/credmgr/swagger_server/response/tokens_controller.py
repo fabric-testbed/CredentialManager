@@ -1,9 +1,8 @@
 import connexion
 import six
 
-from fabric.credmgr.credential_managers.oauth_credmgr_singleton import OAuthCredmgrSingleton
-from fabric.credmgr.swagger_server.models import SuccessValue
-from fabric.credmgr.swagger_server.models.refresh_revoke_request import RefreshRevokeRequest  # noqa: E501
+from fabric.credmgr.credential_managers.oauth_credmgr import OAuthCredmgr
+from fabric.credmgr.swagger_server.models.request import Request  # noqa: E501
 from fabric.credmgr.swagger_server.models.success import Success  # noqa: E501
 from fabric.credmgr.swagger_server import received_counter, success_counter, failure_counter
 from fabric.credmgr.utils import LOG
@@ -22,21 +21,24 @@ def tokens_create_post(project_name=None, scope=None):  # noqa: E501
     :rtype: Success
     """
     received_counter.labels('post', '/tokens/create').inc()
-    response = Success()
     try:
-        result = OAuthCredmgrSingleton.get().create_token(project_name, scope)
-        response.message = "Please visit {}! Use {} to retrieve the token after authentication".format(result["authorization_url"],
-                                                                                                    result["user_id"])
-        response.value = SuccessValue.from_dict(result)
+        ci_logon_id_token = connexion.request.headers.get('X-Vouch-Idp-Idtoken', None)
+        refresh_token = connexion.request.headers.get('X-Vouch-Idp-Refreshtoken', None)
+        cookie = connexion.request.headers.get('Cookie', None)
+        credmgr = OAuthCredmgr()
+        result = credmgr.create_token(ci_logon_id_token=ci_logon_id_token,
+                                      refresh_token=refresh_token,
+                                      project=project_name,
+                                      scope=scope,
+                                      cookie=cookie)
+        response = Success.from_dict(result)
         LOG.debug(result)
-        response.status = 200
         success_counter.labels('post', '/tokens/create').inc()
+        return response
     except Exception as e:
-        response.message = str(e)
-        response.status = 500
         LOG.exception(e)
         failure_counter.labels('post', '/tokens/create').inc()
-    return response
+        return str(e), 500
 
 
 def tokens_refresh_post(body, project_name=None, scope=None):  # noqa: E501
@@ -55,19 +57,19 @@ def tokens_refresh_post(body, project_name=None, scope=None):  # noqa: E501
     """
     received_counter.labels('post', '/tokens/refresh').inc()
     if connexion.request.is_json:
-        body = RefreshRevokeRequest.from_dict(connexion.request.get_json())  # noqa: E501
-    response = Success()
+        body = Request.from_dict(connexion.request.get_json())  # noqa: E501
     try:
-        response.value = SuccessValue.from_dict(OAuthCredmgrSingleton.get().refresh_token(body.refresh_token,
-                                                                                                  project_name, scope))
-        response.status = 200
+        cookie = connexion.request.headers.get('Cookie', None)
+        credmgr = OAuthCredmgr()
+        response = Success.from_dict(credmgr.refresh_token(refresh_token=body.refresh_token,
+                                                                      project=project_name, scope=scope,
+                                                                      cookie=cookie))
         success_counter.labels('post', '/tokens/refresh').inc()
+        return response
     except Exception as e:
-        response.message = str(e)
-        response.status = 500
         LOG.exception(e)
         failure_counter.labels('post', '/tokens/refresh').inc()
-    return response
+        return str(e), 500
 
 
 def tokens_revoke_post(body):  # noqa: E501
@@ -82,40 +84,13 @@ def tokens_revoke_post(body):  # noqa: E501
     """
     received_counter.labels('post', '/tokens/revoke').inc()
     if connexion.request.is_json:
-        body = RefreshRevokeRequest.from_dict(connexion.request.get_json())  # noqa: E501
-    response = Success()
+        body = Request.from_dict(connexion.request.get_json())  # noqa: E501
     try:
-        OAuthCredmgrSingleton.get().revoke_token(body.refresh_token)
-        response.message = "Token revoked successfully"
-        response.status = 200
+        credmgr = OAuthCredmgr()
+        credmgr.revoke_token(refresh_token=body.refresh_token)
         success_counter.labels('post', '/tokens/revoke').inc()
     except Exception as e:
-        response.message = str(e)
-        response.status = 500
         LOG.exception(e)
         failure_counter.labels('post', '/tokens/revoke').inc()
-    return response
-
-
-def tokens_user_idget(user_id):  # noqa: E501
-    """get tokens for an user
-
-    Request to get tokens for an user  # noqa: E501
-
-    :param user_id: User identifier returned in Create
-    :type user_id: str
-
-    :rtype: Success
-    """
-    received_counter.labels('get', '/tokens/{}'.format(user_id)).inc()
-    response = Success()
-    try:
-        response.value = SuccessValue.from_dict(OAuthCredmgrSingleton.get().get_token(user_id))
-        response.status = 200
-        success_counter.labels('get', '/tokens/{}'.format(user_id)).inc()
-    except Exception as e:
-        LOG.exception(e)
-        response.message = str(e)
-        response.status = 500
-        failure_counter.labels('get', '/tokens/{}'.format(user_id)).inc()
-    return response
+        return str(e), 500
+    return {}

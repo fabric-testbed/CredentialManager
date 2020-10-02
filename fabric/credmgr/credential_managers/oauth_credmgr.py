@@ -23,24 +23,20 @@
 #
 # Author Komal Thareja (kthare10@renci.org)
 import base64
+from datetime import timedelta
 
 from fabric.credmgr.credential_managers.abstract_credential_manager import AbstractCredentialManager
-from fabric.credmgr.utils.utils import generate_user_key, get_providers
-import socket
-
-from fabric.credmgr.utils.database import IdTokens, Database
+from fabric.credmgr.utils import LOG
+from fabric.credmgr.utils.utils import get_providers
 from fabric.credmgr.utils.token import FabricToken
 
 try:
     from requests_oauthlib import OAuth2Session
 except:
     OAuth2Session = None
-import os
-import time
-import glob
-import re
+
 import requests
-from fabric.credmgr import CONFIG
+from fabric.credmgr import CONFIG, DefaultTokenLifeTime
 
 
 class OAuthCredmgr(AbstractCredentialManager):
@@ -49,67 +45,33 @@ class OAuthCredmgr(AbstractCredentialManager):
     It also provides support for scanning and cleaning up of expired tokens and key files.
     """
 
-    def __init__(self, *args, **kw):
-        super(OAuthCredmgr, self).__init__(*args, **kw)
+    def __init__(self):
+        self.log = LOG
 
-    def should_delete(self, token:IdTokens):
-        """
-        Checks if refresh token in the database has expired and can be deleted
-        """
-        return False
+    def _generate_fabric_token(self, ci_logon_id_token: str, project: str, scope: str, cookie: str = None):
+        self.log.debug("CILogon Token: {}".format(ci_logon_id_token))
+        fabric_token = FabricToken(ci_logon_id_token, project, scope, cookie)
+        fabric_token.decode()
+        fabric_token.set_claims()
+        validty = CONFIG.get('runtime', 'token-lifetime')
+        if validty is None:
+            validty = DefaultTokenLifeTime
+        id_token = fabric_token.encode(timedelta(minutes=int(validty)))
+        self.log.debug("Fabric Token: {}".format(id_token))
 
-    def scan_tokens(self):
-        """
-        Scan the Credential Directory to cleanup the old key files or delete the expired tokens from database
-        """
-        # loop over all tokens in the database
-        #db = Database()
-        #tokens = db.read_all_tokens()
-        #for token in tokens:
-        #    if self.should_delete(token):
-        #        self.log.info('%s tokens for user %s are marked for deletion', token.refresh_token, token.user_id)
-        #        db.delete_tokens(token)
+        return id_token
 
-        # also cleanup any stale key files
-        self.cleanup_key_files()
-
-    def cleanup_key_files(self):
-        """
-        Cleanup the stale key files from cred_dir
-        """
-
-        # key filenames are hashes with str len 64
-        key_file_re = re.compile(r'^[a-f0-9]{64}$')
-
-        # loop over all possible key files in cred_dir
-        key_files = glob.glob(os.path.join(self.cred_dir, '?'*64))
-        for key_file in key_files:
-            if ((not key_file_re.match(os.path.basename(key_file)))
-                    or os.path.isdir(key_file)):
-                continue
-
-            try:
-                ctime = os.stat(key_file).st_ctime
-            except OSError as os_error:
-                self.log.error('Could not stat key file %s: %s', key_file, os_error)
-                continue
-
-            # remove key files if over 12 hours old
-            if time.time() - ctime > 12*3600:
-                self.log.info('Removing stale key file %s', os.path.basename(key_file))
-                try:
-                    os.unlink(key_file)
-                except OSError as os_error:
-                    self.log.error('Could not remove key file %s: %s', key_file, os_error)
-
-    def create_token(self, project: str, scope: str):
+    def create_token(self, project: str, scope: str, ci_logon_id_token: str, refresh_token: str, cookie: str = None) -> dict:
         """
         Generates key file and return authorization url for user to authenticate itself and also returns user id
 
         @param project: Project for which token is requested, by default it is set to 'all'
         @param scope: Scope of the requested token, by default it is set to 'all'
+        @param ci_logon_id_token: CI logon Identity Token
+        @param refresh_token: Refresh Token
+        @param cookie: Vouch Proxy Cookie
 
-        @returns dictionary containing authorization_url and user_id
+        @returns dict containing id_token and refresh_token
         @raises Exception in case of error
         """
 
@@ -117,21 +79,22 @@ class OAuthCredmgr(AbstractCredentialManager):
             raise OAuthCredMgrError("CredMgr: Cannot request to create a token, "
                                     "Missing required parameter 'project' or 'scope'!")
 
-        user_file = generate_user_key(project, scope)
-        if user_file is None:
-            raise OAuthCredMgrError("CredMgr:user_file could not be generate!")
-        port = CONFIG.get("runtime", "port")
-        fqdn = CONFIG.get("runtime", "fqdn")
-        url = "https://{}:{}/key/{}".format(fqdn, port, user_file)
-        result = {"authorization_url": url, "user_id": user_file}
-        self.log.info(result)
+        id_token = self._generate_fabric_token(ci_logon_id_token=ci_logon_id_token, project=project, scope=scope,
+                                               cookie=cookie)
+
+        result = {"id_token": id_token, "refresh_token":refresh_token}
         return result
 
-    def refresh_token(self, refresh_token: str, project: str, scope: str) -> dict:
+    def refresh_token(self, refresh_token: str, project: str, scope: str, cookie: str = None) -> dict:
         """
         Refreshes a token from CILogon and generates Fabric token using project and scope saved in Database
 
-        @returns dictionary containing tokens and user_id
+        @param project: Project for which token is requested, by default it is set to 'all'
+        @param scope: Scope of the requested token, by default it is set to 'all'
+        @param refresh_token: Refresh Token
+        @param cookie: Vouch Proxy Cookie
+        @returns dict containing id_token and refresh_token
+
         @raises Exception in case of error
         """
 
@@ -155,12 +118,7 @@ class OAuthCredmgr(AbstractCredentialManager):
             self.log.error("No refresh or id token returned")
             return None
 
-        self.log.debug("Before: {}".format(id_token))
-        fabric_token = FabricToken(id_token, project, scope)
-        fabric_token.decode()
-        fabric_token.set_claims()
-        id_token = fabric_token.encode()
-        self.log.debug("After: {}".format(id_token))
+        id_token = self._generate_fabric_token(ci_logon_id_token=id_token, project=project, scope=scope, cookie=cookie)
 
         result = {"id_token": id_token, "refresh_token":refresh_token}
 
@@ -196,23 +154,6 @@ class OAuthCredmgr(AbstractCredentialManager):
         self.log.debug(str(response.content,  "utf-8"))
         if response.status_code != 200:
             raise OAuthCredMgrError(str(response.content,  "utf-8"))
-
-    def get_token(self, user_id: str) -> dict:
-        """
-        Returns the token for user_id returned via Create API after authentication
-
-        @returns dictionary containing tokens and user_id
-        """
-        if user_id is None:
-            raise OAuthCredMgrError("CredMgr: Cannot request to get a token, Missing required parameter 'user_id'!")
-
-        db = Database()
-        result = db.read_token(user_id)
-        if result is None:
-            raise OAuthCredMgrError("CredMgr: Token not found for 'user_id'={}!".format(user_id))
-        db.delete_token(user_id)
-
-        return result
 
 
 class OAuthCredMgrError(Exception):

@@ -25,58 +25,41 @@
 import six
 from abc import ABCMeta, abstractmethod
 
-from fabric.credmgr.utils import LOG
-from fabric.credmgr.utils.utils import get_cred_dir
-
 
 @six.add_metaclass(ABCMeta)
 class AbstractCredentialManager:
     """
     Abstract Credential Manager class
-
-    :param cred_dir: The credential directory to scan.
-    :type cred_dir: str
     """
-
-    def __init__(self, cred_dir = None):
-        self.cred_dir = get_cred_dir(cred_dir)
-        self.log = LOG
-
-    def get_logger(self):
-        """
-        Returns a child logger object specific to its class
-        """
-        return LOG
-
     @abstractmethod
-    def scan_tokens(self):
-        """
-        Scan the Credential Directory to cleanup the old key files or delete the expired tokens from database
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def create_token(self, project:str, scope:str) -> dict:
+    def create_token(self, project: str, scope: str, ci_logon_id_token: str, refresh_token: str,
+                     cookie: str = None) -> dict:
         """
         Generates key file and return authorization url for user to authenticate itself and also returns user id
 
         @param project: Project for which token is requested, by default it is set to 'all'
         @param scope: Scope of the requested token, by default it is set to 'all'
+        @param ci_logon_id_token: CI logon Identity Token
+        @param refresh_token: Refresh Token
+        @param cookie: Vouch Proxy Cookie
 
-        @returns dictionary containing authorization_url and user_id
+        @returns dict containing id_token and refresh_token
         @raises Exception in case of error
         """
-        raise NotImplementedError
 
     @abstractmethod
-    def refresh_token(self, refresh_token: str, project: str, scope: str) -> dict:
+    def refresh_token(self, refresh_token: str, project: str, scope: str, cookie: str = None) -> dict:
         """
         Refreshes a token from CILogon and generates Fabric token using project and scope saved in Database
 
-        @returns dictionary containing tokens and user_id
+        @param project: Project for which token is requested, by default it is set to 'all'
+        @param scope: Scope of the requested token, by default it is set to 'all'
+        @param refresh_token: Refresh Token
+        @param cookie: Vouch Proxy Cookie
+        @returns dict containing id_token and refresh_token
+
         @raises Exception in case of error
         """
-        raise NotImplementedError
 
     @abstractmethod
     def revoke_token(self, refresh_token: str):
@@ -86,14 +69,3 @@ class AbstractCredentialManager:
         @returns dictionary containing status of the operation
         @raises Exception in case of error
         """
-        raise NotImplementedError
-
-    @abstractmethod
-    def get_token(self, user_id:str):
-        """
-        Returns the token for user_id returned via Create API after authentication
-
-        @returns dictionary containing tokens and user_id
-        @raises Exception in case of error
-        """
-        raise NotImplementedError

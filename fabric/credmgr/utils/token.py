@@ -23,7 +23,7 @@
 #
 # Author Komal Thareja (kthare10@renci.org)
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import jwt
 import requests
@@ -32,6 +32,7 @@ from dateutil import tz
 from fabric.credmgr import CONFIG
 from fabric.credmgr.utils import LOG
 from fabric.credmgr.utils.ldap import get_active_projects_from_ldap
+from fabric.credmgr.utils.project_registry import ProjectRegistry
 
 
 class FabricToken:
@@ -40,7 +41,7 @@ class FabricToken:
     by adding the project, scope and membership information to the token
     and signing with Fabric Certificate
     """
-    def __init__(self, id_token, project="all", scope="all"):
+    def __init__(self, id_token, project="all", scope="all", cookie: str = None):
         """
         Constructor
         @param id_token: CI Logon Identity Token
@@ -63,6 +64,7 @@ class FabricToken:
         self.unset = True
         self.encoded = False
         self.jwt = None
+        self.cookie = cookie
 
     def set_claims(self):
         """
@@ -70,8 +72,17 @@ class FabricToken:
         """
         eppn = self.claims.get("eppn")
         email = self.claims.get("email")
+        sub = self.claims.get("sub")
 
-        projects = get_active_projects_from_ldap(eppn, email)
+        use_project_registry = str(CONFIG.get('runtime', 'enable-project-registry'))
+        projects = None
+        if use_project_registry.lower() == 'false' or self.cookie is None:
+            projects = get_active_projects_from_ldap(eppn, email)
+        else:
+            url = CONFIG.get('project-registry', 'project-registry-url')
+            project_registry = ProjectRegistry(url, self.cookie)
+            projects = project_registry.get_roles(sub)
+
         LOG.debug(projects)
 
         project_list = []
@@ -82,13 +93,13 @@ class FabricToken:
             elif self.project in p:
                 project_list.append(p)
         LOG.debug(project_list)
-        self.claims["isMemberOf"] = project_list
+        self.claims["roles"] = project_list
         self.claims["scope"] = self.scope
         self.claims["project"] = self.project
         LOG.debug(self.claims)
         self.unset = False
 
-    def encode(self) -> str:
+    def encode(self, validity: timedelta) -> str:
         """
         sign and base64 encode the token
 
@@ -103,6 +114,9 @@ class FabricToken:
 
         with open(self.private_key) as f:
             private_key = f.read()
+
+        self.claims['iat'] = int(datetime.now().timestamp())
+        self.claims['exp'] = int((datetime.now() + validity).timestamp())
 
         self.jwt = str(jwt.encode(self.claims, private_key, algorithm='RS256'), 'utf-8')
         self.encoded = True

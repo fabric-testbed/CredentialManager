@@ -3,7 +3,7 @@ import requests
 
 
 class TestCredmgr(unittest.TestCase):
-    base_url = "http://localhost:8082/tokens/"
+    base_url = "http://localhost:7000/tokens/"
     create_url = base_url + "create"
     refresh_url = base_url + "refresh"
     revoke_url = base_url + "revoke"
@@ -21,19 +21,12 @@ class TestCredmgr(unittest.TestCase):
         # Create tokens with default project and scope
         response = requests.post(url=self.create_url, headers=self.headers)
         self.assertEqual(200, response.status_code)
-        value = response.json().get('value', None)
-        self.assertIsNotNone(value)
-        user_id = value.get('user_id', None)
-        self.assertIsNotNone(user_id)
-        authorization_url = value.get('authorization_url', None)
-        self.assertIsNotNone(authorization_url)
-
-        # get token with user id but without authentication
-        response = requests.get(url=self.base_url + user_id, headers=self.headers)
-        self.assertIsNone(response.json().get('value', None))
-        self.assertIsNotNone(response.json().get('message', None))
-
-        self.assertEqual(500, response.json()['status'])
+        message = response.json().get('message', None)
+        self.assertIsNotNone(message)
+        self.assertEqual(message, 'Missing required parameters id_token or project or scope')
+        status = response.json().get('status', None)
+        self.assertIsNotNone(status)
+        self.assertEqual(status, 500)
 
     def test_create_tokens_with_unknown_project_scope(self):
         """
@@ -61,18 +54,9 @@ class TestCredmgr(unittest.TestCase):
         # Create tokens with project and scope
         response = requests.post(url=self.create_url, headers=self.headers, params=query_string)
         self.assertEqual(200, response.status_code)
-        value = response.json().get('value', None)
-        self.assertIsNotNone(value)
-        user_id = value.get('user_id', None)
-        self.assertIsNotNone(user_id)
-        authorization_url = value.get('authorization_url', None)
-        self.assertIsNotNone(authorization_url)
-
-        # get token with user id but without authentication
-        response = requests.get(url=self.base_url + user_id, headers=self.headers)
-        self.assertIsNone(response.json().get('value', None))
-        self.assertIsNotNone(response.json().get('message', None))
-
+        message = response.json().get('message', None)
+        self.assertIsNotNone(message)
+        self.assertEqual(message, 'Missing required parameters id_token or project or scope')
         self.assertEqual(500, response.json()['status'])
 
     def test_refresh_tokens(self):

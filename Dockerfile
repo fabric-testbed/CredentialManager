@@ -21,49 +21,24 @@
 # SOFTWARE.
 #
 # Author Komal Thareja (kthare10@renci.org)
-FROM centos:7
-MAINTAINER Komal Thareja<kthare10@renci.org>
-ENV container docker
-RUN (cd /lib/systemd/system/sysinit.target.wants/; for i in *; do [ $i == \
-systemd-tmpfiles-setup.service ] || rm -f $i; done); \
-rm -f /lib/systemd/system/multi-user.target.wants/*;\
-rm -f /etc/systemd/system/*.wants/*;\
-rm -f /lib/systemd/system/local-fs.target.wants/*; \
-rm -f /lib/systemd/system/sockets.target.wants/*udev*; \
-rm -f /lib/systemd/system/sockets.target.wants/*initctl*; \
-rm -f /lib/systemd/system/basic.target.wants/*;\
-rm -f /lib/systemd/system/anaconda.target.wants/*;
-VOLUME [ "/sys/fs/cgroup" ]
+FROM python:3
+MAINTAINER Komal Thareja<komal.thareja@gmail.com>
 
 RUN mkdir -p /usr/src/app
-COPY . /usr/src/app
+RUN mkdir -p /etc/credmgr/
+RUN touch /etc/credmgr/private.pem
+RUN touch /etc/credmgr/public.pem
+
 WORKDIR /usr/src/app
 
-RUN yum install -y epel-release gcc httpd mod_ssl mod_wsgi httpd-devel python3-devel;\
-yum install -y postgresql postgresql-devel;\
-pip3 install --no-cache-dir -r requirements.txt;\
-groupadd credmgr;\
-useradd credmgr -g credmgr;\
-mkdir -p "/var/www/documents";\
-mkdir -p "/var/www/cgi-bin/wsgi/credmgr";\
-mkdir -p "/var/lib/credmgr";\
-chown -R credmgr:credmgr "/var/lib/credmgr";\
-mkdir -p "/var/log/credmgr";\
-chown -R credmgr:credmgr "/var/log/credmgr";\
-pip3 install .;\
-mod_wsgi-express install-module > /etc/httpd/conf.modules.d/02-wsgi.conf;\
-sed -i "s/REPLACE_WITH_FQDN/credmgr/g" /etc/httpd/conf.d/credmgr.conf;\
-sed -i 's/w+t/wb+/g' /usr/local/lib/python3*/site-packages/daemon/runner.py;\
-systemctl enable httpd;\
-systemctl enable credmgrd;\
-systemctl enable credmgr.swagger_server;\
-touch /etc/credmgr/public.pem;\
-touch /etc/credmgr/private.pem;\
-touch /etc/credmgr/hostcert.pem;\
-touch /etc/credmgr/hostkey.pem;\
-echo "Setup credmgr daemon and credmgr swagger_server complete";
+COPY requirements.txt /usr/src/app/
 
-EXPOSE 8080 443
+RUN pip3 install --no-cache-dir -r requirements.txt
 
-#CMD ["./docker-entrypoint.sh"]
-CMD ["/usr/sbin/init"]
+COPY . /usr/src/app/
+
+EXPOSE 7000
+
+ENTRYPOINT ["python3"]
+
+CMD ["-m", "fabric.credmgr.swagger_server"]

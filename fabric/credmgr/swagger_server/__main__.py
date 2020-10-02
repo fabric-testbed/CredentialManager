@@ -32,7 +32,6 @@ import waitress
 from flask import jsonify
 
 from fabric.credmgr import CONFIG
-from fabric.credmgr.credential_managers.oauth_credmgr_singleton import OAuthCredmgrSingleton
 from fabric.credmgr.swagger_server import encoder
 from fabric.credmgr.utils import LOG
 
@@ -43,7 +42,6 @@ def main():
         app = connexion.App(__name__, specification_dir='swagger/')
         app.app.json_encoder = encoder.JSONEncoder
         app.add_api('swagger.yaml', arguments={'title': 'Fabric Credential Manager API'}, pythonic_params=True)
-        OAuthCredmgrSingleton.get()
         port = CONFIG.get('runtime','rest-port')
 
         # prometheus server
@@ -52,6 +50,7 @@ def main():
 
         # Start up the server to expose the metrics.
         waitress.serve(app, port=port)
+
     except Exception as e:
        log.error("Exception occurred while starting Flask app")
        log.error(e)

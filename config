@@ -30,13 +30,11 @@
 
 
 [runtime]
-## The directory into which credmgr should write credentials
-## This directory will be automatically created if it does not exist.
-credentials-directory = /var/lib/credmgr/credentials
-port = 443
-rest-port = 8080
+rest-port = 7000
 prometheus-port = 8100
-fqdn = 127.0.0.1
+enable-project-registry = False
+# Life time of the Fabric Identity Token specified in minutes
+token-lifetime = 60
 
 [logging]
 logger = credmgr
@@ -81,8 +79,5 @@ ldap-search-base =
 jwt-public-key = /etc/credmgr/public.pem
 jwt-private-key = /etc/credmgr/public.pem
 
-[database]
-db-user = credmgr
-db-password = credmgr
-db-name = credmgr
-db-host = creddb:9432
+[project-registry]
+project-registry-url = http://fabric-dev.renci.org:9090/
