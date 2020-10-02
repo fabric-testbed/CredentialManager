@@ -108,7 +108,7 @@ Remove existing swagger_server directory and move my_server/swagger_server to sw
 - Upon completion the user will be issued a `CILOGON_CLIENT_ID` and `CILOGON_CLIENT_SECRET`.
 NOTE: Callback url should match the url specified in Vouch Proxy Config
 #### Vouch Config
-Copy the vouch/config_template as vouch/config and update that file with the `CILOGON_CLIENT_ID` and `CILOGON_CLIENT_SECRET` information as provided by CILogon.
+Copy the `vouch/config_template` as `vouch/config` and update that file with the `CILOGON_CLIENT_ID` and `CILOGON_CLIENT_SECRET` information as provided by CILogon.
 ```
  oauth:
    # Generic OpenID Connect
