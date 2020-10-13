@@ -103,12 +103,27 @@ Remove existing swagger_server directory and move my_server/swagger_server to sw
 
 ## <a name="usage"></a>Usage
 ### <a name="config"></a>Configuration
+#### Nginx Config
+No change is needed for development deployment, for production, replace `$host` with host domain name.
+```
+server {
+  listen 443 ssl http2;
+  server_name $host;
+  root /var/www/html/;
+
+  ssl_certificate /etc/ssl/fullchain.pem;
+  ssl_certificate_key /etc/ssl/privkey.pem;
+
+  # send all requests to the `/validate` endpoint for authorization
+  auth_request /validate;
+```
 #### CILogon Client Registration
 - To get started, register your client at https://cilogon.org/oauth2/register and wait for notice of approval. Please register your callback URLs on that page with care. They are the only callback URLs that may be used by your client unless you later contact help@cilogon.org and request a change to your registration.
 - Upon completion the user will be issued a `CILOGON_CLIENT_ID` and `CILOGON_CLIENT_SECRET`.
 NOTE: Callback url should match the url specified in Vouch Proxy Config
 #### Vouch Config
-Copy the `vouch/config_template` as `vouch/config` and update that file with the `CILOGON_CLIENT_ID` and `CILOGON_CLIENT_SECRET` information as provided by CILogon.
+Copy the `vouch/config_template` as `vouch/config` and update that file with the `CILOGON_CLIENT_ID` and `CILOGON_CLIENT_SECRET` information as provided by CILogon. 
+For production deployment, `callback_url` should point to the host domain name instead of `127.0.0.1`
 ```
  oauth:
    # Generic OpenID Connect
