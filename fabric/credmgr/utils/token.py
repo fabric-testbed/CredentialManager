@@ -88,9 +88,7 @@ class FabricToken:
         project_list = []
         for p in projects:
             LOG.debug("Processing {}".format(p))
-            if self.project == "all":
-                project_list.append(p)
-            elif self.project in p:
+            if self.project == "all" or self.project in p:
                 project_list.append(p)
         LOG.debug(project_list)
         self.claims["roles"] = project_list
@@ -169,11 +167,11 @@ class FabricToken:
             raise FabricTokenError("Claims not initialized")
 
         if 'exp' in self.claims:
-            return self.get_local_from_UTC(self.claims['exp'])
+            return self.get_local_from_utc(self.claims['exp'])
         else:
             raise FabricTokenError("Expiration claim not present")
 
-    def get_local_from_UTC(self, utc: int) -> datetime:
+    def get_local_from_utc(self, utc: int) -> datetime:
         """ convert UTC in claims (iat and exp) into a python
         datetime object """
         return datetime.fromtimestamp(utc, tz.tzlocal())
@@ -188,9 +186,9 @@ class FabricToken:
         fstring = f"Token for {self.claims['sub']}/{self.claims['name']}:"
 
         if 'iat' in self.claims:
-            fstring += f"\n\tIssued on: {self.get_local_from_UTC(self.claims['iat']).strftime('%Y-%m-%d %H:%M:%S')}"
+            fstring += f"\n\tIssued on: {self.get_local_from_utc(self.claims['iat']).strftime('%Y-%m-%d %H:%M:%S')}"
         if 'exp' in self.claims:
-            fstring += f"\n\tExpires on: {self.get_local_from_UTC(self.claims['exp']).strftime('%Y-%m-%d %H:%M:%S')}"
+            fstring += f"\n\tExpires on: {self.get_local_from_utc(self.claims['exp']).strftime('%Y-%m-%d %H:%M:%S')}"
 
         return fstring
 
