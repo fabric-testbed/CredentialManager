@@ -60,7 +60,7 @@ class TestCredmgr(unittest.TestCase):
 
         response = requests.post(url=self.refresh_url, headers=self.headers, json=value)
         self.assertEqual(500, response.status_code)
-        self.assertTrue(response.json().find("No transaction found for identifier") != -1)
+        self.assertIsNotNone(response.json())
 
         query_string = [('projectName', 'RENCI-TEST'),
                         ('scope', 'measurement')]
@@ -68,7 +68,7 @@ class TestCredmgr(unittest.TestCase):
         # valid request with project and scope but unknown token
         response = requests.post(url=self.refresh_url, headers=self.headers, json=value, params=query_string)
         self.assertEqual(500, response.status_code)
-        self.assertTrue(response.json().find("No transaction found for identifier") != -1)
+        self.assertIsNotNone(response.json())
 
         query_string = [('projectName', 'project_name_example'),
                         ('scope', 'scope_example')]
