@@ -27,6 +27,8 @@ from datetime import datetime, timedelta
 
 import jwt
 import requests
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import serialization
 from dateutil import tz
 
 from fabric.credmgr import CONFIG
@@ -57,6 +59,7 @@ class FabricToken:
         self.jwks_url = CONFIG.get("oauth", "oauth-jwks-url")
         self.public_key = CONFIG.get("jwt", "jwt-public-key")
         self.private_key = CONFIG.get("jwt", "jwt-private-key")
+        self.pass_phrase = CONFIG.get("jwt", "jwt-pass-phrase")
         self.id_token = id_token
         self.project = project
         self.scope = scope
@@ -111,7 +114,8 @@ class FabricToken:
             return self.jwt
 
         with open(self.private_key) as f:
-            private_key = f.read()
+            private_key = serialization.load_pem_private_key(f.read(), password=self.pass_phrase,
+                                                             backend=default_backend())
 
         self.claims['iat'] = int(datetime.now().timestamp())
         self.claims['exp'] = int((datetime.now() + validity).timestamp())

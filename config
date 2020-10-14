@@ -73,6 +73,7 @@ ldap-search-base =
 [jwt]
 jwt-public-key = /etc/credmgr/public.pem
 jwt-private-key = /etc/credmgr/public.pem
+jwt-pass-phrase =
 
 [project-registry]
 project-registry-url = http://fabric-dev.renci.org:9090/
