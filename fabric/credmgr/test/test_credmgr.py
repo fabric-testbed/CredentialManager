@@ -76,7 +76,7 @@ class TestCredmgr(unittest.TestCase):
         # valid request with unknonw project and scope but unknown token
         response = requests.post(url=self.refresh_url, headers=self.headers, json=value, params=query_string)
         self.assertEqual(500, response.status_code)
-        self.assertTrue(response.json().find("No transaction found for identifier") != -1)
+        self.assertIsNotNone(response.json())
 
     def test_revoke_tokens(self):
         #invalid request
