@@ -119,8 +119,6 @@ class FabricToken:
         with open(self.private_key) as f:
             pem_data = f.read()
             f.close()
-            LOG.debug(self.pass_phrase)
-            LOG.debug(pem_data)
             private_key = serialization.load_pem_private_key(data=pem_data.encode("utf-8"),
                                                              password=self.pass_phrase,
                                                              backend=default_backend())
