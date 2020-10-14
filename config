@@ -72,7 +72,7 @@ ldap-search-base =
 
 [jwt]
 jwt-public-key = /etc/credmgr/public.pem
-jwt-private-key = /etc/credmgr/public.pem
+jwt-private-key = /etc/credmgr/private.pem
 jwt-pass-phrase =
 
 [project-registry]

@@ -113,8 +113,16 @@ class FabricToken:
             LOG.info("Returning previously encoded token for project %s user %s" % (self.project, self.scope))
             return self.jwt
 
+        if self.pass_phrase is not None:
+            self.pass_phrase = self.pass_phrase.encode("utf-8")
+
         with open(self.private_key) as f:
-            private_key = serialization.load_pem_private_key(f.read(), password=self.pass_phrase,
+            pem_data = f.read()
+            f.close()
+            LOG.debug(self.pass_phrase)
+            LOG.debug(pem_data)
+            private_key = serialization.load_pem_private_key(data=pem_data.encode("utf-8"),
+                                                             password=self.pass_phrase,
                                                              backend=default_backend())
 
         self.claims['iat'] = int(datetime.now().timestamp())
