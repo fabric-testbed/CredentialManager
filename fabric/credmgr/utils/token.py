@@ -60,6 +60,7 @@ class FabricToken:
         self.public_key = CONFIG.get("jwt", "jwt-public-key")
         self.private_key = CONFIG.get("jwt", "jwt-private-key")
         self.pass_phrase = CONFIG.get("jwt", "jwt-pass-phrase")
+        LOG.debug(self.pass_phrase)
         self.id_token = id_token
         self.project = project
         self.scope = scope
@@ -113,8 +114,10 @@ class FabricToken:
             LOG.info("Returning previously encoded token for project %s user %s" % (self.project, self.scope))
             return self.jwt
 
-        if self.pass_phrase is not None:
+        if self.pass_phrase is not None and self.pass_phrase != "":
             self.pass_phrase = self.pass_phrase.encode("utf-8")
+        else:
+            self.pass_phrase = None
 
         with open(self.private_key) as f:
             pem_data = f.read()
