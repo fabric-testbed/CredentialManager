@@ -106,7 +106,7 @@ class FabricToken:
         @return Returns the encoded string for the Fabric token
         """
         if self.unset:
-            raise Exception("Claims not initialized, unable to encode")
+            raise FabricTokenError("Claims not initialized, unable to encode")
 
         if self.encoded:
             LOG.info("Returning previously encoded token for project %s user %s" % (self.project, self.scope))
@@ -147,7 +147,7 @@ class FabricToken:
                     return "JWT not initialized"
 
                 if not self.encoded:
-                    raise Exception("Token already in decoded form")
+                    raise FabricTokenError("Token already in decoded form")
 
                 if self.public_key is None:
                     LOG.info("Decoding token without verification of origin or date")
@@ -166,12 +166,12 @@ class FabricToken:
 
     def valid_until(self) -> datetime:
         if self.unset:
-            raise Exception("Claims not initialized")
+            raise FabricTokenError("Claims not initialized")
 
         if 'exp' in self.claims:
             return self.get_local_from_UTC(self.claims['exp'])
         else:
-            raise Exception("Expiration claim not present")
+            raise FabricTokenError("Expiration claim not present")
 
     def get_local_from_UTC(self, utc: int) -> datetime:
         """ convert UTC in claims (iat and exp) into a python

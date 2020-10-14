@@ -57,7 +57,7 @@ def main():
        raise (e)
 
     @app.route('/stopServer', methods=['GET'])
-    def stopServer():
+    def stop_server():
         os.kill(os.getpid(), signal.SIGINT)
         return jsonify({"success": True, "message": "Server is shutting down..."})
 

@@ -25,7 +25,8 @@
 # coding: utf-8
 
 from setuptools import setup, find_packages
-from fabric.credmgr import *
+
+from fabric.credmgr import ConfDir, ConfFile, LogDir
 
 NAME = "credmgr"
 VERSION = "1.0.0"

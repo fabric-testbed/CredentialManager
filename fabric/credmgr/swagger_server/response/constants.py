@@ -22,35 +22,15 @@
 # SOFTWARE.
 #
 # Author Komal Thareja (kthare10@renci.org)
-import requests
+version_url = '/version'
+tokens_create_url = '/tokens/create'
+tokens_refresh_url = '/tokens/refresh'
+tokens_revoke_url = '/tokens/revoke'
+
+http_method_get = 'get'
+http_method_post = 'post'
 
 
-class ProjectRegistry:
-    def __init__(self, api_server: str, cookie: str):
-        self.api_server = api_server
-        self.cookie = cookie
-
-    def _headers(self):
-        headers = {
-            'Accept': 'application/json',
-            'Content-Type': "application/json",
-        }
-        return headers
-
-    def get_roles(self, sub: str):
-        if self.api_server is None or self.cookie is None:
-            raise ProjectRegistryError("Project Registry URL: {} or Cookie: {} not available".format(
-                self.api_server, self.cookie))
-
-        url = self.api_server + "/people/oidc_claim_sub?oidc_claim_sub={}".format(sub)
-        response = requests.get(url, headers=self._headers())
-
-        if response.status_code != 200:
-            raise ProjectRegistryError("Project Registry error occurred status_code: {} message: {}".format(
-                response.status_code, response.content))
-
-        return response.json()['roles']
-
-
-class ProjectRegistryError(Exception):
-    pass
+vouch_id_token = 'X-Vouch-Idp-Idtoken'
+vouch_refresh_token = 'X-Vouch-Idp-Refreshtoken'
+vouch_cookie = 'Cookie'

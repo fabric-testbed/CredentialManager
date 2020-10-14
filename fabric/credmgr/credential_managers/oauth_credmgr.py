@@ -32,7 +32,7 @@ from fabric.credmgr.utils.token import FabricToken
 
 try:
     from requests_oauthlib import OAuth2Session
-except:
+except Exception as e:
     OAuth2Session = None
 
 import requests
