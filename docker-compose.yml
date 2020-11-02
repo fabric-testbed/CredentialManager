@@ -4,6 +4,8 @@ services:
     nginx:
         image: library/nginx:1
         container_name: nginx
+        networks:
+            - frontend
         ports:
             - 8443:443
         volumes:
@@ -13,6 +15,8 @@ services:
         restart: unless-stopped
     vouch-proxy:
         container_name: vouch-proxy
+        networks:
+            - frontend
         image: kthare10/vouch-proxy:refresh_token
         ports:
         - 9090:9090
@@ -25,6 +29,8 @@ services:
             context: ./
             dockerfile: Dockerfile
         container_name: credmgr
+        networks:
+            - frontend
         hostname: credmgr
         image: credmgr:latest
         restart: on-failure
@@ -39,3 +45,5 @@ services:
         ports:
             - 7000:7000
             - 8100:8100
+networks:
+  frontend:
