@@ -28,7 +28,7 @@ from setuptools import setup, find_packages
 
 from fabric.credmgr import ConfDir, ConfFile, LogDir
 
-NAME = "credmgr"
+NAME = "fabric-credmgr"
 VERSION = "0.1"
 # To install the library, run the following
 #
