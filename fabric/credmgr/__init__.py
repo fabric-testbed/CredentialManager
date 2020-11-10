@@ -22,23 +22,26 @@
 # SOFTWARE.
 #
 # Author Komal Thareja (kthare10@renci.org)
+"""
+Credential Manager
+"""
 import os
 import sys
 import configparser
 
-ConfDir = '/etc/credmgr'
-ConfFile = 'config'
+CONF_DIR = '/etc/credmgr'
+CONF_FILE = 'config'
 
-Port = '7000'
-RestPort = '8100'
+PORT = '7000'
+REST_PORT = '8100'
 
-LogDir = '/var/log/credmgr'
-LogFile = 'credmgr.log'
-LogLevel = 'DEBUG'
-LogRetain = '5'
-LogFileSize = '5000000'
+LOG_DIR = '/var/log/credmgr'
+LOG_FILE = 'credmgr.log'
+LOG_LEVEL = 'DEBUG'
+LOG_RETAIN = '5'
+LOG_FILE_SIZE = '5000000'
 
-DefaultTokenLifeTime = 60
+DEFAULT_TOKEN_LIFE_TIME = 60
 
 LOGGER = 'logger'
 
@@ -47,24 +50,24 @@ CONFIG.add_section('runtime')
 CONFIG.add_section('oauth')
 CONFIG.add_section('logging')
 
-CONFIG.set('runtime', 'port', Port)
-CONFIG.set('runtime', 'rest-port', RestPort)
+CONFIG.set('runtime', 'port', PORT)
+CONFIG.set('runtime', 'rest-port', REST_PORT)
 
 CONFIG.set('logging', 'logger', LOGGER)
-CONFIG.set('logging', 'log-directory', LogDir)
-CONFIG.set('logging', 'log-file', LogFile)
-CONFIG.set('logging', 'log-level', LogLevel)
-CONFIG.set('logging', 'log-retain', LogRetain)
-CONFIG.set('logging', 'log-file-size', LogFileSize)
+CONFIG.set('logging', 'log-directory', LOG_DIR)
+CONFIG.set('logging', 'log-file', LOG_FILE)
+CONFIG.set('logging', 'log-level', LOG_LEVEL)
+CONFIG.set('logging', 'log-retain', LOG_RETAIN)
+CONFIG.set('logging', 'log-file-size', LOG_FILE_SIZE)
 
 # Now, attempt to read in the configuration file.
 if os.getenv('TEST_ENVIRONMENT', 'False') == 'True':
-    ConfDir = '../../../../docker'
+    CONF_DIR = '../../../../docker'
 
-config_file = ConfDir + '/' + ConfFile 
+CONFIG_FILE = CONF_DIR + '/' + CONF_FILE
 try:
-    files_read = CONFIG.read(config_file)
+    files_read = CONFIG.read(CONFIG_FILE)
     if len(files_read) == 0:
         sys.stderr.write('Configuration file could not be read; proceeding with default settings.')
-except Exception as e:
+except Exception:
     raise RuntimeError('Unable to parse configuration file')

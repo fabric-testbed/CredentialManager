@@ -22,15 +22,18 @@
 # SOFTWARE.
 #
 # Author Komal Thareja (kthare10@renci.org)
+"""
+Module for handling /tokens APIs
+"""
 import connexion
-import six
 
 from fabric.credmgr.credential_managers.oauth_credmgr import OAuthCredmgr
 from fabric.credmgr.swagger_server.models.request import Request  # noqa: E501
 from fabric.credmgr.swagger_server.models.success import Success  # noqa: E501
 from fabric.credmgr.swagger_server import received_counter, success_counter, failure_counter
-from fabric.credmgr.swagger_server.response.constants import http_method_post, tokens_revoke_url, tokens_refresh_url, \
-    tokens_create_url, vouch_id_token, vouch_refresh_token, vouch_cookie
+from fabric.credmgr.swagger_server.response.constants import HTTP_METHOD_POST, \
+    TOKENS_REVOKE_URL, TOKENS_REFRESH_URL, \
+    TOKENS_CREATE_URL, VOUCH_ID_TOKEN, VOUCH_REFRESH_TOKEN, VOUCH_COOKIE
 from fabric.credmgr.utils import LOG
 
 
@@ -46,11 +49,11 @@ def tokens_create_post(project_name=None, scope=None):  # noqa: E501
 
     :rtype: Success
     """
-    received_counter.labels(http_method_post, tokens_create_url).inc()
+    received_counter.labels(HTTP_METHOD_POST, TOKENS_CREATE_URL).inc()
     try:
-        ci_logon_id_token = connexion.request.headers.get(vouch_id_token, None)
-        refresh_token = connexion.request.headers.get(vouch_refresh_token, None)
-        cookie = connexion.request.headers.get(vouch_cookie, None)
+        ci_logon_id_token = connexion.request.headers.get(VOUCH_ID_TOKEN, None)
+        refresh_token = connexion.request.headers.get(VOUCH_REFRESH_TOKEN, None)
+        cookie = connexion.request.headers.get(VOUCH_COOKIE, None)
         credmgr = OAuthCredmgr()
         result = credmgr.create_token(ci_logon_id_token=ci_logon_id_token,
                                       refresh_token=refresh_token,
@@ -59,12 +62,12 @@ def tokens_create_post(project_name=None, scope=None):  # noqa: E501
                                       cookie=cookie)
         response = Success.from_dict(result)
         LOG.debug(result)
-        success_counter.labels(http_method_post, tokens_create_url).inc()
+        success_counter.labels(HTTP_METHOD_POST, TOKENS_CREATE_URL).inc()
         return response
-    except Exception as e:
-        LOG.exception(e)
-        failure_counter.labels(http_method_post, tokens_create_url).inc()
-        return str(e), 500
+    except Exception as ex:
+        LOG.exception(ex)
+        failure_counter.labels(HTTP_METHOD_POST, TOKENS_CREATE_URL).inc()
+        return str(ex), 500
 
 
 def tokens_refresh_post(body, project_name=None, scope=None):  # noqa: E501
@@ -72,7 +75,7 @@ def tokens_refresh_post(body, project_name=None, scope=None):  # noqa: E501
 
     Request to refresh OAuth tokens for an user  # noqa: E501
 
-    :param body: 
+    :param body:
     :type body: dict | bytes
     :param project_name: Project Name
     :type project_name: str
@@ -81,21 +84,21 @@ def tokens_refresh_post(body, project_name=None, scope=None):  # noqa: E501
 
     :rtype: Success
     """
-    received_counter.labels(http_method_post, tokens_refresh_url).inc()
+    received_counter.labels(HTTP_METHOD_POST, TOKENS_REFRESH_URL).inc()
     if connexion.request.is_json:
         body = Request.from_dict(connexion.request.get_json())  # noqa: E501
     try:
-        cookie = connexion.request.headers.get(vouch_cookie, None)
+        cookie = connexion.request.headers.get(VOUCH_COOKIE, None)
         credmgr = OAuthCredmgr()
         response = Success.from_dict(credmgr.refresh_token(refresh_token=body.refresh_token,
-                                                                      project=project_name, scope=scope,
-                                                                      cookie=cookie))
-        success_counter.labels(http_method_post, tokens_refresh_url).inc()
+                                                           project=project_name, scope=scope,
+                                                           cookie=cookie))
+        success_counter.labels(HTTP_METHOD_POST, TOKENS_REFRESH_URL).inc()
         return response
-    except Exception as e:
-        LOG.exception(e)
-        failure_counter.labels(http_method_post, tokens_refresh_url).inc()
-        return str(e), 500
+    except Exception as ex:
+        LOG.exception(ex)
+        failure_counter.labels(HTTP_METHOD_POST, TOKENS_REFRESH_URL).inc()
+        return str(ex), 500
 
 
 def tokens_revoke_post(body):  # noqa: E501
@@ -108,15 +111,15 @@ def tokens_revoke_post(body):  # noqa: E501
 
     :rtype: Success
     """
-    received_counter.labels(http_method_post, tokens_revoke_url).inc()
+    received_counter.labels(HTTP_METHOD_POST, TOKENS_REVOKE_URL).inc()
     if connexion.request.is_json:
         body = Request.from_dict(connexion.request.get_json())  # noqa: E501
     try:
         credmgr = OAuthCredmgr()
         credmgr.revoke_token(refresh_token=body.refresh_token)
-        success_counter.labels(http_method_post, tokens_revoke_url).inc()
-    except Exception as e:
-        LOG.exception(e)
-        failure_counter.labels(http_method_post, tokens_revoke_url).inc()
-        return str(e), 500
+        success_counter.labels(HTTP_METHOD_POST, TOKENS_REVOKE_URL).inc()
+    except Exception as ex:
+        LOG.exception(ex)
+        failure_counter.labels(HTTP_METHOD_POST, TOKENS_REVOKE_URL).inc()
+        return str(ex), 500
     return {}

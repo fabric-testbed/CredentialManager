@@ -22,13 +22,16 @@
 # SOFTWARE.
 #
 # Author Komal Thareja (kthare10@renci.org)
+"""
+Module for handling version APIs
+"""
 import connexion
 import requests
 import six
 
 from fabric.credmgr.swagger_server.models.version import Version  # noqa: E501
 from fabric.credmgr.swagger_server import util, received_counter, success_counter, failure_counter
-from fabric.credmgr.swagger_server.response.constants import version_url, http_method_get
+from fabric.credmgr.swagger_server.response.constants import VERSION_URL, HTTP_METHOD_GET
 from fabric.credmgr.utils import LOG
 
 
@@ -40,7 +43,7 @@ def version_get():  # noqa: E501
 
     :rtype: Version
     """
-    received_counter.labels(http_method_get, version_url).inc()
+    received_counter.labels(HTTP_METHOD_GET, VERSION_URL).inc()
     try:
         version = '1.0.0'
         tag = '1.0.0'
@@ -57,9 +60,9 @@ def version_get():  # noqa: E501
                 sha = object_json.get("sha", None)
                 if sha is not None:
                     response.gitsha1 = sha
-        success_counter.labels(http_method_get, version_url).inc()
-    except Exception as e:
-        LOG.exception(e)
-        failure_counter.labels(http_method_get, version_url).inc()
-        return str(e), 500
+        success_counter.labels(HTTP_METHOD_GET, VERSION_URL).inc()
+    except Exception as ex:
+        LOG.exception(ex)
+        failure_counter.labels(HTTP_METHOD_GET, VERSION_URL).inc()
+        return str(ex), 500
     return response

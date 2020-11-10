@@ -22,6 +22,9 @@
 # SOFTWARE.
 #
 # Author Komal Thareja (kthare10@renci.org)
+"""
+Utility Module
+"""
 from fabric.credmgr.utils.log import get_logger
 
 LOG, FILE_HANDLER = get_logger()

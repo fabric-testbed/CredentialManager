@@ -22,15 +22,26 @@
 # SOFTWARE.
 #
 # Author Komal Thareja (kthare10@renci.org)
+"""
+Project Registry Interface
+"""
 import requests
 
 
 class ProjectRegistry:
+    """
+    Class implements functionality to interface with Project Registry
+    """
     def __init__(self, api_server: str, cookie: str):
         self.api_server = api_server
         self.cookie = cookie
 
-    def _headers(self):
+    @staticmethod
+    def _headers() -> dict:
+        """
+        Returns the headers
+        @return dict containing header info
+        """
         headers = {
             'Accept': 'application/json',
             'Content-Type': "application/json",
@@ -38,19 +49,29 @@ class ProjectRegistry:
         return headers
 
     def get_roles(self, sub: str):
+        """
+        Determine Role from Project Registry
+        @param sub: OIDC claim sub
+        @param returns the roles
+        """
         if self.api_server is None or self.cookie is None:
-            raise ProjectRegistryError("Project Registry URL: {} or Cookie: {} not available".format(
+            raise ProjectRegistryError("Project Registry URL: {} or "
+                                       "Cookie: {} not available".format(
                 self.api_server, self.cookie))
 
         url = self.api_server + "/people/oidc_claim_sub?oidc_claim_sub={}".format(sub)
         response = requests.get(url, headers=self._headers())
 
         if response.status_code != 200:
-            raise ProjectRegistryError("Project Registry error occurred status_code: {} message: {}".format(
+            raise ProjectRegistryError("Project Registry error occurred "
+                                       "status_code: {} message: {}".format(
                 response.status_code, response.content))
 
         return response.json()['roles']
 
 
 class ProjectRegistryError(Exception):
+    """
+    Project Registry Exception
+    """
     pass

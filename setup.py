@@ -26,7 +26,7 @@
 
 from setuptools import setup, find_packages
 
-from fabric.credmgr import ConfDir, ConfFile, LogDir
+from fabric.credmgr import CONF_DIR, CONF_FILE, LOG_DIR
 
 NAME = "fabric-credmgr"
 VERSION = "0.1"
@@ -69,7 +69,7 @@ setup(
     packages=find_packages(),
     package_data={'': ['swagger/swagger.yaml']},
     include_package_data=True,
-    data_files = [(ConfDir, [ConfFile]), (LogDir, [])],
+    data_files = [(CONF_DIR, [CONF_FILE]), (LOG_DIR, [])],
     entry_points={
         'console_scripts': ['fabric.credmgr.swagger_server=fabric.credmgr.swagger_server.__main__:main']},
     classifiers=[

@@ -22,8 +22,11 @@
 # SOFTWARE.
 #
 # Author Komal Thareja (kthare10@renci.org)
-import six
+"""
+Base class for Credential Manager
+"""
 from abc import ABCMeta, abstractmethod
+import six
 
 
 @six.add_metaclass(ABCMeta)
@@ -32,8 +35,8 @@ class AbstractCredentialManager:
     Abstract Credential Manager class
     """
     @abstractmethod
-    def create_token(self, project: str, scope: str, ci_logon_id_token: str, refresh_token: str,
-                     cookie: str = None) -> dict:
+    def create_token(self, project: str, scope: str, ci_logon_id_token: str,
+                     refresh_token: str, cookie: str = None) -> dict:
         """
         Generates key file and return authorization url for user to authenticate itself and also returns user id
 

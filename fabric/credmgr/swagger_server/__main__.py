@@ -22,7 +22,9 @@
 # SOFTWARE.
 #
 # Author Komal Thareja (kthare10@renci.org)
-
+"""
+Main Entry Point
+"""
 import os
 import signal
 
@@ -37,11 +39,16 @@ from fabric.credmgr.utils import LOG
 
 
 def main():
+    """
+    Main Entry Point
+    """
     log = LOG
     try:
         app = connexion.App(__name__, specification_dir='swagger/')
         app.app.json_encoder = encoder.JSONEncoder
-        app.add_api('swagger.yaml', arguments={'title': 'Fabric Credential Manager API'}, pythonic_params=True)
+        app.add_api('swagger.yaml',
+                    arguments={'title': 'Fabric Credential Manager API'},
+                    pythonic_params=True)
         port = CONFIG.get('runtime','rest-port')
 
         # prometheus server
@@ -51,10 +58,10 @@ def main():
         # Start up the server to expose the metrics.
         waitress.serve(app, port=port)
 
-    except Exception as e:
+    except Exception as ex:
        log.error("Exception occurred while starting Flask app")
-       log.error(e)
-       raise (e)
+       log.error(ex)
+       raise (ex)
 
     @app.route('/stopServer', methods=['GET'])
     def stop_server():

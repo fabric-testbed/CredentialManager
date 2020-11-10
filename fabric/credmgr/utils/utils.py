@@ -22,6 +22,9 @@
 # SOFTWARE.
 #
 # Author Komal Thareja (kthare10@renci.org)
+"""
+Provides utility functions
+"""
 from fabric.credmgr import CONFIG
 
 
