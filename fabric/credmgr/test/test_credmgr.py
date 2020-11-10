@@ -1,8 +1,15 @@
 import unittest
 import requests
 
+"""
+Test Credmgr APIs
+"""
+
 
 class TestCredmgr(unittest.TestCase):
+    """
+    Test Credential Manager
+    """
     base_url = "http://localhost:7000/tokens/"
     create_url = base_url + "create"
     refresh_url = base_url + "refresh"
@@ -53,6 +60,9 @@ class TestCredmgr(unittest.TestCase):
         self.assertEqual(response.json(), self.missing_param_str)
 
     def test_refresh_tokens(self):
+        """
+        Verify Refresh Tokens
+        """
         # Invalid request
         response = requests.post(url=self.refresh_url, headers=self.headers)
         self.assertEqual(400, response.status_code)
@@ -68,7 +78,8 @@ class TestCredmgr(unittest.TestCase):
                         ('scope', 'measurement')]
 
         # valid request with project and scope but unknown token
-        response = requests.post(url=self.refresh_url, headers=self.headers, json=value, params=query_string)
+        response = requests.post(url=self.refresh_url, headers=self.headers,
+                                 json=value, params=query_string)
         self.assertEqual(500, response.status_code)
         self.assertIsNotNone(response.json())
 
@@ -76,11 +87,15 @@ class TestCredmgr(unittest.TestCase):
                         ('scope', 'scope_example')]
 
         # valid request with unknonw project and scope but unknown token
-        response = requests.post(url=self.refresh_url, headers=self.headers, json=value, params=query_string)
+        response = requests.post(url=self.refresh_url, headers=self.headers,
+                                 json=value, params=query_string)
         self.assertEqual(500, response.status_code)
         self.assertIsNotNone(response.json())
 
     def test_revoke_tokens(self):
+        """
+        Verify Revoke Tokens API
+        """
         #invalid request
         response = requests.post(url=self.revoke_url, headers=self.headers)
 

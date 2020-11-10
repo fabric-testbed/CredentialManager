@@ -22,15 +22,15 @@
 # SOFTWARE.
 #
 # Author Komal Thareja (kthare10@renci.org)
-version_url = '/version'
-tokens_create_url = '/tokens/create'
-tokens_refresh_url = '/tokens/refresh'
-tokens_revoke_url = '/tokens/revoke'
+VERSION_URL = '/version'
+TOKENS_CREATE_URL = '/tokens/create'
+TOKENS_REFRESH_URL = '/tokens/refresh'
+TOKENS_REVOKE_URL = '/tokens/revoke'
 
-http_method_get = 'get'
-http_method_post = 'post'
+HTTP_METHOD_GET = 'get'
+HTTP_METHOD_POST = 'post'
 
 
-vouch_id_token = 'X-Vouch-Idp-Idtoken'
-vouch_refresh_token = 'X-Vouch-Idp-Refreshtoken'
-vouch_cookie = 'Cookie'
+VOUCH_ID_TOKEN = 'X-Vouch-Idp-Idtoken'
+VOUCH_REFRESH_TOKEN = 'X-Vouch-Idp-Refreshtoken'
+VOUCH_COOKIE = 'Cookie'
