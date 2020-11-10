@@ -8,6 +8,8 @@ class TestCredmgr(unittest.TestCase):
     refresh_url = base_url + "refresh"
     revoke_url = base_url + "revoke"
 
+    missing_param_str = 'Missing required parameters id_token or project or scope'
+
     headers = {
         'Accept': 'application/json',
     }
@@ -21,7 +23,7 @@ class TestCredmgr(unittest.TestCase):
         # Create tokens with default project and scope
         response = requests.post(url=self.create_url, headers=self.headers)
         self.assertEqual(500, response.status_code)
-        self.assertEqual(response.json(), 'Missing required parameters id_token or project or scope')
+        self.assertEqual(response.json(), self.missing_param_str)
 
     def test_create_tokens_with_unknown_project_scope(self):
         """
@@ -34,7 +36,7 @@ class TestCredmgr(unittest.TestCase):
         # Create tokens with unknown project and scope
         response = requests.post(url=self.create_url, headers=self.headers, params=query_string)
         self.assertEqual(500, response.status_code)
-        self.assertEqual(response.json(), 'Missing required parameters id_token or project or scope')
+        self.assertEqual(response.json(), self.missing_param_str)
 
     def test_create_tokens_and_get_with_project_scope(self):
         """
@@ -48,7 +50,7 @@ class TestCredmgr(unittest.TestCase):
         # Create tokens with project and scope
         response = requests.post(url=self.create_url, headers=self.headers, params=query_string)
         self.assertEqual(500, response.status_code)
-        self.assertEqual(response.json(), 'Missing required parameters id_token or project or scope')
+        self.assertEqual(response.json(), self.missing_param_str)
 
     def test_refresh_tokens(self):
         # Invalid request
