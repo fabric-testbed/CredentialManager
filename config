@@ -32,7 +32,7 @@
 [runtime]
 rest-port = 7000
 prometheus-port = 8100
-enable-project-registry = False
+enable-project-registry = True
 # Life time of the Fabric Identity Token specified in minutes
 token-lifetime = 60
 
@@ -77,3 +77,6 @@ jwt-pass-phrase =
 
 [project-registry]
 project-registry-url = http://fabric-dev.renci.org:9090/
+project-registry-cert = /etc/credmgr/public.pem
+project-registry-key =  /etc/credmgr/private.pem
+project-registry-pass-phrase =

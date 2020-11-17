@@ -89,7 +89,11 @@ class FabricToken:
             projects = get_active_projects_from_ldap(eppn, email)
         else:
             url = CONFIG.get('project-registry', 'project-registry-url')
-            project_registry = ProjectRegistry(url, self.cookie)
+            cert = CONFIG.get('project-registry', 'project-registry-cert')
+            key = CONFIG.get('project-registry', 'project-registry-key')
+            pass_phrase = CONFIG.get('project-registry', 'project-registry-pass-phrase')
+            LOG.debug("Cookie: %s", self.cookie)
+            project_registry = ProjectRegistry(url, self.cookie, cert, key, pass_phrase)
             projects = project_registry.get_roles(sub)
 
         LOG.debug(projects)

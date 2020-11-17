@@ -26,15 +26,43 @@
 Project Registry Interface
 """
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.ssl_ import create_urllib3_context
+
+
+class SSLAdapter(HTTPAdapter):
+    def __init__(self, certfile, keyfile, password=None, *args, **kwargs):
+        self._certfile = certfile
+        self._keyfile = keyfile
+        self._password = password
+        return super(self.__class__, self).__init__(*args, **kwargs)
+
+    def init_poolmanager(self, *args, **kwargs):
+        self._add_ssl_context(kwargs)
+        return super(self.__class__, self).init_poolmanager(*args, **kwargs)
+
+    def proxy_manager_for(self, *args, **kwargs):
+        self._add_ssl_context(kwargs)
+        return super(self.__class__, self).proxy_manager_for(*args, **kwargs)
+
+    def _add_ssl_context(self, kwargs):
+        context = create_urllib3_context()
+        context.load_cert_chain(certfile=self._certfile,
+                                keyfile=self._keyfile,
+                                password=str(self._password))
+        kwargs['ssl_context'] = context
 
 
 class ProjectRegistry:
     """
     Class implements functionality to interface with Project Registry
     """
-    def __init__(self, api_server: str, cookie: str):
+    def __init__(self, api_server: str, cookie: str, cert: str, key: str, pass_phrase: str = None):
         self.api_server = api_server
         self.cookie = cookie
+        self.cert = cert
+        self.key = key
+        self.pass_phrase = pass_phrase
 
     @staticmethod
     def _headers() -> dict:
@@ -60,7 +88,12 @@ class ProjectRegistry:
                 self.api_server, self.cookie))
 
         url = self.api_server + "/people/oidc_claim_sub?oidc_claim_sub={}".format(sub)
-        response = requests.get(url, headers=self._headers())
+        session = requests.Session()
+        session.mount('https://', SSLAdapter(self.cert, self.key, self.pass_phrase))
+        temp = self.cookie.split('=')
+        cookie_dict = {temp[0]: temp[1]}
+
+        response = session.get(url, headers=self._headers(), cookies=cookie_dict, verify=False)
 
         if response.status_code != 200:
             raise ProjectRegistryError("Project Registry error occurred "

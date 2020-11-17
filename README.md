@@ -106,43 +106,64 @@ Remove existing swagger_server directory and move my_server/swagger_server to sw
 #### Nginx Config
 No change is needed for development deployment, for production, replace `$host` with host domain name.
 ```
-server {
-  listen 443 ssl http2;
-  server_name $host;
-  root /var/www/html/;
+ server {
+     listen 443 ssl http2;
+     server_name $host;
 
-  ssl_certificate /etc/ssl/fullchain.pem;
-  ssl_certificate_key /etc/ssl/privkey.pem;
-
-  # send all requests to the `/validate` endpoint for authorization
-  auth_request /validate;
+     #ssl_password_file /etc/keys/fifo;
+     ssl_certificate /etc/ssl/public.pem;
+     ssl_certificate_key /etc/ssl/private.pem;
 ```
 #### CILogon Client Registration
 - To get started, register your client at https://cilogon.org/oauth2/register and wait for notice of approval. Please register your callback URLs on that page with care. They are the only callback URLs that may be used by your client unless you later contact help@cilogon.org and request a change to your registration.
 - Upon completion the user will be issued a `CILOGON_CLIENT_ID` and `CILOGON_CLIENT_SECRET`.
 NOTE: Callback url should match the url specified in Vouch Proxy Config
 #### Vouch Config
-Copy the `vouch/config_template` as `vouch/config` and update that file with the `CILOGON_CLIENT_ID` and `CILOGON_CLIENT_SECRET` information as provided by CILogon. 
-For production deployment, `callback_url` should point to the host domain name instead of `127.0.0.1`
+Copy the `vouch/config_template` as `vouch/config`.
+Adjust the settings to suit your deployment environment
+    - `jwt.secret:` - must be changed - if using in production, it likely needs to be the same as on all other services, e.g. Project Registry
+    - `cookie.domain:` - your domain (default `127.0.0.1`)
+    - `cookie.name:` - your cookie name (default `fabric-service`)
+    - `oauth.client_id:` - CILogon Client ID (default `CILOGON_CLIENT_ID`)
+    - `oauth.client_secret:` - CILogon Client Secret (default `CILOGON_CLIENT_SECRET`)
+    - `oauth.callback_url:` - OIDC callback URL (default `http://127.0.0.1:9090/auth`)
 ```
- oauth:
-   # Generic OpenID Connect
-   # including okta
-   provider: oidc
-   client_id: CILOGON_CLIENT_ID
-   client_secret: CILOGON_CLIENT_SECRET
-   auth_url: https://cilogon.org/authorize
-   token_url: https://cilogon.org/oauth2/token
-   user_info_url: https://cilogon.org/oauth2/userinfo
-   scopes:
-     - openid
-     - email
-     - profile
-   callback_url: http://127.0.0.1:9090/auth
+    jwt:
+        # secret - VOUCH_JWT_SECRET
+        # a random string used to cryptographically sign the jwt
+        # Vouch Proxy complains if the string is less than 44 characters (256 bits as 32 base64 bytes)
+        # if the secret is not set here then Vouch Proxy will..
+        # - look for the secret in `./config/secret`
+        # - if `./config/secret` doesn't exist then randomly generate a secret and store it there
+        # in order to run multiple instances of vouch on multiple servers (perhaps purely for validating the jwt),
+        # you'll want them all to have the same secret
+        secret: kmDDgMLGThapDV1QnhWPJd0oARzjLa5Zy3bQ8WfOIYk=
+
+    cookie:
+        # allow the jwt/cookie to be set into http://yourdomain.com (defaults to true, requiring https://yourdomain.com)
+        secure: false
+        # vouch.cookie.domain must be set when enabling allowAllUsers
+        domain: 127.0.0.1
+        name: fabric-service
+oauth:
+    # Generic OpenID Connect
+    # including okta
+    provider: oidc
+    client_id: CILOGON_CLIENT_ID
+    client_secret: CILOGON_CLIENT_SECRET
+    auth_url: https://cilogon.org/authorize
+    token_url: https://cilogon.org/oauth2/token
+    user_info_url: https://cilogon.org/oauth2/userinfo
+    scopes:
+        - openid
+        - email
+        - profile
+    callback_url: http://127.0.0.1:9090/auth
 ```
 
 #### Credmr Config
-Copy `config` file as `config_template`. Update the `config_template` for the following parameters:
+Copy `config` file as `config_template`.
+Adjust the settings to suit your deployment environment
 ```
 oauth-client-id = 
 oauth-client-secret = 
@@ -152,7 +173,9 @@ ldap-user =
 ldap-password = 
 ldap-search-base =
 
-project-registry-url = http://fabric-dev.renci.org:9090/
+project-registry-cert = /etc/credmgr/public.pem
+project-registry-key =  /etc/credmgr/private.pem
+project-registry-pass-phrase =
 
 enable-project-registry = False
 # Life time of the Fabric Identity Token specified in minutes
