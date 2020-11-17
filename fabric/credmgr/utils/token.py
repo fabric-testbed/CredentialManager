@@ -92,6 +92,7 @@ class FabricToken:
             cert = CONFIG.get('project-registry', 'project-registry-cert')
             key = CONFIG.get('project-registry', 'project-registry-key')
             pass_phrase = CONFIG.get('project-registry', 'project-registry-pass-phrase')
+            LOG.debug("Cookie: %s", self.cookie)
             project_registry = ProjectRegistry(url, self.cookie, cert, key, pass_phrase)
             projects = project_registry.get_roles(sub)
 

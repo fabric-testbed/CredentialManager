@@ -90,8 +90,10 @@ class ProjectRegistry:
         url = self.api_server + "/people/oidc_claim_sub?oidc_claim_sub={}".format(sub)
         session = requests.Session()
         session.mount('https://', SSLAdapter(self.cert, self.key, self.pass_phrase))
+        temp = self.cookie.split('=')
+        cookie_dict = {temp[0]: temp[1]}
 
-        response = session.get(url, headers=self._headers(), cookies=dict(self.cookie))
+        response = session.get(url, headers=self._headers(), cookies=cookie_dict, verify=False)
 
         if response.status_code != 200:
             raise ProjectRegistryError("Project Registry error occurred "
