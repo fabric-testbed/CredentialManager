@@ -40,12 +40,12 @@ def get_log_file(log_path: str = None):
     if (log_path is None) and (CONFIG is not None) and ('logging' in CONFIG) \
             and ('log-directory' in CONFIG['logging']) and ('log-file' in CONFIG['logging']):
         log_path = CONFIG.get('logging', "log-directory") + '/' + CONFIG.get('logging', "log-file")
-    elif (log_path is None):
+    elif log_path is None:
         raise RuntimeError('The log file path must be specified in config or passed as an argument')
     return log_path
 
 
-def get_log_level(log_level = None):
+def get_log_level(log_level=None):
     """
         Determine the configured log level
         @param log_level: log level
@@ -57,8 +57,8 @@ def get_log_level(log_level = None):
     return log_level
 
 
-def get_logger(log_path = None, log_level = None):
-    '''
+def get_logger(log_path=None, log_level=None):
+    """
     Detects the path and level for the log file from the credmgr config and sets
     up a logger. Instead of detecting the path and/or level from the
     credmgr config, a custom path and/or level for the log file can be passed as
@@ -67,7 +67,7 @@ def get_logger(log_path = None, log_level = None):
     :param log_path: Path to custom log file
     :param log_level: Custom log level
     :return: logging.Logger object
-    '''
+    """
 
     # Get the log path
     if (log_path is None) and (CONFIG is not None) and ('logging' in CONFIG) \

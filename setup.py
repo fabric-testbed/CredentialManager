@@ -29,7 +29,7 @@ from setuptools import setup, find_packages
 from fabric.credmgr import CONF_DIR, CONF_FILE, LOG_DIR
 
 NAME = "fabric-credmgr"
-VERSION = "0.2"
+VERSION = "0.3"
 # To install the library, run the following
 #
 # python setup.py install

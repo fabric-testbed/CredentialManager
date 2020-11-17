@@ -31,21 +31,33 @@ from urllib3.util.ssl_ import create_urllib3_context
 
 
 class SSLAdapter(HTTPAdapter):
+    """
+    Implements SSL Adapter to pass SSL certfifcate and key along with passphrase
+    """
     def __init__(self, certfile, keyfile, password=None, *args, **kwargs):
         self._certfile = certfile
         self._keyfile = keyfile
         self._password = password
-        return super(self.__class__, self).__init__(*args, **kwargs)
+        super(self.__class__, self).__init__(*args, **kwargs)
 
     def init_poolmanager(self, *args, **kwargs):
+        """
+        Initialize the pool manager
+        """
         self._add_ssl_context(kwargs)
         return super(self.__class__, self).init_poolmanager(*args, **kwargs)
 
     def proxy_manager_for(self, *args, **kwargs):
+        """
+        Create proxy manager
+        """
         self._add_ssl_context(kwargs)
         return super(self.__class__, self).proxy_manager_for(*args, **kwargs)
 
     def _add_ssl_context(self, kwargs):
+        """
+        Add SSL Context
+        """
         context = create_urllib3_context()
         context.load_cert_chain(certfile=self._certfile,
                                 keyfile=self._keyfile,
@@ -84,8 +96,7 @@ class ProjectRegistry:
         """
         if self.api_server is None or self.cookie is None:
             raise ProjectRegistryError("Project Registry URL: {} or "
-                                       "Cookie: {} not available".format(
-                self.api_server, self.cookie))
+                                       "Cookie: {} not available".format(self.api_server, self.cookie))
 
         url = self.api_server + "/people/oidc_claim_sub?oidc_claim_sub={}".format(sub)
         session = requests.Session()
@@ -97,8 +108,7 @@ class ProjectRegistry:
 
         if response.status_code != 200:
             raise ProjectRegistryError("Project Registry error occurred "
-                                       "status_code: {} message: {}".format(
-                response.status_code, response.content))
+                                       "status_code: {} message: {}".format(response.status_code, response.content))
 
         return response.json()['roles']
 

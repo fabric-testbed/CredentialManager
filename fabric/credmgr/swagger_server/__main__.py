@@ -49,7 +49,7 @@ def main():
         app.add_api('swagger.yaml',
                     arguments={'title': 'Fabric Credential Manager API'},
                     pythonic_params=True)
-        port = CONFIG.get('runtime','rest-port')
+        port = CONFIG.get('runtime', 'rest-port')
 
         # prometheus server
         prometheus_port = int(CONFIG.get('runtime', 'prometheus-port'))
@@ -59,9 +59,9 @@ def main():
         waitress.serve(app, port=port)
 
     except Exception as ex:
-       log.error("Exception occurred while starting Flask app")
-       log.error(ex)
-       raise (ex)
+        log.error("Exception occurred while starting Flask app")
+        log.error(ex)
+        raise ex
 
     @app.route('/stopServer', methods=['GET'])
     def stop_server():

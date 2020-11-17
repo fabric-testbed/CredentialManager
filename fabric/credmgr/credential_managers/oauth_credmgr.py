@@ -115,10 +115,10 @@ class OAuthCredmgr(AbstractCredentialManager):
         refresh_token_dict = {"refresh_token": refresh_token}
 
         # refresh the token (provides both new refresh and access tokens)
-        oauth_client = OAuth2Session(providers[provider]['client_id'], token = refresh_token_dict)
+        oauth_client = OAuth2Session(providers[provider]['client_id'], token=refresh_token_dict)
         new_token = oauth_client.refresh_token(providers[provider]['token_uri'],
-                                               client_id = providers[provider]['client_id'],
-                                               client_secret = providers[provider]['client_secret'])
+                                               client_id=providers[provider]['client_id'],
+                                               client_secret=providers[provider]['client_secret'])
         try:
             refresh_token = new_token.pop('refresh_token')
             id_token = new_token.pop('id_token')
@@ -129,7 +129,7 @@ class OAuthCredmgr(AbstractCredentialManager):
         id_token = self._generate_fabric_token(ci_logon_id_token=id_token,
                                                project=project, scope=scope, cookie=cookie)
 
-        result = {"id_token": id_token, "refresh_token":refresh_token}
+        result = {"id_token": id_token, "refresh_token": refresh_token}
 
         return result
 
@@ -160,7 +160,7 @@ class OAuthCredmgr(AbstractCredentialManager):
         response = requests.post(providers[provider]['revoke_uri'], headers=headers, data=data)
         self.log.debug("Response Status=%d", response.status_code)
         self.log.debug("Response Reason=%s", response.reason)
-        self.log.debug(str(response.content,  "utf-8"))
+        self.log.debug(str(response.content, "utf-8"))
         if response.status_code != 200:
             raise OAuthCredMgrError(str(response.content,  "utf-8"))
 

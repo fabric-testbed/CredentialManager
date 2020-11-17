@@ -25,12 +25,10 @@
 """
 Module for handling version APIs
 """
-import connexion
 import requests
-import six
 
 from fabric.credmgr.swagger_server.models.version import Version  # noqa: E501
-from fabric.credmgr.swagger_server import util, received_counter, success_counter, failure_counter
+from fabric.credmgr.swagger_server import received_counter, success_counter, failure_counter
 from fabric.credmgr.swagger_server.response.constants import VERSION_URL, HTTP_METHOD_GET
 from fabric.credmgr.utils import LOG
 
