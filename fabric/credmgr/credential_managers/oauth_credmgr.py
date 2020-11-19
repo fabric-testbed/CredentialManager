@@ -28,18 +28,17 @@ Module responsible for handling Credmgr REST API logic
 
 import base64
 from datetime import timedelta
-
-from fabric.credmgr.credential_managers.abstract_credential_manager import AbstractCredentialManager
-from fabric.credmgr.utils import LOG
-from fabric.credmgr.utils.utils import get_providers
-from fabric.credmgr.utils.token import FabricToken
+import requests
 
 try:
     from requests_oauthlib import OAuth2Session
 except Exception:
     OAuth2Session = None
 
-import requests
+from fabric.credmgr.credential_managers.abstract_credential_manager import AbstractCredentialManager
+from fabric.credmgr.utils import LOG
+from fabric.credmgr.utils.utils import get_providers
+from fabric.credmgr.utils.token import FabricToken
 from fabric.credmgr import CONFIG, DEFAULT_TOKEN_LIFE_TIME
 
 
@@ -57,7 +56,8 @@ class OAuthCredmgr(AbstractCredentialManager):
         self.log.debug("CILogon Token: %s", ci_logon_id_token)
         fabric_token = FabricToken(ci_logon_id_token, project, scope, cookie)
         fabric_token.decode()
-        fabric_token.set_claims()
+        #fabric_token.set_claims()
+        fabric_token.update_claims()
         validty = CONFIG.get('runtime', 'token-lifetime')
         if validty is None:
             validty = DEFAULT_TOKEN_LIFE_TIME
@@ -162,11 +162,10 @@ class OAuthCredmgr(AbstractCredentialManager):
         self.log.debug("Response Reason=%s", response.reason)
         self.log.debug(str(response.content, "utf-8"))
         if response.status_code != 200:
-            raise OAuthCredMgrError(str(response.content,  "utf-8"))
+            raise OAuthCredMgrError(str(response.content, "utf-8"))
 
 
 class OAuthCredMgrError(Exception):
     """
     Credmgr Exception
     """
-    pass

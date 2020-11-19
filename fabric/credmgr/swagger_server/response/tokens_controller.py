@@ -106,7 +106,7 @@ def tokens_revoke_post(body):  # noqa: E501
 
     Request to revoke a refresh token for an user  # noqa: E501
 
-    :param body: 
+    :param body:
     :type body: dict | bytes
 
     :rtype: Success

@@ -36,10 +36,6 @@ from fabric.credmgr.utils import LOG
 from fabric.credmgr.utils.ldap import get_active_projects_from_ldap
 from fabric.credmgr.utils.project_registry import ProjectRegistry
 
-"""
-Module to convert CI Logon token to Fabric Token
-"""
-
 
 class FabricToken:
     """
@@ -105,6 +101,28 @@ class FabricToken:
                 project_list.append(p)
         LOG.debug(project_list)
         self.claims["roles"] = project_list
+        self.claims["scope"] = self.scope
+        self.claims["project"] = self.project
+        LOG.debug(self.claims)
+        self.unset = False
+
+    def update_claims(self):
+        """
+        Update the role claims for the Token and add scope
+        """
+        roles = self.claims.get("roles")
+        LOG.debug(roles)
+        new_roles = []
+        for item in roles:
+            if 'CO:members:active' not in item:
+                if 'project-leads:members:active' in item:
+                    new_roles.append(item)
+                elif 'members:active' in item:
+                    if (self.project != "all" and self.project in item) or self.project == "all":
+                        new_roles.append(item)
+
+        LOG.debug(new_roles)
+        self.claims["roles"] = new_roles
         self.claims["scope"] = self.scope
         self.claims["project"] = self.project
         LOG.debug(self.claims)
@@ -225,6 +243,9 @@ class FabricToken:
 
 
 class FabricTokenError(Exception):
+    """
+    Token Exception
+    """
     pass
 
 

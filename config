@@ -32,7 +32,7 @@
 [runtime]
 rest-port = 7000
 prometheus-port = 8100
-enable-project-registry = True
+enable-project-registry = False 
 # Life time of the Fabric Identity Token specified in minutes
 token-lifetime = 60
 
@@ -62,7 +62,7 @@ oauth-revoke-url = https://cilogon.org/oauth2/revoke
 oauth-jwks-url = https://cilogon.org/oauth2/certs
 
 oauth-client-id = 
-oauth-client-secret =
+oauth-client-secret = 
 
 [ldap]
 ldap-host = 
