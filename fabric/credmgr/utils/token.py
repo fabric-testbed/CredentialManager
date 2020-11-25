@@ -102,7 +102,6 @@ class FabricToken:
         LOG.debug(project_list)
         self.claims["roles"] = project_list
         self.claims["scope"] = self.scope
-        self.claims["project"] = self.project
         LOG.debug(self.claims)
         self.unset = False
 

@@ -35,7 +35,7 @@ This package includes:
  
  Credential Manager can roles directly from CoManage via ldap queries or via project registry. This is a configurable option. For now, by default it is configured to use LDAP queries.
  
- ![Component Diagram](./images/credmgr2.png)
+ ![Component Diagram](./images/credmgr.png)
 
 ## <a name="requirements"></a>Requirements
 - Python 3.6+
@@ -116,8 +116,6 @@ No change is needed for development deployment, for production, replace `$host` 
 ```
 #### CILogon Client Registration
 - To get started, register your client at https://cilogon.org/oauth2/register and wait for notice of approval. Please register your callback URLs on that page with care. They are the only callback URLs that may be used by your client unless you later contact help@cilogon.org and request a change to your registration.
-Configure LDAP to claims mapping as depicted in the figure below.
-![OIDC Client Configuration](./images/oidc_client_config.png)
 - Upon completion the user will be issued a `CILOGON_CLIENT_ID` and `CILOGON_CLIENT_SECRET`.
 NOTE: Callback url should match the url specified in Vouch Proxy Config
 #### Vouch Config

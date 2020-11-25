@@ -56,8 +56,7 @@ class OAuthCredmgr(AbstractCredentialManager):
         self.log.debug("CILogon Token: %s", ci_logon_id_token)
         fabric_token = FabricToken(ci_logon_id_token, project, scope, cookie)
         fabric_token.decode()
-        #fabric_token.set_claims()
-        fabric_token.update_claims()
+        fabric_token.set_claims()
         validty = CONFIG.get('runtime', 'token-lifetime')
         if validty is None:
             validty = DEFAULT_TOKEN_LIFE_TIME
