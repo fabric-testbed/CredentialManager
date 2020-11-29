@@ -28,6 +28,7 @@ Project Registry Interface
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.ssl_ import create_urllib3_context
+from fabric.credmgr.utils import LOG
 
 
 class SSLAdapter(HTTPAdapter):
@@ -88,11 +89,11 @@ class ProjectRegistry:
         }
         return headers
 
-    def get_roles(self, sub: str):
+    def get_projects_and_roles(self, sub: str):
         """
         Determine Role from Project Registry
         @param sub: OIDC claim sub
-        @param returns the roles
+        @param returns the roles and project with tags
         """
         if self.api_server is None or self.cookie is None:
             raise ProjectRegistryError("Project Registry URL: {} or "
@@ -110,7 +111,22 @@ class ProjectRegistry:
             raise ProjectRegistryError("Project Registry error occurred "
                                        "status_code: {} message: {}".format(response.status_code, response.content))
 
-        return response.json()['roles']
+        LOG.debug("Response : {}".format(response.json()))
+
+        roles = response.json().get('roles', None)
+        projects = response.json().get('projects', None)
+        project_tags = {}
+        for p in projects:
+            project_name = p.get('name', None)
+            project_uuid = p.get('uuid', None)
+            LOG.debug("Getting tags for Project: {}".format(project_name))
+            url = self.api_server + "/projects/{}".format(project_uuid)
+            response = session.get(url, headers=self._headers(), cookies=cookie_dict, verify=False)
+            if response.status_code != 200:
+                raise ProjectRegistryError("Project Registry error occurred "
+                                           "status_code: {} message: {}".format(response.status_code, response.content))
+            project_tags[project_name] = response.json().get('tags', None)
+        return roles, project_tags
 
 
 class ProjectRegistryError(Exception):

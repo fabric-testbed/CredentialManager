@@ -1,10 +1,6 @@
 import unittest
 import requests
 
-"""
-Test Credmgr APIs
-"""
-
 
 class TestCredmgr(unittest.TestCase):
     """
@@ -68,7 +64,8 @@ class TestCredmgr(unittest.TestCase):
         self.assertEqual(400, response.status_code)
 
         # valid request but unknown token
-        value = {"refresh_token": "https://cilogon.org/oauth2/refreshToken/46438248f4b7691a851f88b0849d9687/1584383387474"}
+        value = {"refresh_token":
+                     "https://cilogon.org/oauth2/refreshToken/46438248f4b7691a851f88b0849d9687/1584383387474"}
 
         response = requests.post(url=self.refresh_url, headers=self.headers, json=value)
         self.assertEqual(500, response.status_code)

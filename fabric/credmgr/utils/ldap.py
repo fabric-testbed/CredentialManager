@@ -22,11 +22,12 @@
 # SOFTWARE.
 #
 # Author Komal Thareja (kthare10@renci.org)
+import re
+
 from ldap3 import Connection, Server, ALL
 
 from fabric.credmgr import CONFIG
 from fabric.credmgr.utils import LOG
-
 """
 Handle LDAP interaction to get roles for a user
 """
@@ -36,10 +37,13 @@ ldap_user = CONFIG.get('ldap', 'ldap-user')
 ldap_password = CONFIG.get('ldap', 'ldap-password')
 ldap_search_base = CONFIG.get('ldap', 'ldap-search-base')
 
+project_ignore_list = CONFIG.get('runtime', 'project-names-ignore-list')
+roles_list = CONFIG.get('runtime', 'roles-list')
+
 server = Server(ldap_host, use_ssl=True, get_info=ALL)
 
 
-def get_active_projects_from_ldap(eppn, email):
+def get_active_projects_and_roles_from_ldap(eppn, email):
     """
     Return active projects for a user identified by eppn or email
     @params eppn: eppn
@@ -69,4 +73,20 @@ def get_active_projects_from_ldap(eppn, email):
         attributes = None
     conn.unbind()
     LOG.debug(attributes)
-    return attributes
+    projects = None
+    roles = None
+    if attributes is not None:
+        projects = {}
+        roles = []
+        for a in attributes:
+            m = re.match('CO:COU:(.+?):members:active', a)
+            if m:
+                found = m.group(1)
+                if found not in project_ignore_list:
+                    if found in roles_list:
+                        roles.append(found)
+                    else:
+                        projects[found] = []
+
+    LOG.debug("Projects: %s, Roles: %s", projects, roles)
+    return roles, projects

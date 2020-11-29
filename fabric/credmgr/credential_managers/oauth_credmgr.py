@@ -81,6 +81,8 @@ class OAuthCredmgr(AbstractCredentialManager):
         @raises Exception in case of error
         """
 
+        self.validate_scope(scope=scope)
+
         if project is None or scope is None:
             raise OAuthCredMgrError("CredMgr: Cannot request to create a token, "
                                     "Missing required parameter 'project' or 'scope'!")
@@ -104,6 +106,8 @@ class OAuthCredmgr(AbstractCredentialManager):
 
         @raises Exception in case of error
         """
+
+        self.validate_scope(scope=scope)
 
         if OAuth2Session is None or refresh_token is None:
             raise ImportError("No module named OAuth2Session or refresh_token not provided")
@@ -162,6 +166,13 @@ class OAuthCredmgr(AbstractCredentialManager):
         self.log.debug(str(response.content, "utf-8"))
         if response.status_code != 200:
             raise OAuthCredMgrError(str(response.content, "utf-8"))
+
+    @staticmethod
+    def validate_scope(scope: str):
+        allowed_scopes = CONFIG.get('runtime', 'allowed-scopes')
+        allowed_scopes_list = allowed_scopes.split(',')
+        if scope not in allowed_scopes_list:
+            raise OAuthCredMgrError("Scope %s is not allowed! Allowed scope values: %s", scope, allowed_scopes)
 
 
 class OAuthCredMgrError(Exception):

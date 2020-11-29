@@ -33,7 +33,7 @@ from dateutil import tz
 
 from fabric.credmgr import CONFIG
 from fabric.credmgr.utils import LOG
-from fabric.credmgr.utils.ldap import get_active_projects_from_ldap
+from fabric.credmgr.utils.ldap import get_active_projects_and_roles_from_ldap
 from fabric.credmgr.utils.project_registry import ProjectRegistry
 
 
@@ -81,8 +81,9 @@ class FabricToken:
 
         use_project_registry = str(CONFIG.get('runtime', 'enable-project-registry'))
         projects = None
+        roles = None
         if use_project_registry.lower() == 'false' or self.cookie is None:
-            projects = get_active_projects_from_ldap(eppn, email)
+            roles, projects = get_active_projects_and_roles_from_ldap(eppn, email)
         else:
             url = CONFIG.get('project-registry', 'project-registry-url')
             cert = CONFIG.get('project-registry', 'project-registry-cert')
@@ -90,9 +91,9 @@ class FabricToken:
             pass_phrase = CONFIG.get('project-registry', 'project-registry-pass-phrase')
             LOG.debug("Cookie: %s", self.cookie)
             project_registry = ProjectRegistry(url, self.cookie, cert, key, pass_phrase)
-            projects = project_registry.get_roles(sub)
+            roles, projects = project_registry.get_projects_and_roles(sub)
 
-        LOG.debug(projects)
+        LOG.debug("Projects: %s, Roles: %s", projects, roles)
 
         project_list = []
         for p in projects:
@@ -100,7 +101,7 @@ class FabricToken:
             if self.project == "all" or self.project in p:
                 project_list.append(p)
         LOG.debug(project_list)
-        self.claims["roles"] = project_list
+        self.claims["roles"] = roles
         self.claims["scope"] = self.scope
         LOG.debug(self.claims)
         self.unset = False

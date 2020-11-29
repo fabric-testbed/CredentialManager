@@ -35,6 +35,9 @@ prometheus-port = 8100
 enable-project-registry = False 
 # Life time of the Fabric Identity Token specified in minutes
 token-lifetime = 60
+project-names-ignore-list = Jupyterhub
+roles-list = facility-operators, project-leads
+allowed-scopes = cf, mf, all
 
 [logging]
 logger = credmgr
