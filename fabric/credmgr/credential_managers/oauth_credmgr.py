@@ -170,8 +170,7 @@ class OAuthCredmgr(AbstractCredentialManager):
     @staticmethod
     def validate_scope(scope: str):
         allowed_scopes = CONFIG.get('runtime', 'allowed-scopes')
-        allowed_scopes_list = allowed_scopes.split(',')
-        if scope not in allowed_scopes_list:
+        if scope not in allowed_scopes:
             raise OAuthCredMgrError("Scope %s is not allowed! Allowed scope values: %s", scope, allowed_scopes)
 
 

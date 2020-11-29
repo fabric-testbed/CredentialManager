@@ -95,15 +95,17 @@ class FabricToken:
 
         LOG.debug("Projects: %s, Roles: %s", projects, roles)
 
-        project_list = []
-        for p in projects:
-            LOG.debug("Processing %s", p)
-            if self.project == "all" or self.project in p:
-                project_list.append(p)
-        LOG.debug(project_list)
+        projects_to_be_removed = []
+        for project in projects.keys():
+            LOG.debug("Processing %s", project)
+            if self.project != "all" and self.project not in project:
+                projects_to_be_removed.append(project)
+        for x in projects_to_be_removed:
+            projects.pop(x)
+        self.claims['projects'] = projects
         self.claims["roles"] = roles
         self.claims["scope"] = self.scope
-        LOG.debug(self.claims)
+        LOG.debug("Claims %s", self.claims)
         self.unset = False
 
     def update_claims(self):

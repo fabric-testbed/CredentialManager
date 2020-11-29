@@ -312,9 +312,9 @@ Date: Thu, 19 Mar 2020 02:01:25 GMT
     "refresh_token": "https://cilogon.org/oauth2/refreshToken/46438248f4b7691a851f88b0849d9687/1584383387474"
 }
 ```
-### <a name="create2"></a>Create Token for projectName=RENCI-TEST and scope=measurement
+### <a name="create2"></a>Create Token for projectName=RENCI-TEST and scope=mf
 ```
-curl -X POST -i "localhost:7000/tokens/create?projectName=RENCI-TEST&scope=measurement" -H "accept: application/json"
+curl -X POST -i "localhost:7000/tokens/create?projectName=RENCI-TEST&scope=mf" -H "accept: application/json"
 HTTP/1.0 200 OK
 Content-Type: application/json
 Content-Length: 340
@@ -356,56 +356,52 @@ Date: Mon, 16 Mar 2020 18:32:38 GMT
 ### <a name="identity1"></a>Decoded Id Token Returned for projectName=all and scope=all
 ```
 {
-  "iss": "https://cilogon.org",
-  "sub": "http://cilogon.org/serverA/users/11904101",
-  "aud": "cilogon:/client_id/311cbebecefc7c1a6e0282e13fcf9588",
-  "auth_time": "1584583311",
-  "exp": 1584584211,
-  "iat": 1584583311,
   "email": "kthare10@email.unc.edu",
   "given_name": "Komal",
   "family_name": "Thareja",
-  "cert_subject_dn": "/DC=org/DC=cilogon/C=US/O=University of North Carolina at Chapel Hill/CN=Komal Thareja A11904106",
-  "idp": "urn:mace:incommon:unc.edu",
-  "idp_name": "University of North Carolina at Chapel Hill",
-  "eppn": "kthare10@unc.edu",
-  "affiliation": "employee@unc.edu;staff@unc.edu;member@unc.edu",
   "name": "Komal Thareja",
-  "acr": "urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport",
-  "entitlement": "urn:mace:dir:entitlement:common-lib-terms",
+  "iss": "https://cilogon.org",
+  "sub": "http://cilogon.org/serverA/users/11904101",
+  "aud": "cilogon:/client_id/1253defc60a323fcaa3b449326476099",
+  "token_id": "https://cilogon.org/oauth2/idToken/6fc1a62669fa4598911265824981e8d8/1606658617708",
+  "auth_time": "1606658617",
+  "exp": 1606662223,
+  "iat": 1606658623,
   "roles": [
-    "CO:members:active",
-    "CO:COU:Jupyterhub:members:active",
-    "CO:COU:RENCI-TEST:members:active"
+    "project-leads"
   ],
-  "scope": "all",
-  "project": "all"
+  "projects": {
+    "RENCI-TEST": [
+      "tag 1",
+      "tag 2"
+    ]
+  },
+  "scope": "all"
 }
 ```
-### <a name="identity2"></a>Decoded Token for projectName=RENCI-TEST and scope=measurement
+### <a name="identity2"></a>Decoded Token for projectName=RENCI-TEST and scope=mf
 ```
 {
-  "iss": "https://cilogon.org",
-  "sub": "http://cilogon.org/serverA/users/11904101",
-  "aud": "cilogon:/client_id/311cbebecefc7c1a6e0282e13fcf9588",
-  "auth_time": "1584583311",
-  "exp": 1584584554,
-  "iat": 1584583654,
   "email": "kthare10@email.unc.edu",
   "given_name": "Komal",
   "family_name": "Thareja",
-  "cert_subject_dn": "/DC=org/DC=cilogon/C=US/O=University of North Carolina at Chapel Hill/CN=Komal Thareja A11904106",
-  "idp": "urn:mace:incommon:unc.edu",
-  "idp_name": "University of North Carolina at Chapel Hill",
-  "eppn": "kthare10@unc.edu",
-  "affiliation": "employee@unc.edu;staff@unc.edu;member@unc.edu",
   "name": "Komal Thareja",
-  "acr": "urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport",
-  "entitlement": "urn:mace:dir:entitlement:common-lib-terms",
+  "iss": "https://cilogon.org",
+  "sub": "http://cilogon.org/serverA/users/11904101",
+  "aud": "cilogon:/client_id/1253defc60a323fcaa3b449326476099",
+  "token_id": "https://cilogon.org/oauth2/idToken/6fc1a62669fa4598911265824981e8d8/1606658617708",
+  "auth_time": "1606658617",
+  "exp": 1606662223,
+  "iat": 1606658623,
   "roles": [
-    "CO:COU:RENCI-TEST:members:active"
+    "project-leads"
   ],
-  "scope": "measurement",
-  "project": "RENCI-TEST"
+  "projects": {
+    "RENCI-TEST": [
+      "tag 1",
+      "tag 2"
+    ]
+  },
+  "scope": "mf"
 }
 ```
