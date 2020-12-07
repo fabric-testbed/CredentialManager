@@ -161,7 +161,7 @@ oauth:
     callback_url: http://127.0.0.1:9090/auth
 ```
 
-#### Credmr Config
+#### Credmgr Config
 Copy `config` file as `config_template`.
 Adjust the settings to suit your deployment environment
 ```
@@ -177,9 +177,14 @@ project-registry-cert = /etc/credmgr/public.pem
 project-registry-key =  /etc/credmgr/private.pem
 project-registry-pass-phrase =
 
-enable-project-registry = False
+rest-port = 7000
+prometheus-port = 8100
+enable-project-registry = False 
 # Life time of the Fabric Identity Token specified in minutes
 token-lifetime = 60
+project-names-ignore-list = Jupyterhub
+roles-list = facility-operators, project-leads
+allowed-scopes = cf, mf, all
 ```
 ### <a name="deploy"></a>Deployment
 

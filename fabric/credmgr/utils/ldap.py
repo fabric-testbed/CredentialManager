@@ -83,7 +83,7 @@ def get_active_projects_and_roles_from_ldap(eppn, email):
             if m:
                 found = m.group(1)
                 if found not in project_ignore_list:
-                    if found in roles_list:
+                    if found in roles_list or "-po" in found or "-pm" in found:
                         roles.append(found)
                     else:
                         projects[found] = []

@@ -161,8 +161,12 @@ components:
         refresh_token:
           type: string
           description: Refresh Token
+        cookie:
+          type: string
+          description: Vouch Cookie
       example:
         refresh_token: refresh_token
+        cookie: cookie
         id_token: id_token
     request:
       required:

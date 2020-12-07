@@ -14,25 +14,30 @@ class Success(Model):
 
     Do not edit the class manually.
     """
-    def __init__(self, id_token: str=None, refresh_token: str=None):  # noqa: E501
+    def __init__(self, id_token: str=None, refresh_token: str=None, cookie: str=None):  # noqa: E501
         """Success - a model defined in Swagger
 
         :param id_token: The id_token of this Success.  # noqa: E501
         :type id_token: str
         :param refresh_token: The refresh_token of this Success.  # noqa: E501
         :type refresh_token: str
+        :param cookie: The cookie of this Success.  # noqa: E501
+        :type cookie: str
         """
         self.swagger_types = {
             'id_token': str,
-            'refresh_token': str
+            'refresh_token': str,
+            'cookie': str
         }
 
         self.attribute_map = {
             'id_token': 'id_token',
-            'refresh_token': 'refresh_token'
+            'refresh_token': 'refresh_token',
+            'cookie': 'cookie'
         }
         self._id_token = id_token
         self._refresh_token = refresh_token
+        self._cookie = cookie
 
     @classmethod
     def from_dict(cls, dikt) -> 'Success':
@@ -90,3 +95,26 @@ class Success(Model):
         """
 
         self._refresh_token = refresh_token
+
+    @property
+    def cookie(self) -> str:
+        """Gets the cookie of this Success.
+
+        Vouch Cookie  # noqa: E501
+
+        :return: The cookie of this Success.
+        :rtype: str
+        """
+        return self._cookie
+
+    @cookie.setter
+    def cookie(self, cookie: str):
+        """Sets the cookie of this Success.
+
+        Vouch Cookie  # noqa: E501
+
+        :param cookie: The cookie of this Success.
+        :type cookie: str
+        """
+
+        self._cookie = cookie

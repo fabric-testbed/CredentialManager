@@ -91,7 +91,7 @@ class OAuthCredmgr(AbstractCredentialManager):
                                                project=project, scope=scope,
                                                cookie=cookie)
 
-        result = {"id_token": id_token, "refresh_token":refresh_token}
+        result = {"id_token": id_token, "refresh_token": refresh_token, "cookie": cookie}
         return result
 
     def refresh_token(self, refresh_token: str, project: str, scope: str, cookie: str = None) -> dict:
@@ -132,7 +132,7 @@ class OAuthCredmgr(AbstractCredentialManager):
         id_token = self._generate_fabric_token(ci_logon_id_token=id_token,
                                                project=project, scope=scope, cookie=cookie)
 
-        result = {"id_token": id_token, "refresh_token": refresh_token}
+        result = {"id_token": id_token, "refresh_token": refresh_token, "cookie": cookie}
 
         return result
 

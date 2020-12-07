@@ -227,6 +227,10 @@
           "refresh_token": {
             "type": "string",
             "description": "Refresh Token"
+          },
+          "cookie": {
+            "type": "string",
+            "description": "Vouch Cookie"
           }
         }
       },
