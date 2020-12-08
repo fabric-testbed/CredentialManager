@@ -15,11 +15,7 @@ services:
         restart: unless-stopped
     vouch-proxy:
         container_name: vouch-proxy
-        networks:
-            - frontend
         image: kthare10/vouch-proxy:refresh_token
-        ports:
-        - 9090:9090
         volumes:
         - ./vouch:/config
         - ./data:/data
@@ -29,8 +25,6 @@ services:
             context: ./
             dockerfile: Dockerfile
         container_name: credmgr
-        networks:
-            - frontend
         hostname: credmgr
         image: credmgr:latest
         restart: on-failure
@@ -42,8 +36,5 @@ services:
             - ./config_template:/etc/credmgr/config
             - ./ssl/pubkey.pem:/etc/credmgr/public.pem
             - ./ssl/privkey.pem:/etc/credmgr/private.pem
-        ports:
-            - 7000:7000
-            - 8100:8100
 networks:
   frontend:

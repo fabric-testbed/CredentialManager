@@ -104,7 +104,7 @@ Remove existing swagger_server directory and move my_server/swagger_server to sw
 ## <a name="usage"></a>Usage
 ### <a name="config"></a>Configuration
 #### Nginx Config
-No change is needed for development deployment, for production, replace `$host` with host domain name.
+No change is needed for development deployment, for production, enable password if Certs have one.
 ```
  server {
      listen 443 ssl http2;
@@ -126,7 +126,7 @@ Adjust the settings to suit your deployment environment
     - `cookie.name:` - your cookie name (default `fabric-service`)
     - `oauth.client_id:` - CILogon Client ID (default `CILOGON_CLIENT_ID`)
     - `oauth.client_secret:` - CILogon Client Secret (default `CILOGON_CLIENT_SECRET`)
-    - `oauth.callback_url:` - OIDC callback URL (default `http://127.0.0.1:9090/auth`)
+    - `oauth.callback_url:` - OIDC callback URL (default `https://127.0.0.1:8443/auth`)
 ```
     jwt:
         # secret - VOUCH_JWT_SECRET
@@ -158,7 +158,7 @@ oauth:
         - openid
         - email
         - profile
-    callback_url: http://127.0.0.1:9090/auth
+    callback_url: https://127.0.0.1:8443/auth
 ```
 
 #### Credmgr Config
@@ -188,7 +188,8 @@ allowed-scopes = cf, mf, all
 ```
 ### <a name="deploy"></a>Deployment
 
-Once the config file has been updated, bring up the containers. By default, self-signed certificates kept in ssl directory are used and refered in docker-compose.yml. For production, signed certificates must be used. 
+Once the config file has been updated, bring up the containers. By default, self-signed certificates kept in ssl directory are used and refered in docker-compose.yml. 
+For production, signed certificates must be used. 
 
 ```bash
  # bring using via docker-compose
@@ -266,7 +267,7 @@ Logstash input:
 ```
 
 ## <a name="metrics"></a>Metrics
-Credential Manager is integrated to following metrics collected by Prometheus. User can view the metrics by 'http://localhost:8100/' once the container is running.
+Credential Manager is integrated to following metrics collected by Prometheus. User can view the metrics by 'https://127.0.0.1:8443/metrics' once the container is running.
 - Requests_Received : HTTP Requests received
 - Requests_Success : HTTP Requests processed successfully
 - Requests_Failed : HTTP Requests failed
@@ -305,7 +306,7 @@ Requests_Failed_created{endpoint="/tokens/revoke",method="post"} 1.5893885516985
 ### <a name="create1"></a>Create a tokens with projectName=all and scope=all
 NOTE: In this case, it is not required to pass projectName and scope in query parameters as they default to all.
 ```bash
-curl -X POST -i "localhost:7000/tokens/create?projectName=all&scope=all" -H "accept: application/json"
+curl -X POST -i "localhost:8443/tokens/create?projectName=all&scope=all" -H "accept: application/json"
 HTTP/1.0 200 OK
 Content-Type: application/json
 Content-Length: 340
@@ -319,7 +320,7 @@ Date: Thu, 19 Mar 2020 02:01:25 GMT
 ```
 ### <a name="create2"></a>Create Token for projectName=RENCI-TEST and scope=mf
 ```
-curl -X POST -i "localhost:7000/tokens/create?projectName=RENCI-TEST&scope=mf" -H "accept: application/json"
+curl -X POST -i "localhost:8443/tokens/create?projectName=RENCI-TEST&scope=mf" -H "accept: application/json"
 HTTP/1.0 200 OK
 Content-Type: application/json
 Content-Length: 340
@@ -334,7 +335,7 @@ Date: Thu, 19 Mar 2020 02:06:43 GMT
 
 ### <a name="refresh"></a>Refresh token with projectName=all and scope=all
 ```bash
-curl -X POST -i "localhost:7000/tokens/refresh?projectName=all&scope=all" -H "accept: application/json" -H "Content-Type: application/json" -d '{"refresh_token": "https://cilogon.org/oauth2/refreshToken/46438248f4b7691a851f88b0849d9687/1584383387474"}'
+curl -X POST -i "localhost:8443/tokens/refresh?projectName=all&scope=all" -H "accept: application/json" -H "Content-Type: application/json" -d '{"refresh_token": "https://cilogon.org/oauth2/refreshToken/46438248f4b7691a851f88b0849d9687/1584383387474"}'
 HTTP/1.0 200 OK
 Content-Type: application/json
 Content-Length: 1624
@@ -349,7 +350,7 @@ Date: Mon, 16 Mar 2020 18:32:06 GMT
 
 ### <a name="revoke"></a>Revoke token 
 ```bash
-curl -X POST -i "localhost:7000/tokens/revoke" -H "accept: application/json" -H "Content-Type: application/json" -d '{"refresh_token": "https://cilogon.org/oauth2/refreshToken/46438248f4b7691a851f88b0849d9687/1584383387474"}'
+curl -X POST -i "localhost:8443/tokens/revoke" -H "accept: application/json" -H "Content-Type: application/json" -d '{"refresh_token": "https://cilogon.org/oauth2/refreshToken/46438248f4b7691a851f88b0849d9687/1584383387474"}'
 HTTP/1.0 200 OK
 Content-Type: application/json
 Content-Length: 106
