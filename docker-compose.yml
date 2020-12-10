@@ -12,11 +12,12 @@ services:
       - ./ssl/privkey.pem:/etc/ssl/private.pem
     restart: on-failure
 
-  api-server:
+  credmgr:
     build:
       context: ./
       dockerfile: Dockerfile
-    container_name: cm-api-server
+    image: fabrictestbed/credmgr:0.3
+    container_name: credmgr
     depends_on:
       - nginx
     volumes:
@@ -31,9 +32,10 @@ services:
 
   vouch-proxy:
     container_name: cm-vouch-proxy
-    image: voucher/vouch-proxy
+    image: kthare10/vouch-proxy:refresh_token
     #ports:
     #  - 9090:9090
     volumes:
       - ./vouch:/config
+      - ./data:/data
     restart: unless-stopped
