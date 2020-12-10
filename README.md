@@ -119,14 +119,14 @@ No change is needed for development deployment, for production, enable password 
 - Upon completion the user will be issued a `CILOGON_CLIENT_ID` and `CILOGON_CLIENT_SECRET`.
 NOTE: Callback url should match the url specified in Vouch Proxy Config
 #### Vouch Config
-Copy the `vouch/config_template` as `vouch/config`.
+Copy the `vouch/config_template` as `vouch/config`
 Adjust the settings to suit your deployment environment
-    - `jwt.secret:` - must be changed - if using in production, it likely needs to be the same as on all other services, e.g. Project Registry
-    - `cookie.domain:` - your domain (default `127.0.0.1`)
-    - `cookie.name:` - your cookie name (default `fabric-service`)
-    - `oauth.client_id:` - CILogon Client ID (default `CILOGON_CLIENT_ID`)
-    - `oauth.client_secret:` - CILogon Client Secret (default `CILOGON_CLIENT_SECRET`)
-    - `oauth.callback_url:` - OIDC callback URL (default `https://127.0.0.1:8443/auth`)
+- `jwt.secret:` - must be changed - if using in production, it likely needs to be the same as on all other services, e.g. Project Registry
+- `cookie.domain:` - your domain (default `127.0.0.1`)
+- `cookie.name:` - your cookie name (default `fabric-service`)
+- `oauth.client_id:` - CILogon Client ID (default `CILOGON_CLIENT_ID`)
+- `oauth.client_secret:` - CILogon Client Secret (default `CILOGON_CLIENT_SECRET`)
+- `oauth.callback_url:` - OIDC callback URL (default `https://127.0.0.1:8443/auth`)
 ```
     jwt:
         # secret - VOUCH_JWT_SECRET
