@@ -81,6 +81,6 @@ jwt-pass-phrase =
 
 [project-registry]
 project-registry-url = http://fabric-dev.renci.org:9090/
-project-registry-cert = /etc/credmgr/public.pem
+project-registry-cert = /etc/credmgr/cert.pem
 project-registry-key =  /etc/credmgr/private.pem
 project-registry-pass-phrase =
