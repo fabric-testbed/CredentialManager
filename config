@@ -33,8 +33,8 @@
 rest-port = 7000
 prometheus-port = 8100
 enable-project-registry = False 
-# Life time of the Fabric Identity Token specified in minutes
-token-lifetime = 60
+# Life time of the Fabric Identity Token specified in seconds
+token-lifetime = 3600
 project-names-ignore-list = Jupyterhub
 roles-list = facility-operators, project-leads
 allowed-scopes = cf, mf, all
@@ -75,6 +75,7 @@ ldap-search-base =
 
 [jwt]
 jwt-public-key = /etc/credmgr/public.pem
+jwt-public-key-kid = b415167211191e2e05b22b54b1d3b7667e764a747722185e722e52e146fe43aa
 jwt-private-key = /etc/credmgr/private.pem
 jwt-pass-phrase =
 

@@ -96,9 +96,27 @@ From the generate code icon (downward facing arrow), select Download API > JSON 
 A file named kthare10-credmgr-1.0.1-resolved.json should be downloaded. Rename it as openapi.json and copy it to CredentialManager/fabric/credmgr. Run the following command to generate the Flask based server.
 
 ```bash
+$ cd fabric/credmgr/
 $ cp kthare10-credmgr-1.0.1-resolved.json openapi.json
 $ ./update_swagger_stub.sh
 ```
+Update the `fabric/credmgr/swagger_server/util.py::_deserialize(data, klass)` to replace from:
+```
+    elif type(klass) == typing.GenericMeta:
+        if klass.__extra__ == list:
+            return _deserialize_list(data, klass.__args__[0])
+        if klass.__extra__ == dict:
+            return _deserialize_dict(data, klass.__args__[1])
+```
+to:
+```
+    elif hasattr(klass, '__origin__'):
+        if klass.__origin__ == list or klass.__origin__ == typing.List:
+            return _deserialize_list(data, klass.__args__[0])
+        if klass.__extra__ == dict:
+            return _deserialize_dict(data, klass.__args__[1])
+```
+
 Remove existing swagger_server directory and move my_server/swagger_server to swagger_server after verifying all changes are as expected.
 
 ## <a name="usage"></a>Usage
@@ -180,8 +198,8 @@ project-registry-pass-phrase =
 rest-port = 7000
 prometheus-port = 8100
 enable-project-registry = False 
-# Life time of the Fabric Identity Token specified in minutes
-token-lifetime = 60
+# Life time of the Fabric Identity Token specified in seconds
+token-lifetime = 3600
 project-names-ignore-list = Jupyterhub
 roles-list = facility-operators, project-leads
 allowed-scopes = cf, mf, all

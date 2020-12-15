@@ -12,3 +12,4 @@ prometheus_client
 waitress
 six
 cryptography
+authlib

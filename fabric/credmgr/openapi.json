@@ -52,6 +52,27 @@
         }
       }
     },
+    "/certs": {
+      "get": {
+        "tags": [
+          "default"
+        ],
+        "summary": "Return Public Keys to verify signature of the tokens",
+        "description": "Json Web Keys",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/jwks"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/tokens/create": {
       "post": {
         "tags": [
@@ -253,6 +274,46 @@
           },
           "gitsha1": {
             "type": "string"
+          }
+        }
+      },
+      "jwks": {
+        "type": "object",
+        "properties": {
+          "keys": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/jwks_keys"
+            }
+          }
+        }
+      },
+      "jwks_keys": {
+        "type": "object",
+        "properties": {
+          "kty": {
+            "type": "string",
+            "description": "Key Type"
+          },
+          "e": {
+            "type": "string",
+            "description": "Exponent Parameter"
+          },
+          "n": {
+            "type": "string",
+            "description": "Modulus Parameter"
+          },
+          "use": {
+            "type": "string",
+            "description": "Public Key Use Parameter"
+          },
+          "alg": {
+            "type": "string",
+            "description": "Algorithm Parameter"
+          },
+          "kid": {
+            "type": "string",
+            "description": "Key Id Header Parameter"
           }
         }
       }

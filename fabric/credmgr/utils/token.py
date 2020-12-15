@@ -30,11 +30,83 @@ import requests
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from dateutil import tz
+from authlib.jose import jwk
 
 from fabric.credmgr import CONFIG
 from fabric.credmgr.utils import LOG
 from fabric.credmgr.utils.ldap import get_active_projects_and_roles_from_ldap
 from fabric.credmgr.utils.project_registry import ProjectRegistry
+
+
+class JWTManager:
+    @staticmethod
+    def decode(*, id_token: str, jwks_url: str) -> dict:
+        """
+        Decode and validate a JWT
+        :raises Exception in case of failure
+        """
+        try:
+            response = requests.get(jwks_url)
+            if response.status_code != 200:
+                LOG.error("Response: {}".format(response.content))
+                raise TokenError("Failed to get Json Web Keys")
+
+            jwks = response.json()
+            public_keys = {}
+            for jwk in jwks['keys']:
+                kid = jwk['kid']
+                public_keys[kid] = jwt.algorithms.RSAAlgorithm.from_jwk(json.dumps(jwk))
+
+            kid = jwt.get_unverified_header(id_token)['kid']
+            key = public_keys[kid]
+
+            options = {'verify_aud': False}
+            claims = jwt.decode(id_token, key=key, verify=True, algorithms=['RS256'], options=options)
+
+            LOG.debug("Decoded Token %s", json.dumps(claims))
+            return claims
+        except Exception as ex:
+            LOG.error(ex)
+            raise ex
+
+    @staticmethod
+    def encode(*, validity: timedelta, claims: dict, private_key_file_name: str,
+               pass_phrase: str, kid: str) -> str:
+        """
+        sign and base64 encode the token
+
+        @return Returns the encoded string for the Fabric token
+        """
+        if pass_phrase is not None and pass_phrase != "":
+            pass_phrase = pass_phrase.encode("utf-8")
+        else:
+            pass_phrase = None
+
+        with open(private_key_file_name) as private_key_fh:
+            pem_data = private_key_fh.read()
+            private_key_fh.close()
+            private_key = serialization.load_pem_private_key(data=pem_data.encode("utf-8"),
+                                                             password=pass_phrase,
+                                                             backend=default_backend())
+
+        claims['iat'] = int(datetime.now().timestamp())
+        claims['exp'] = int((datetime.now() + validity).timestamp())
+
+        new_token = str(jwt.encode(claims, private_key, algorithm='RS256', headers={'kid':kid}), 'utf-8')
+        return new_token
+
+    @staticmethod
+    def encode_public_jwk(public_key_file_name: str, kid: str, alg: str):
+        pem_data = None
+        with open(public_key_file_name) as public_key_fh:
+            pem_data = public_key_fh.read()
+            public_key_fh.close()
+
+        result = jwk.dumps(pem_data, kty='RSA')
+        result["kid"] = kid
+        result["alg"] = alg
+        result["use"] = "sig"
+        return result
 
 
 class FabricToken:
@@ -54,24 +126,33 @@ class FabricToken:
         @raises Exception in case of error
         """
         if id_token is None or project is None or scope is None:
-            raise FabricTokenError("Missing required parameters id_token or project or scope")
+            raise TokenError("Missing required parameters id_token or project or scope")
 
         LOG.debug("id_token %s", id_token)
-        self.jwks_url = CONFIG.get("oauth", "oauth-jwks-url")
-        self.public_key = CONFIG.get("jwt", "jwt-public-key")
-        self.private_key = CONFIG.get("jwt", "jwt-private-key")
-        self.pass_phrase = CONFIG.get("jwt", "jwt-pass-phrase")
-        LOG.debug(self.pass_phrase)
         self.id_token = id_token
         self.project = project
         self.scope = scope
         self.claims = None
-        self.unset = True
         self.encoded = False
         self.jwt = None
         self.cookie = cookie
+        self.unset = True
 
-    def set_claims(self):
+    def generate_from_ci_logon_token(self, jwks_url: str, private_key: str, validity_in_seconds: int, kid: str,
+                                     pass_phrase: str = None):
+        if self.encoded:
+            LOG.info("Returning previously encoded token for project %s user %s" % (self.project, self.scope))
+            return self.jwt
+
+        self.claims = JWTManager.decode(id_token=self.id_token, jwks_url=jwks_url)
+        self._add_fabric_claims()
+
+        self.jwt = JWTManager.encode(validity=timedelta(seconds=int(validity_in_seconds)), claims=self.claims,
+                                     private_key_file_name=private_key, pass_phrase=pass_phrase, kid=kid)
+        self.encoded = True
+        return self.jwt
+
+    def _add_fabric_claims(self):
         """
         Set the claims for the Token by adding membership, project and scope
         """
@@ -108,117 +189,6 @@ class FabricToken:
         LOG.debug("Claims %s", self.claims)
         self.unset = False
 
-    def update_claims(self):
-        """
-        Update the role claims for the Token and add scope
-        """
-        roles = self.claims.get("roles")
-        LOG.debug(roles)
-        new_roles = []
-        for item in roles:
-            if 'CO:members:active' not in item:
-                if 'project-leads:members:active' in item:
-                    new_roles.append(item)
-                elif 'members:active' in item:
-                    if (self.project != "all" and self.project in item) or self.project == "all":
-                        new_roles.append(item)
-
-        LOG.debug(new_roles)
-        self.claims["roles"] = new_roles
-        self.claims["scope"] = self.scope
-        self.claims["project"] = self.project
-        LOG.debug(self.claims)
-        self.unset = False
-
-    def encode(self, validity: timedelta) -> str:
-        """
-        sign and base64 encode the token
-
-        @return Returns the encoded string for the Fabric token
-        """
-        if self.unset:
-            raise FabricTokenError("Claims not initialized, unable to encode")
-
-        if self.encoded:
-            LOG.info("Returning previously encoded token for project %s user %s" % (self.project, self.scope))
-            return self.jwt
-
-        if self.pass_phrase is not None and self.pass_phrase != "":
-            self.pass_phrase = self.pass_phrase.encode("utf-8")
-        else:
-            self.pass_phrase = None
-
-        with open(self.private_key) as private_key_fh:
-            pem_data = private_key_fh.read()
-            private_key_fh.close()
-            private_key = serialization.load_pem_private_key(data=pem_data.encode("utf-8"),
-                                                             password=self.pass_phrase,
-                                                             backend=default_backend())
-
-        self.claims['iat'] = int(datetime.now().timestamp())
-        self.claims['exp'] = int((datetime.now() + validity).timestamp())
-
-        self.jwt = str(jwt.encode(self.claims, private_key, algorithm='RS256'), 'utf-8')
-        self.encoded = True
-        return self.jwt
-
-    def decode(self, ci_logon: bool = True, verify: bool = True):
-        """
-        Decode token
-
-        @param ci_logon: true if CI Logon id token to be decoded;
-                         false is Fabric token to be decoded
-        @param verify: verify signature and expiration date if True
-        """
-        try:
-            if ci_logon:
-                response = requests.get(self.jwks_url)
-                if response.status_code != 200:
-                    return
-                jwks = response.json()
-                public_keys = {}
-                for jwk in jwks['keys']:
-                    kid = jwk['kid']
-                    public_keys[kid] = jwt.algorithms.RSAAlgorithm.from_jwk(json.dumps(jwk))
-
-                kid = jwt.get_unverified_header(self.id_token)['kid']
-                key = public_keys[kid]
-            else:
-                if self.unset:
-                    raise FabricTokenError("JWT not initialized")
-
-                if not self.encoded:
-                    raise FabricTokenError("Token already in decoded form")
-
-                if self.public_key is None:
-                    LOG.info("Decoding token without verification of origin or date")
-                    verify = False
-
-                with open(self.public_key) as fh:
-                    key = fh.read()
-                    fh.close()
-
-            options = {'verify_aud': False}
-            self.claims = jwt.decode(self.id_token, key=key, verify=verify, algorithms=['RS256'], options=options)
-
-            LOG.debug("Decoded Token %s", json.dumps(self.claims))
-        except Exception as ex:
-            LOG.error(ex)
-            raise ex
-
-    def valid_until(self) -> datetime:
-        """
-        Returns time until when the token is valid
-        @return time until when the token is valid
-        """
-        if self.unset:
-            raise FabricTokenError("Claims not initialized")
-
-        if 'exp' in self.claims:
-            return self.get_local_from_utc(self.claims['exp'])
-
-        raise FabricTokenError("Expiration claim not present")
-
     @staticmethod
     def get_local_from_utc(utc: int) -> datetime:
         """ convert UTC in claims (iat and exp) into a python
@@ -244,7 +214,7 @@ class FabricToken:
         return fstring
 
 
-class FabricTokenError(Exception):
+class TokenError(Exception):
     """
     Token Exception
     """

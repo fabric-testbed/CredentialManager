@@ -33,8 +33,16 @@ from fabric.credmgr.swagger_server.models.success import Success  # noqa: E501
 from fabric.credmgr.swagger_server import received_counter, success_counter, failure_counter
 from fabric.credmgr.swagger_server.response.constants import HTTP_METHOD_POST, \
     TOKENS_REVOKE_URL, TOKENS_REFRESH_URL, \
-    TOKENS_CREATE_URL, VOUCH_ID_TOKEN, VOUCH_REFRESH_TOKEN, VOUCH_COOKIE
+    TOKENS_CREATE_URL, VOUCH_ID_TOKEN, VOUCH_REFRESH_TOKEN, VOUCH_COOKIE, AUTHORIZATION_ERR
 from fabric.credmgr.utils import LOG
+
+
+def authorize(headers):
+    ci_logon_id_token = headers.get(VOUCH_ID_TOKEN, None)
+    refresh_token = headers.get(VOUCH_REFRESH_TOKEN, None)
+    cookie = headers.get(VOUCH_COOKIE, None)
+
+    return ci_logon_id_token, refresh_token, cookie
 
 
 def tokens_create_post(project_name=None, scope=None):  # noqa: E501
@@ -51,9 +59,10 @@ def tokens_create_post(project_name=None, scope=None):  # noqa: E501
     """
     received_counter.labels(HTTP_METHOD_POST, TOKENS_CREATE_URL).inc()
     try:
-        ci_logon_id_token = connexion.request.headers.get(VOUCH_ID_TOKEN, None)
-        refresh_token = connexion.request.headers.get(VOUCH_REFRESH_TOKEN, None)
-        cookie = connexion.request.headers.get(VOUCH_COOKIE, None)
+        ci_logon_id_token, refresh_token, cookie = authorize(connexion.request.headers)
+        if ci_logon_id_token is None:
+            return AUTHORIZATION_ERR, 401
+
         credmgr = OAuthCredmgr()
         result = credmgr.create_token(ci_logon_id_token=ci_logon_id_token,
                                       refresh_token=refresh_token,
