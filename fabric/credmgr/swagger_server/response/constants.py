@@ -35,3 +35,5 @@ HTTP_METHOD_POST = 'post'
 VOUCH_ID_TOKEN = 'X-Vouch-Idp-IdToken'
 VOUCH_REFRESH_TOKEN = 'X-Vouch-Idp-RefreshToken'
 VOUCH_COOKIE = 'Cookie'
+
+AUTHORIZATION_ERR = 'Authorization information is missing or invalid: /tokens'

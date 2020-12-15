@@ -100,6 +100,23 @@ $ cd fabric/credmgr/
 $ cp kthare10-credmgr-1.0.1-resolved.json openapi.json
 $ ./update_swagger_stub.sh
 ```
+Update the `fabric/credmgr/swagger_server/util.py::_deserialize(data, klass)` to replace from:
+```
+    elif type(klass) == typing.GenericMeta:
+        if klass.__extra__ == list:
+            return _deserialize_list(data, klass.__args__[0])
+        if klass.__extra__ == dict:
+            return _deserialize_dict(data, klass.__args__[1])
+```
+to:
+```
+    elif hasattr(klass, '__origin__'):
+        if klass.__origin__ == list or klass.__origin__ == typing.List:
+            return _deserialize_list(data, klass.__args__[0])
+        if klass.__extra__ == dict:
+            return _deserialize_dict(data, klass.__args__[1])
+```
+
 Remove existing swagger_server directory and move my_server/swagger_server to swagger_server after verifying all changes are as expected.
 
 ## <a name="usage"></a>Usage

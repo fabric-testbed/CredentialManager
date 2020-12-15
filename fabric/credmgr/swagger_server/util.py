@@ -23,8 +23,8 @@ def _deserialize(data, klass):
         return deserialize_date(data)
     elif klass == datetime.datetime:
         return deserialize_datetime(data)
-    elif type(klass) == typing.GenericMeta:
-        if klass.__extra__ == list:
+    elif hasattr(klass, '__origin__'):
+        if klass.__origin__ == list or klass.__origin__ == typing.List:
             return _deserialize_list(data, klass.__args__[0])
         if klass.__extra__ == dict:
             return _deserialize_dict(data, klass.__args__[1])
