@@ -6,6 +6,7 @@
  - [Requirements](#requirements)
  - [API Specification](#apispec)
    - [API Version](#apiversion)
+   - [API Certs](#apicerts)
    - [API Tokens](#apitoken)
  - [Swagger Server](#swagger)
    - [Generate a new Server Stub](#generate)   
@@ -59,6 +60,29 @@ Example: Version format
 {
   "gitsha1": "Release SHA as string",
   "version": "Release version as string"
+}
+```
+### <a name="apicerts"></a>Certs
+API `certs`:
+
+Resource | Action | Input | Output
+:--------|:----:|:---:|:---:
+`/certs` | GET: Public Keys to verify signature of the tokens | NA | Keys format
+
+Example: Keys format
+
+```json
+{
+  "keys": [
+    {
+      "kty": "Key Type",
+      "e": "Exponent Parameter",
+      "n": "Modulus Parameter",
+      "use": "Public Key Use Parameter",
+      "alg": "Algorithm Parameter",
+      "kid": "Key Id Header Parameter"
+    }
+  ]
 }
 ```
 ### <a name="apitokens"></a>Tokens
