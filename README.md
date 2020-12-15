@@ -96,6 +96,7 @@ From the generate code icon (downward facing arrow), select Download API > JSON 
 A file named kthare10-credmgr-1.0.1-resolved.json should be downloaded. Rename it as openapi.json and copy it to CredentialManager/fabric/credmgr. Run the following command to generate the Flask based server.
 
 ```bash
+$ cd fabric/credmgr/
 $ cp kthare10-credmgr-1.0.1-resolved.json openapi.json
 $ ./update_swagger_stub.sh
 ```
@@ -180,8 +181,8 @@ project-registry-pass-phrase =
 rest-port = 7000
 prometheus-port = 8100
 enable-project-registry = False 
-# Life time of the Fabric Identity Token specified in minutes
-token-lifetime = 60
+# Life time of the Fabric Identity Token specified in seconds
+token-lifetime = 3600
 project-names-ignore-list = Jupyterhub
 roles-list = facility-operators, project-leads
 allowed-scopes = cf, mf, all

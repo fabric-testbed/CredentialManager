@@ -23,6 +23,7 @@
 #
 # Author Komal Thareja (kthare10@renci.org)
 VERSION_URL = '/version'
+CERTS_URL = '/certs'
 TOKENS_CREATE_URL = '/tokens/create'
 TOKENS_REFRESH_URL = '/tokens/refresh'
 TOKENS_REVOKE_URL = '/tokens/revoke'
@@ -31,6 +32,6 @@ HTTP_METHOD_GET = 'get'
 HTTP_METHOD_POST = 'post'
 
 
-VOUCH_ID_TOKEN = 'X-Vouch-Idp-Idtoken'
-VOUCH_REFRESH_TOKEN = 'X-Vouch-Idp-Refreshtoken'
+VOUCH_ID_TOKEN = 'X-Vouch-Idp-IdToken'
+VOUCH_REFRESH_TOKEN = 'X-Vouch-Idp-RefreshToken'
 VOUCH_COOKIE = 'Cookie'

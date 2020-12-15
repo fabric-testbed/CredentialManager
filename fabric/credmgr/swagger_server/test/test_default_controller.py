@@ -5,12 +5,24 @@ from __future__ import absolute_import
 from flask import json
 from six import BytesIO
 
+from fabric.credmgr.swagger_server.models.jwks import Jwks  # noqa: E501
 from fabric.credmgr.swagger_server.models.version import Version  # noqa: E501
 from fabric.credmgr.swagger_server.test import BaseTestCase
 
 
 class TestDefaultController(BaseTestCase):
     """DefaultController integration test stubs"""
+
+    def test_certs_get(self):
+        """Test case for certs_get
+
+        Return Public Keys to verify signature of the tokens
+        """
+        response = self.client.open(
+            '//certs',
+            method='GET')
+        self.assert200(response,
+                       'Response body is : ' + response.data.decode('utf-8'))
 
     def test_version_get(self):
         """Test case for version_get

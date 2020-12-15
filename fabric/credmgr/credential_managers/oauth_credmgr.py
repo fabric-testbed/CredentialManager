@@ -29,6 +29,7 @@ Module responsible for handling Credmgr REST API logic
 import base64
 from datetime import timedelta
 import requests
+from authlib.jose import jwk
 
 try:
     from requests_oauthlib import OAuth2Session
@@ -38,7 +39,7 @@ except Exception:
 from fabric.credmgr.credential_managers.abstract_credential_manager import AbstractCredentialManager
 from fabric.credmgr.utils import LOG
 from fabric.credmgr.utils.utils import get_providers
-from fabric.credmgr.utils.token import FabricToken
+from fabric.credmgr.utils.token import FabricToken, JWTManager
 from fabric.credmgr import CONFIG, DEFAULT_TOKEN_LIFE_TIME
 
 
@@ -55,12 +56,18 @@ class OAuthCredmgr(AbstractCredentialManager):
                                scope: str, cookie: str = None):
         self.log.debug("CILogon Token: %s", ci_logon_id_token)
         fabric_token = FabricToken(ci_logon_id_token, project, scope, cookie)
-        fabric_token.decode()
-        fabric_token.set_claims()
         validty = CONFIG.get('runtime', 'token-lifetime')
         if validty is None:
             validty = DEFAULT_TOKEN_LIFE_TIME
-        id_token = fabric_token.encode(timedelta(minutes=int(validty)))
+        jwks_url = CONFIG.get("oauth", "oauth-jwks-url")
+        private_key = CONFIG.get("jwt", "jwt-private-key")
+        pass_phrase = CONFIG.get("jwt", "jwt-pass-phrase")
+        kid = CONFIG.get("jwt", "jwt-public-key-kid")
+        public_key = CONFIG.get("jwt", "jwt-public-key")
+
+        id_token = fabric_token.generate_from_ci_logon_token(jwks_url=jwks_url, private_key=private_key,
+                                                             validity_in_seconds=validty, kid=kid,
+                                                             pass_phrase=pass_phrase)
         self.log.debug("Fabric Token: %s", id_token)
 
         return id_token
@@ -172,6 +179,16 @@ class OAuthCredmgr(AbstractCredentialManager):
         allowed_scopes = CONFIG.get('runtime', 'allowed-scopes')
         if scope not in allowed_scopes:
             raise OAuthCredMgrError("Scope %s is not allowed! Allowed scope values: %s", scope, allowed_scopes)
+
+    @staticmethod
+    def get_jwks():
+        kid = CONFIG.get("jwt", "jwt-public-key-kid")
+        public_key = CONFIG.get("jwt", "jwt-public-key")
+
+        jwk_public_key_rsa = JWTManager.encode_public_jwk(public_key_file_name=public_key, kid=kid, alg="RS256")
+
+        jwks = {"keys": [jwk_public_key_rsa]}
+        return jwks
 
 
 class OAuthCredMgrError(Exception):

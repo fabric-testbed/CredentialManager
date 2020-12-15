@@ -34,6 +34,21 @@ paths:
               schema:
                 $ref: '#/components/schemas/version'
       x-openapi-router-controller: fabric.credmgr.swagger_server.controllers.default_controller
+  /certs:
+    get:
+      tags:
+      - default
+      summary: Return Public Keys to verify signature of the tokens
+      description: Json Web Keys
+      operationId: certs_get
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/jwks'
+      x-openapi-router-controller: fabric.credmgr.swagger_server.controllers.default_controller
   /tokens/create:
     post:
       tags:
@@ -185,6 +200,55 @@ components:
       example:
         gitsha1: gitsha1
         version: version
+    jwks:
+      type: object
+      properties:
+        keys:
+          type: array
+          items:
+            $ref: '#/components/schemas/jwks_keys'
+      example:
+        keys:
+        - kty: kty
+          e: e
+          use: use
+          kid: kid
+          alg: alg
+          n: "n"
+        - kty: kty
+          e: e
+          use: use
+          kid: kid
+          alg: alg
+          n: "n"
+    jwks_keys:
+      type: object
+      properties:
+        kty:
+          type: string
+          description: Key Type
+        e:
+          type: string
+          description: Exponent Parameter
+        n:
+          type: string
+          description: Modulus Parameter
+        use:
+          type: string
+          description: Public Key Use Parameter
+        alg:
+          type: string
+          description: Algorithm Parameter
+        kid:
+          type: string
+          description: Key Id Header Parameter
+      example:
+        kty: kty
+        e: e
+        use: use
+        kid: kid
+        alg: alg
+        n: "n"
   parameters:
     projectName:
       name: projectName
