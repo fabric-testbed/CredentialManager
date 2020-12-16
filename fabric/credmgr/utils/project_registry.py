@@ -70,15 +70,15 @@ class ProjectRegistry:
     """
     Class implements functionality to interface with Project Registry
     """
-    def __init__(self, api_server: str, cookie: str, cert: str, key: str, pass_phrase: str = None):
+    def __init__(self, api_server: str, cookie: str, id_token: str, cert: str, key: str, pass_phrase: str = None):
         self.api_server = api_server
         self.cookie = cookie
+        self.id_token = id_token
         self.cert = cert
         self.key = key
         self.pass_phrase = pass_phrase
 
-    @staticmethod
-    def _headers() -> dict:
+    def _headers(self) -> dict:
         """
         Returns the headers
         @return dict containing header info
@@ -86,6 +86,7 @@ class ProjectRegistry:
         headers = {
             'Accept': 'application/json',
             'Content-Type': "application/json",
+            'X-Vouch-Idp-Idtoken': self.id_token
         }
         return headers
 
