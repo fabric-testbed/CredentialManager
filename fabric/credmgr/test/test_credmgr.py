@@ -6,7 +6,7 @@ class TestCredmgr(unittest.TestCase):
     """
     Test Credential Manager
     """
-    base_url = "http://localhost:7000/tokens/"
+    base_url = "https://localhost:8443/tokens/"
     create_url = base_url + "create"
     refresh_url = base_url + "refresh"
     revoke_url = base_url + "revoke"
