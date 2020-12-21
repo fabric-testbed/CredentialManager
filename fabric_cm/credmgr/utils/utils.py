@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # MIT License
 #
 # Copyright (c) 2020 FABRIC Testbed
@@ -21,24 +22,25 @@
 # SOFTWARE.
 #
 # Author Komal Thareja (kthare10@renci.org)
-FROM python:3
-MAINTAINER Komal Thareja<komal.thareja@gmail.com>
+"""
+Provides utility functions
+"""
+from fabric_cm.credmgr import CONFIG
 
-RUN mkdir -p /usr/src/app
-RUN mkdir -p /etc/credmgr/
-RUN touch /etc/credmgr/private.pem
-RUN touch /etc/credmgr/public.pem
 
-WORKDIR /usr/src/app
+def get_providers():
+    """
+    Constructor providers dict based on the information provided in config file
+    """
+    if not CONFIG and ('oauth' not in CONFIG):
+        raise RuntimeError('OAUTH configuration parameters must be specified in config')
 
-COPY requirements.txt /usr/src/app/
+    providers = {}
+    provider = CONFIG.get('oauth', "oauth-provider")
+    providers[provider] = {}
+    providers[provider]['client_id'] = CONFIG.get('oauth', "oauth-client-id")
+    providers[provider]['client_secret'] = CONFIG.get('oauth', "oauth-client-secret")
+    providers[provider]['token_uri'] = CONFIG.get('oauth', "oauth-token-url")
+    providers[provider]['revoke_uri'] = CONFIG.get('oauth', "oauth-revoke-url")
 
-RUN pip3 install --no-cache-dir -r requirements.txt
-
-COPY . /usr/src/app/
-
-EXPOSE 7000 8100
-
-ENTRYPOINT ["python3"]
-
-CMD ["-m", "fabric_cm.credmgr.swagger_server"]
+    return providers

@@ -13,3 +13,4 @@ waitress
 six
 cryptography
 authlib
+fabric_fss_utils

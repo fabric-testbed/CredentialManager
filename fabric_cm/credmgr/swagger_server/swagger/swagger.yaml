@@ -1,0 +1,273 @@
+openapi: 3.0.3
+info:
+  title: Fabric Credential Manager API
+  description: This is Fabric Credential Manager API
+  termsOfService: None
+  contact:
+    name: Komal Thareja
+    email: kthare10@unc.edu
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  version: 1.0.1
+servers:
+- url: http://127.0.0.1:7000/
+  description: local development
+- url: https://virtserver.swaggerhub.com/kthare10/credmgr/1.0.0
+  description: SwaggerHub API Auto Mocking
+tags:
+- name: tokens
+  description: Tokens in FABRIC
+paths:
+  /version:
+    get:
+      tags:
+      - default
+      summary: version
+      description: Version
+      operationId: version_get
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/version'
+      x-openapi-router-controller: fabric_cm.credmgr.swagger_server.controllers.default_controller
+  /certs:
+    get:
+      tags:
+      - default
+      summary: Return Public Keys to verify signature of the tokens
+      description: Json Web Keys
+      operationId: certs_get
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/jwks'
+      x-openapi-router-controller: fabric_cm.credmgr.swagger_server.controllers.default_controller
+  /tokens/create:
+    post:
+      tags:
+      - tokens
+      summary: Generate tokens for an user
+      description: |
+        Request to generate tokens for an user
+      operationId: tokens_create_post
+      parameters:
+      - name: projectName
+        in: query
+        description: Project Name
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+          default: all
+      - name: scope
+        in: query
+        description: Scope for which token is requested
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+          default: all
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/success'
+        "400":
+          description: Bad request
+        "401":
+          description: Authorization information is missing or invalid
+        "404":
+          description: Token not found
+        "5XX":
+          description: Unexpected error
+      x-openapi-router-controller: fabric_cm.credmgr.swagger_server.controllers.tokens_controller
+  /tokens/refresh:
+    post:
+      tags:
+      - tokens
+      summary: Refresh tokens for an user
+      description: |
+        Request to refresh OAuth tokens for an user
+      operationId: tokens_refresh_post
+      parameters:
+      - name: projectName
+        in: query
+        description: Project Name
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+          default: all
+      - name: scope
+        in: query
+        description: Scope for which token is requested
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+          default: all
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/request'
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/success'
+        "400":
+          description: Bad request
+        "401":
+          description: Authorization information is missing or invalid
+        "404":
+          description: Token not found
+        "5XX":
+          description: Unexpected error
+      x-openapi-router-controller: fabric_cm.credmgr.swagger_server.controllers.tokens_controller
+  /tokens/revoke:
+    post:
+      tags:
+      - tokens
+      summary: Revoke a refresh token for an user
+      description: |
+        Request to revoke a refresh token for an user
+      operationId: tokens_revoke_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/request'
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad request
+        "401":
+          description: Authorization information is missing or invalid
+        "404":
+          description: Token not found
+        "5XX":
+          description: Unexpected error
+      x-openapi-router-controller: fabric_cm.credmgr.swagger_server.controllers.tokens_controller
+components:
+  schemas:
+    success:
+      type: object
+      properties:
+        id_token:
+          type: string
+          description: Identity Token
+        refresh_token:
+          type: string
+          description: Refresh Token
+        cookie:
+          type: string
+          description: Vouch Cookie
+      example:
+        refresh_token: refresh_token
+        cookie: cookie
+        id_token: id_token
+    request:
+      required:
+      - refresh_token
+      type: object
+      properties:
+        refresh_token:
+          type: string
+          description: Refresh Token
+    version:
+      properties:
+        version:
+          type: string
+        gitsha1:
+          type: string
+      example:
+        gitsha1: gitsha1
+        version: version
+    jwks:
+      type: object
+      properties:
+        keys:
+          type: array
+          items:
+            $ref: '#/components/schemas/jwks_keys'
+      example:
+        keys:
+        - kty: kty
+          e: e
+          use: use
+          kid: kid
+          alg: alg
+          n: "n"
+        - kty: kty
+          e: e
+          use: use
+          kid: kid
+          alg: alg
+          n: "n"
+    jwks_keys:
+      type: object
+      properties:
+        kty:
+          type: string
+          description: Key Type
+        e:
+          type: string
+          description: Exponent Parameter
+        n:
+          type: string
+          description: Modulus Parameter
+        use:
+          type: string
+          description: Public Key Use Parameter
+        alg:
+          type: string
+          description: Algorithm Parameter
+        kid:
+          type: string
+          description: Key Id Header Parameter
+      example:
+        kty: kty
+        e: e
+        use: use
+        kid: kid
+        alg: alg
+        n: "n"
+  parameters:
+    projectName:
+      name: projectName
+      in: query
+      description: Project Name
+      required: false
+      style: form
+      explode: true
+      schema:
+        type: string
+        default: all
+    scope:
+      name: scope
+      in: query
+      description: Scope for which token is requested
+      required: false
+      style: form
+      explode: true
+      schema:
+        type: string
+        default: all
+

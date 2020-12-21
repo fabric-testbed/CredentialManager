@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # MIT License
 #
 # Copyright (c) 2020 FABRIC Testbed
@@ -21,24 +22,9 @@
 # SOFTWARE.
 #
 # Author Komal Thareja (kthare10@renci.org)
-FROM python:3
-MAINTAINER Komal Thareja<komal.thareja@gmail.com>
+"""
+Utility Module
+"""
+from fabric_cm.credmgr.utils.log import get_logger
 
-RUN mkdir -p /usr/src/app
-RUN mkdir -p /etc/credmgr/
-RUN touch /etc/credmgr/private.pem
-RUN touch /etc/credmgr/public.pem
-
-WORKDIR /usr/src/app
-
-COPY requirements.txt /usr/src/app/
-
-RUN pip3 install --no-cache-dir -r requirements.txt
-
-COPY . /usr/src/app/
-
-EXPOSE 7000 8100
-
-ENTRYPOINT ["python3"]
-
-CMD ["-m", "fabric_cm.credmgr.swagger_server"]
+LOG, FILE_HANDLER = get_logger()
