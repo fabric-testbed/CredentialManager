@@ -41,4 +41,4 @@ EXPOSE 7000 8100
 
 ENTRYPOINT ["python3"]
 
-CMD ["-m", "fabric.credmgr.swagger_server"]
+CMD ["-m", "fabric_cm.credmgr.swagger_server"]

@@ -149,4 +149,3 @@ class TokenError(Exception):
     """
     Token Exception
     """
-    pass

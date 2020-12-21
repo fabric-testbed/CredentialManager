@@ -16,7 +16,7 @@ services:
     build:
       context: ./
       dockerfile: Dockerfile
-    image: fabrictestbed/credmgr:0.3
+    image: fabrictestbed/credmgr:0.4
     container_name: credmgr
     depends_on:
       - nginx

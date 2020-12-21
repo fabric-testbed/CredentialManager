@@ -102,7 +102,7 @@ class OAuthCredmgr(AbstractCredentialManager):
                                                project=project, scope=scope,
                                                cookie=cookie)
 
-        result = {"id_token": id_token, "refresh_token": refresh_token, "cookie": cookie}
+        result = {"id_token": id_token, "refresh_token": refresh_token}
         return result
 
     def refresh_token(self, refresh_token: str, project: str, scope: str, cookie: str = None) -> dict:

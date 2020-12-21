@@ -1,6 +1,6 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
-from fss_utils.jwt_validate import ValidateCode, JWTValidator
+from fss_utils.jwt_validate import JWTValidator
 import prometheus_client
 
 from fabric_cm.credmgr import CONFIG
@@ -16,11 +16,9 @@ CILOGON_CERTS = CONFIG.get("oauth", "oauth-jwks-url")
 CILOGON_KEY_REFRESH = CONFIG.get("oauth", "oauth-key-refresh")
 LOG.info(f'Initializing JWT Validator to use {CILOGON_CERTS} endpoint, '
          f'refreshing keys every {CILOGON_KEY_REFRESH} HH:MM:SS')
-t = datetime.datetime.strptime(CILOGON_KEY_REFRESH, "%H:%M:%S")
+t = datetime.strptime(CILOGON_KEY_REFRESH, "%H:%M:%S")
 jwt_validator = JWTValidator(CILOGON_CERTS,
-                             datetime.timedelta(hours=t.hour,
-                                                minutes=t.minute,
-                                                seconds=t.second))
+                             timedelta(hours=t.hour, minutes=t.minute, seconds=t.second))
 
 kid = CONFIG.get("jwt", "jwt-public-key-kid")
 public_key = CONFIG.get("jwt", "jwt-public-key")
