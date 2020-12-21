@@ -26,10 +26,10 @@
 
 from setuptools import setup, find_packages
 
-from fabric.credmgr import CONF_DIR, CONF_FILE, LOG_DIR
+from fabric_cm.credmgr import CONF_DIR, CONF_FILE, LOG_DIR
 
 NAME = "fabric-credmgr"
-VERSION = "0.3"
+VERSION = "0.4"
 # To install the library, run the following
 #
 # python setup.py install
@@ -71,7 +71,7 @@ setup(
     include_package_data=True,
     data_files = [(CONF_DIR, [CONF_FILE]), (LOG_DIR, [])],
     entry_points={
-        'console_scripts': ['fabric.credmgr.swagger_server=fabric.credmgr.swagger_server.__main__:main']},
+        'console_scripts': ['fabric_cm.credmgr.swagger_server=fabric_cm.credmgr.swagger_server.__main__:main']},
     classifiers=[
                   "Programming Language :: Python :: 3",
                   "License :: OSI Approved :: MIT License",
