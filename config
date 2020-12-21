@@ -63,6 +63,8 @@ oauth-provider = cilogon
 oauth-token-url = https://cilogon.org/oauth2/token
 oauth-revoke-url = https://cilogon.org/oauth2/revoke
 oauth-jwks-url = https://cilogon.org/oauth2/certs
+# Uses HH:MM:SS (less than 24 hours)
+oauth-key-refresh = "00:10:00"
 
 oauth-client-id = 
 oauth-client-secret = 

@@ -27,10 +27,9 @@ Module for handling version APIs
 """
 import requests
 
-from fabric.credmgr.credential_managers.oauth_credmgr import OAuthCredmgr
 from fabric.credmgr.swagger_server.models.jwks import Jwks
 from fabric.credmgr.swagger_server.models.version import Version  # noqa: E501
-from fabric.credmgr.swagger_server import received_counter, success_counter, failure_counter
+from fabric.credmgr.swagger_server import received_counter, success_counter, failure_counter, fabric_jwks
 from fabric.credmgr.swagger_server.response.constants import VERSION_URL, HTTP_METHOD_GET, CERTS_URL
 from fabric.credmgr.utils import LOG
 
@@ -78,9 +77,8 @@ def certs_get():  # noqa: E501
     """
     received_counter.labels(HTTP_METHOD_GET, CERTS_URL).inc()
     try:
-        result = OAuthCredmgr.get_jwks()
-        response = Jwks.from_dict(result)
-        LOG.debug(result)
+        response = Jwks.from_dict(fabric_jwks)
+        LOG.debug(response)
         success_counter.labels(HTTP_METHOD_GET, CERTS_URL).inc()
         return response
     except Exception as ex:

@@ -22,91 +22,15 @@
 # SOFTWARE.
 #
 # Author Komal Thareja (kthare10@renci.org)
-import json
-from datetime import datetime, timedelta
-
+from datetime import datetime
 import jwt
-import requests
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import serialization
 from dateutil import tz
-from authlib.jose import jwk
 
 from fabric.credmgr import CONFIG
 from fabric.credmgr.utils import LOG
+from fabric.credmgr.utils.jwt_manager import JWTManager
 from fabric.credmgr.utils.ldap import get_active_projects_and_roles_from_ldap
 from fabric.credmgr.utils.project_registry import ProjectRegistry
-
-
-class JWTManager:
-    @staticmethod
-    def decode(*, id_token: str, jwks_url: str) -> dict:
-        """
-        Decode and validate a JWT
-        :raises Exception in case of failure
-        """
-        try:
-            response = requests.get(jwks_url)
-            if response.status_code != 200:
-                LOG.error("Response: {}".format(response.content))
-                raise TokenError("Failed to get Json Web Keys")
-
-            jwks = response.json()
-            public_keys = {}
-            for jwk in jwks['keys']:
-                kid = jwk['kid']
-                public_keys[kid] = jwt.algorithms.RSAAlgorithm.from_jwk(json.dumps(jwk))
-
-            kid = jwt.get_unverified_header(id_token)['kid']
-            key = public_keys[kid]
-
-            options = {'verify_aud': False}
-            claims = jwt.decode(id_token, key=key, verify=True, algorithms=['RS256'], options=options)
-
-            LOG.debug("Decoded Token %s", json.dumps(claims))
-            return claims
-        except Exception as ex:
-            LOG.error(ex)
-            raise ex
-
-    @staticmethod
-    def encode(*, validity: timedelta, claims: dict, private_key_file_name: str,
-               pass_phrase: str, kid: str) -> str:
-        """
-        sign and base64 encode the token
-
-        @return Returns the encoded string for the Fabric token
-        """
-        if pass_phrase is not None and pass_phrase != "":
-            pass_phrase = pass_phrase.encode("utf-8")
-        else:
-            pass_phrase = None
-
-        with open(private_key_file_name) as private_key_fh:
-            pem_data = private_key_fh.read()
-            private_key_fh.close()
-            private_key = serialization.load_pem_private_key(data=pem_data.encode("utf-8"),
-                                                             password=pass_phrase,
-                                                             backend=default_backend())
-
-        claims['iat'] = int(datetime.now().timestamp())
-        claims['exp'] = int((datetime.now() + validity).timestamp())
-
-        new_token = str(jwt.encode(claims, private_key, algorithm='RS256', headers={'kid': kid}), 'utf-8')
-        return new_token
-
-    @staticmethod
-    def encode_public_jwk(public_key_file_name: str, kid: str, alg: str):
-        pem_data = None
-        with open(public_key_file_name) as public_key_fh:
-            pem_data = public_key_fh.read()
-            public_key_fh.close()
-
-        result = jwk.dumps(pem_data, kty='RSA')
-        result["kid"] = kid
-        result["alg"] = alg
-        result["use"] = "sig"
-        return result
 
 
 class FabricToken:
@@ -132,22 +56,29 @@ class FabricToken:
         self.id_token = id_token
         self.project = project
         self.scope = scope
-        self.claims = None
+        self.claims = jwt.decode(id_token, verify=False)
         self.encoded = False
         self.jwt = None
         self.cookie = cookie
         self.unset = True
 
-    def generate_from_ci_logon_token(self, jwks_url: str, private_key: str, validity_in_seconds: int, kid: str,
-                                     pass_phrase: str = None):
+    def generate_from_ci_logon_token(self, private_key: str, validity_in_seconds: int, kid: str,
+                                     pass_phrase: str = None) -> str:
+        """
+        Generate Fabric Token by adding additional claims and signing with Fabric Cert
+        @param private_key Private Key to sign the fabric token
+        @param validity_in_seconds Validity of the Token in seconds
+        @param kid Public Key Id
+        @param pass_phrase Pass Phrase for Private Key
+        @return JWT String containing encoded Fabric Token
+        """
         if self.encoded:
             LOG.info("Returning previously encoded token for project %s user %s" % (self.project, self.scope))
             return self.jwt
 
-        self.claims = JWTManager.decode(id_token=self.id_token, jwks_url=jwks_url)
         self._add_fabric_claims()
 
-        self.jwt = JWTManager.encode(validity=timedelta(seconds=int(validity_in_seconds)), claims=self.claims,
+        self.jwt = JWTManager.encode(validity=validity_in_seconds, claims=self.claims,
                                      private_key_file_name=private_key, pass_phrase=pass_phrase, kid=kid)
         self.encoded = True
         return self.jwt
@@ -219,33 +150,3 @@ class TokenError(Exception):
     Token Exception
     """
     pass
-
-
-def main():
-    """ simple test harness """
-    id_token = "eyJ0eXAiOiJKV1QiLCJraWQiOiIyNDRCMjM1RjZCMjhFMzQxMDhEMTAxRUFDNzM2MkM0RSIsImFsZy" \
-               "I6IlJTMjU2In0.eyJpc3MiOiJodHRwczovL2NpbG9nb24ub3JnIiwic3ViIjoiaHR0cDovL2NpbG9nb24" \
-               "ub3JnL3NlcnZlckEvdXNlcnMvMTE5MDQxMDEiLCJhdWQiOiJjaWxvZ29uOi9jb GllbnRfaWQvNzdlMWF" \
-               "lYTAyMGE0Njc2OTM3ZWFhMjJkZjFkNDMyZDgiLCJhdXRoX3RpbWUiOiIxNTg0MTk1MDUyIiwiZXhwIjoxNT" \
-               "g0MTk1OTUzLCJpYXQiOjE1ODQxOT UwNTMsImVtYWlsIjoia3RoYXJlMTBAZW1haWwudW5jLmVkdSIsImdpdmV" \
-               "uX25hbWUiOiJLb21hbCIsImZhbWlseV9uYW1lIjoiVGhhcmVqYSIsImNlcnRfc3ViamVjdF9 kbiI6Ii9EQz1vcm" \
-               "cvREM9Y2lsb2dvbi9DPVVTL089VW5pdmVyc2l0eSBvZiBOb3J0aCBDYXJvbGluYSBhdCBDaGFwZWwgSGlsbC9DTj1L" \
-               "b21hbCBUaGFyZWphIEExMTkw NDEwNiIsImlkcCI6InVybjptYWNlOmluY29tbW9uOnVuYy5lZHUiLCJpZHBfbm" \
-               "FtZSI6IlVuaXZlcnNpdHkgb2YgTm9ydGggQ2Fyb2xpbmEgYXQgQ2hhcGVsIEhpbGwiL CJlcHBuIjoia3RoYXJl" \
-               "MTBAdW5jLmVkdSIsImFmZmlsaWF0aW9uIjoiZW1wbG95ZWVAdW5jLmVkdTtzdGFmZkB1bmMuZWR1O21lbWJlckB" \
-               "1bmMuZWR1IiwibmFtZSI6Ik tvbWFsIFRoYXJlamEiLCJhY3IiOiJ1cm46b2FzaXM6bmFtZXM6dGM6U0FNTDoy" \
-               "LjA6YWM6Y2xhc3NlczpQYXNzd29yZFByb3RlY3RlZFRyYW5zcG9ydCIsImVudGl0bGV tZW50IjoidXJuOm1hY" \
-               "2U6ZGlyOmVudGl0bGVtZW50OmNvbW1vbi1saWItdGVybXMifQ.GNHSbN6Ftq8rAfY-GEr0oJe8VXd9sBwyih0" \
-               "Q05sD6Mg-0PdTwyqSODJNv--vSS5o9i6Zi_JGKvjCxCg4ce30JuB_OCmY0zDwLaedBzILlfVmwbuwAQMn" \
-               "zg9yxBGqSW8O2tdoMVqausjQj6BZ5EuUA9pvT-IwK6lDJPVvTZ42FURsJfZXCyRSqafxXrJFQ" \
-               "g7-fHxY6KmG2RY_J8ChOKN07o519G0Tr8N4pmqmGa5j0FIACyL4tznFY8yJ6ccBLxxEMGDqIMHO_X" \
-               "c-P0b6powF4_6CktLX3Qqf_2w8hquvDqa_e6OHd8uNbuA3kcGuMhFdu2M8r0byzEIJjhSSYXM_vw"
-    tok = FabricToken(id_token)
-    tok.decode()
-    print(tok)
-    tok.set_claims()
-    print(tok)
-
-
-if __name__ == "__main__":
-    main()

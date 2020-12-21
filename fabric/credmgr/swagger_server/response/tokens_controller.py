@@ -27,7 +27,7 @@ Module for handling /tokens APIs
 """
 import connexion
 
-from fabric.credmgr.credential_managers.oauth_credmgr import OAuthCredmgr
+from fabric.credmgr.credential_managers.oauth_credmgr import OAuthCredmgr, OAuthCredMgrError
 from fabric.credmgr.swagger_server.models.request import Request  # noqa: E501
 from fabric.credmgr.swagger_server.models.success import Success  # noqa: E501
 from fabric.credmgr.swagger_server import received_counter, success_counter, failure_counter
@@ -35,6 +35,8 @@ from fabric.credmgr.swagger_server.response.constants import HTTP_METHOD_POST, \
     TOKENS_REVOKE_URL, TOKENS_REFRESH_URL, \
     TOKENS_CREATE_URL, VOUCH_ID_TOKEN, VOUCH_REFRESH_TOKEN, VOUCH_COOKIE, AUTHORIZATION_ERR
 from fabric.credmgr.utils import LOG
+from fabric.credmgr.utils.project_registry import ProjectRegistryError
+from fabric.credmgr.utils.token import TokenError
 
 
 def authorize(headers):
@@ -73,7 +75,7 @@ def tokens_create_post(project_name=None, scope=None):  # noqa: E501
         LOG.debug(result)
         success_counter.labels(HTTP_METHOD_POST, TOKENS_CREATE_URL).inc()
         return response
-    except Exception as ex:
+    except (TokenError, ProjectRegistryError, OAuthCredMgrError, Exception) as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_POST, TOKENS_CREATE_URL).inc()
         return str(ex), 500
@@ -104,7 +106,7 @@ def tokens_refresh_post(body, project_name=None, scope=None):  # noqa: E501
                                                            cookie=cookie))
         success_counter.labels(HTTP_METHOD_POST, TOKENS_REFRESH_URL).inc()
         return response
-    except Exception as ex:
+    except (TokenError, ProjectRegistryError, OAuthCredMgrError, Exception) as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_POST, TOKENS_REFRESH_URL).inc()
         return str(ex), 500
@@ -127,7 +129,7 @@ def tokens_revoke_post(body):  # noqa: E501
         credmgr = OAuthCredmgr()
         credmgr.revoke_token(refresh_token=body.refresh_token)
         success_counter.labels(HTTP_METHOD_POST, TOKENS_REVOKE_URL).inc()
-    except Exception as ex:
+    except (TokenError, ProjectRegistryError, OAuthCredMgrError, Exception) as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_POST, TOKENS_REVOKE_URL).inc()
         return str(ex), 500
