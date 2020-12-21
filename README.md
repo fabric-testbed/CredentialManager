@@ -1,3 +1,5 @@
+[![Requirements Status](https://requires.io/github/fabric-testbed/CredentialManager/requirements.svg?branch=master)](https://requires.io/github/fabric-testbed/CredentialManager/requirements/?branch=master)
+
 # CredentialManager
 
  ## Table of Contents
