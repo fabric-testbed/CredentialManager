@@ -42,7 +42,7 @@ This package includes:
  ![Component Diagram](./images/credmgr.png)
 
 ## <a name="requirements"></a>Requirements
-- Python 3.6+
+- Python 3.7+
 
 ## <a name="apispec"></a>API
 API Documentation can be found [here](https://app.swaggerhub.com/apis-docs/kthare10/credmgr/1.0.1)
