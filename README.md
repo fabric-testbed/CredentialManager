@@ -15,6 +15,7 @@
  - [Usage](#usage)
    - [Configuration](#config)
    - [Deployment](#deploy)
+   - [Validate Token Issued By Credential Manager](#validate)
  - [Logging](#logging)
    - [Filebeat Configuration](#filebeat)
    - [Logstash Filters](#logstash)
@@ -83,6 +84,21 @@ Example: Keys format
       "use": "Public Key Use Parameter",
       "alg": "Algorithm Parameter",
       "kid": "Key Id Header Parameter"
+    }
+  ]
+}
+```
+Example: Output: https://dev-2.fabric-testbed.net/certs
+```
+{
+  "keys": [
+    {
+      "alg": "RS256",
+      "e": "AQAB",
+      "kid": "b415167211191e2e05b22b54b1d3b7667e764a747722185e722e52e146fe43aa",
+      "kty": "RSA",
+      "n": "wSvi-VG4z_Yxr0I6b0vYaKq1lyEb8c71efhsQ3mwO4WsV7f9gwbcEbCF9CihJSFUJ2z25-nk_oM11DAzQolSgZDO9y2SR7YlqZJm0Q4v-m0CwWjVpJg4Ce_Emxu4P-X82wt7UO4VgXXEmVBfYF-q28FM8apF0RFSoFtH_pwg4G6hXIwSVmBa-i5YS6rx2h_TyavwQ8k2IOOLDMvBLRz6lOr0XxPJmFpkqXnKGeUqJnu_nvdfeDKtDjtH4097rrPBn0H8XuzMvCHfH6ZRcMWrHzFZf9JCu4gs7q_Rq1mEPIjiQMuMM9DlDQcwgt8ZL8AVsatVq5JqvJV6AWA3YBI8Fw",
+      "use": "sig"
     }
   ]
 }
@@ -239,6 +255,29 @@ For production, signed certificates must be used.
  # bring using via docker-compose
  docker-compose up -d
  ```
+### <a name="validate"></a>Validate Token issued by Credential Manager
+
+FABRIC applications using Fabric Tokens issued by Credential Manager can validate the token against the Credential Manager Json Web Keys.
+Below is a snippet of example python code for validating the tokens:
+```
+   from fss_utils.jwt_validate import JWTValidator
+   
+   # Credential Manager JWKS Url
+   CREDMGR_CERTS = "https://dev-2.fabric-testbed.net/certs"
+   
+   # Uses HH:MM:SS (less than 24 hours)
+   CREDMGR_KEY_REFRESH = "00:10:00"
+   t = datetime.strptime(CREDMGR_KEY_REFRESH, "%H:%M:%S")
+   jwt_validator = JWTValidator(CREDMGR_CERTS, timedelta(hours=t.hour, minutes=t.minute, seconds=t.second))
+   
+   # Assumption that encoded_token variable contains the Fabric Token
+   code, e = jwt_validator.validate_jwt(encoded_token)
+   if code is not ValidateCode.VALID:
+       print(f"Unable to validate provided token: {code}/{e}")
+       raise e
+   
+   decoded_token = jwt.decode(encoded_token, verify=False)
+```
 
 ## <a name="logging"></a>Logging
 Credential Manager logs can be sent to ELK using filebeat and logstash either directly or via Kafka.
