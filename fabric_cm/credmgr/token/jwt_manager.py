@@ -131,5 +131,10 @@ class JWTManager:
             uncompressed_cookie = gzip.decompress(decoded_64)
             cookie = uncompressed_cookie
 
+        from fabric_cm.credmgr.logging import LOG
+        LOG.debug("Cookie: {}".format(cookie))
+        LOG.debug("secret: {}".format(secret))
+        LOG.debug("algorithm: {}".format(algorithm))
+        LOG.debug("verify: {}".format(verify))
         decoded_cookie = jwt.decode(cookie, secret, algorithms=[algorithm], verify=verify)
         return decoded_cookie
