@@ -4,7 +4,7 @@ connexion
 swagger-ui-bundle
 python_dateutil
 setuptools
-PyJWT
+PyJWT==1.7.1
 ldap3
 prometheus_client
 waitress
