@@ -31,8 +31,7 @@ from fabric_cm.credmgr.swagger_server.models.jwks import Jwks
 from fabric_cm.credmgr.swagger_server.models.version import Version  # noqa: E501
 from fabric_cm.credmgr.swagger_server import received_counter, success_counter, failure_counter, fabric_jwks
 from fabric_cm.credmgr.swagger_server.response.constants import VERSION_URL, HTTP_METHOD_GET, CERTS_URL
-from fabric_cm.credmgr.utils import LOG
-
+from fabric_cm.credmgr.logging import LOG
 
 def version_get():  # noqa: E501
     """version

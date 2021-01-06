@@ -32,7 +32,8 @@
 [runtime]
 rest-port = 7000
 prometheus-port = 8100
-enable-project-registry = False 
+enable-project-registry = True
+enable-vouch-cookie = True
 # Life time of the Fabric Identity Token specified in seconds
 token-lifetime = 3600
 project-names-ignore-list = Jupyterhub
@@ -49,7 +50,7 @@ log-directory = /var/log/credmgr
 log-file = credmgr.log
 #
 ## The default log level for credmgr.
-#log-level = DEBUG
+log-level = DEBUG
 #
 ## credmgr rotates log files. You may specify how many archived log files to keep here.
 log-retain = 5
@@ -82,7 +83,14 @@ jwt-private-key = /etc/credmgr/private.pem
 jwt-pass-phrase =
 
 [project-registry]
-project-registry-url = http://fabric-dev.renci.org:9090/
-project-registry-cert = /etc/credmgr/cert.pem
-project-registry-key =  /etc/credmgr/private.pem
-project-registry-pass-phrase =
+project-registry-url = https://fabric-dev.renci.org/
+ssl_verify = False
+
+[vouch]
+secret =
+compression = True
+custom_claims = OPENID, EMAIL, PROFILE
+# in seconds
+lifetime = 3600
+cookie-name = fabric-service
+cookie-domain-name = cookie_domain

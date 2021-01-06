@@ -22,25 +22,15 @@
 # SOFTWARE.
 #
 # Author Komal Thareja (kthare10@renci.org)
-"""
-Provides utility functions
-"""
-from fabric_cm.credmgr import CONFIG
 
 
-def get_providers():
+class TokenError(Exception):
     """
-    Constructor providers dict based on the information provided in config file
+    Token Exception
     """
-    if not CONFIG and ('oauth' not in CONFIG):
-        raise RuntimeError('OAUTH configuration parameters must be specified in config')
 
-    providers = {}
-    provider = CONFIG.get('oauth', "oauth-provider")
-    providers[provider] = {}
-    providers[provider]['client_id'] = CONFIG.get('oauth', "oauth-client-id")
-    providers[provider]['client_secret'] = CONFIG.get('oauth', "oauth-client-secret")
-    providers[provider]['token_uri'] = CONFIG.get('oauth', "oauth-token-url")
-    providers[provider]['revoke_uri'] = CONFIG.get('oauth', "oauth-revoke-url")
 
-    return providers
+class ConfigError(Exception):
+    """
+    Config Exception
+    """

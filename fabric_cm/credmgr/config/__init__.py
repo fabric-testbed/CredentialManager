@@ -22,9 +22,7 @@
 # SOFTWARE.
 #
 # Author Komal Thareja (kthare10@renci.org)
-"""
-Utility Module
-"""
-from fabric_cm.credmgr.utils.log import get_logger
+from fabric_cm.credmgr import CONFIG
+from fabric_cm.credmgr.config.config import Config
 
-LOG, FILE_HANDLER = get_logger()
+CONFIG_OBJ = Config(CONFIG)

@@ -23,14 +23,14 @@
 #
 # Author Komal Thareja (kthare10@renci.org)
 from datetime import datetime
-import jwt
 from dateutil import tz
 
-from fabric_cm.credmgr import CONFIG
-from fabric_cm.credmgr.utils import LOG
-from fabric_cm.credmgr.utils.jwt_manager import JWTManager
-from fabric_cm.credmgr.utils.ldap import get_active_projects_and_roles_from_ldap
-from fabric_cm.credmgr.utils.project_registry import ProjectRegistry
+from fabric_cm.credmgr.config import CONFIG_OBJ
+from fabric_cm.credmgr.logging import LOG
+from fabric_cm.credmgr.common.exceptions import TokenError
+from fabric_cm.credmgr.token.jwt_manager import JWTManager
+from fabric_cm.credmgr.external_apis.project_registry import ProjectRegistry
+from fabric_cm.credmgr.token.vouch.vouch_helper import VouchHelper, PTokens, CustomClaimsType
 
 
 class FabricToken:
@@ -42,12 +42,12 @@ class FabricToken:
     def __init__(self, id_token, project="all", scope="all", cookie: str = None):
         """
         Constructor
-        @param id_token: CI Logon Identity Token
-        @param project: Project for which token is requested
-        @param scope: Scope for which token is requested
-        @param cookie: Vouch Proxy Cookie
+        :param id_token: CI Logon Identity Token
+        :param project: Project for which token is requested
+        :param scope: Scope for which token is requested
+        :param cookie: Vouch Proxy Cookie
 
-        @raises Exception in case of error
+        :raises Exception in case of error
         """
         if id_token is None or project is None or scope is None:
             raise TokenError("Missing required parameters id_token or project or scope")
@@ -56,9 +56,10 @@ class FabricToken:
         self.id_token = id_token
         self.project = project
         self.scope = scope
-        self.claims = jwt.decode(id_token, verify=False)
+        self.id_token = id_token
+        self.claims = None
         self.encoded = False
-        self.jwt = None
+        self.token = None
         self.cookie = cookie
         self.unset = True
 
@@ -66,44 +67,69 @@ class FabricToken:
                                      pass_phrase: str = None) -> str:
         """
         Generate Fabric Token by adding additional claims and signing with Fabric Cert
-        @param private_key Private Key to sign the fabric_cm token
-        @param validity_in_seconds Validity of the Token in seconds
-        @param kid Public Key Id
-        @param pass_phrase Pass Phrase for Private Key
-        @return JWT String containing encoded Fabric Token
+        :param private_key Private Key to sign the fabric_cm token
+        :param validity_in_seconds Validity of the Token in seconds
+        :param kid Public Key Id
+        :param pass_phrase Pass Phrase for Private Key
+        :return JWT String containing encoded Fabric Token
         """
         if self.encoded:
             LOG.info("Returning previously encoded token for project %s user %s" % (self.project, self.scope))
-            return self.jwt
+            return self.token
+
+        self.claims = JWTManager.decode(cookie=self.id_token, verify=False, compression=False)
 
         self._add_fabric_claims()
 
-        self.jwt = JWTManager.encode(validity=validity_in_seconds, claims=self.claims,
-                                     private_key_file_name=private_key, pass_phrase=pass_phrase, kid=kid)
+        self.token = JWTManager.encode(validity=validity_in_seconds, claims=self.claims,
+                                       private_key_file_name=private_key, pass_phrase=pass_phrase, kid=kid,
+                                       algorithm='RS256')
         self.encoded = True
-        return self.jwt
+        return self.token
+
+    def get_vouch_cookie(self) -> str:
+        if self.cookie is not None:
+            return self.cookie
+
+        vouch_cookie_enabled = CONFIG_OBJ.is_vouch_cookie_enabled()
+        if not vouch_cookie_enabled:
+            return None
+
+        vouch_secret = CONFIG_OBJ.get_vouch_secret()
+        vouch_compression = CONFIG_OBJ.is_vouch_cookie_compressed()
+        vouch_claims = CONFIG_OBJ.get_vouch_custom_claims()
+        vouch_cookie_lifetime = CONFIG_OBJ.get_vouch_cookie_lifetime()
+        vouch_cookie_name = CONFIG_OBJ.get_vouch_cookie_name()
+        vouch_helper = VouchHelper(secret=vouch_secret, compression=vouch_compression,
+                                   cookie_name=vouch_cookie_name)
+
+        custom_claims = []
+        for c in vouch_claims:
+            if c.lower() == CustomClaimsType.OPENID.name.lower():
+                custom_claims.append(CustomClaimsType.OPENID)
+            elif c.lower() == CustomClaimsType.EMAIL.name.lower():
+                custom_claims.append(CustomClaimsType.EMAIL)
+            elif c.lower() == CustomClaimsType.PROFILE.name.lower():
+                custom_claims.append(CustomClaimsType.PROFILE)
+            elif c.lower() == CustomClaimsType.CILOGON_USER_INFO.name.lower():
+                custom_claims.append(CustomClaimsType.CILOGON_USER_INFO)
+
+        p_tokens = PTokens(id_token=self.id_token, idp_claims=self.claims)
+
+        return vouch_helper.encode(custom_claims_type=custom_claims, p_tokens=p_tokens,
+                                   validity_in_seconds=vouch_cookie_lifetime)
 
     def _add_fabric_claims(self):
         """
         Set the claims for the Token by adding membership, project and scope
         """
-        eppn = self.claims.get("eppn")
-        email = self.claims.get("email")
         sub = self.claims.get("sub")
-
-        use_project_registry = str(CONFIG.get('runtime', 'enable-project-registry'))
-        projects = None
-        roles = None
-        if use_project_registry.lower() == 'false' or self.cookie is None:
-            roles, projects = get_active_projects_and_roles_from_ldap(eppn, email)
-        else:
-            url = CONFIG.get('project-registry', 'project-registry-url')
-            cert = CONFIG.get('project-registry', 'project-registry-cert')
-            key = CONFIG.get('project-registry', 'project-registry-key')
-            pass_phrase = CONFIG.get('project-registry', 'project-registry-pass-phrase')
-            LOG.debug("Cookie: %s", self.cookie)
-            project_registry = ProjectRegistry(url, self.cookie, self.id_token, cert, key, pass_phrase)
-            roles, projects = project_registry.get_projects_and_roles(sub)
+        url = CONFIG_OBJ.get_pr_url()
+        project_registry = ProjectRegistry(api_server=url, cookie=self.get_vouch_cookie(),
+                                           cookie_name=CONFIG_OBJ.get_vouch_cookie_name(),
+                                           cookie_domain=CONFIG_OBJ.get_vouch_cookie_domain_name(),
+                                           id_token=self.id_token)
+        roles, projects = project_registry.get_projects_and_roles(sub)
 
         LOG.debug("Projects: %s, Roles: %s", projects, roles)
 
@@ -143,9 +169,3 @@ class FabricToken:
                        f"{self.get_local_from_utc(self.claims['exp']).strftime('%Y-%m-%d %H:%M:%S')}"
 
         return fstring
-
-
-class TokenError(Exception):
-    """
-    Token Exception
-    """

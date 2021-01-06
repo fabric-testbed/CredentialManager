@@ -27,22 +27,21 @@ Module for handling /tokens APIs
 """
 import connexion
 
-from fabric_cm.credmgr.credential_managers.oauth_credmgr import OAuthCredmgr, OAuthCredMgrError
+from fabric_cm.credmgr.credential_managers.oauth_credmgr import OAuthCredmgr
 from fabric_cm.credmgr.swagger_server.models.request import Request  # noqa: E501
 from fabric_cm.credmgr.swagger_server.models.success import Success  # noqa: E501
 from fabric_cm.credmgr.swagger_server import received_counter, success_counter, failure_counter
 from fabric_cm.credmgr.swagger_server.response.constants import HTTP_METHOD_POST, \
     TOKENS_REVOKE_URL, TOKENS_REFRESH_URL, \
-    TOKENS_CREATE_URL, VOUCH_ID_TOKEN, VOUCH_REFRESH_TOKEN, VOUCH_COOKIE, AUTHORIZATION_ERR
-from fabric_cm.credmgr.utils import LOG
-from fabric_cm.credmgr.utils.project_registry import ProjectRegistryError
-from fabric_cm.credmgr.utils.token import TokenError
+    TOKENS_CREATE_URL, VOUCH_ID_TOKEN, VOUCH_REFRESH_TOKEN, AUTHORIZATION_ERR
+from fabric_cm.credmgr.config import CONFIG_OBJ
+from fabric_cm.credmgr.logging import LOG
 
-
-def authorize(headers):
-    ci_logon_id_token = headers.get(VOUCH_ID_TOKEN, None)
-    refresh_token = headers.get(VOUCH_REFRESH_TOKEN, None)
-    cookie = headers.get(VOUCH_COOKIE, None)
+def authorize(request):
+    ci_logon_id_token = request.headers.get(VOUCH_ID_TOKEN, None)
+    refresh_token = request.headers.get(VOUCH_REFRESH_TOKEN, None)
+    cookie_name = CONFIG_OBJ.get_vouch_cookie_name()
+    cookie = request.cookies.get(cookie_name)
 
     return ci_logon_id_token, refresh_token, cookie
 
@@ -61,7 +60,7 @@ def tokens_create_post(project_name=None, scope=None):  # noqa: E501
     """
     received_counter.labels(HTTP_METHOD_POST, TOKENS_CREATE_URL).inc()
     try:
-        ci_logon_id_token, refresh_token, cookie = authorize(connexion.request.headers)
+        ci_logon_id_token, refresh_token, cookie = authorize(connexion.request)
         if ci_logon_id_token is None:
             return AUTHORIZATION_ERR, 401
 
@@ -99,7 +98,7 @@ def tokens_refresh_post(body, project_name=None, scope=None):  # noqa: E501
     if connexion.request.is_json:
         body = Request.from_dict(connexion.request.get_json())  # noqa: E501
     try:
-        cookie = connexion.request.headers.get(VOUCH_COOKIE, None)
+        ci_logon_id_token, refresh_token, cookie = authorize(connexion.request)
         credmgr = OAuthCredmgr()
         response = Success.from_dict(credmgr.refresh_token(refresh_token=body.refresh_token,
                                                            project=project_name, scope=scope,

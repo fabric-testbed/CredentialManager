@@ -33,9 +33,9 @@ import prometheus_client
 import waitress
 from flask import jsonify
 
-from fabric_cm.credmgr import CONFIG
 from fabric_cm.credmgr.swagger_server import encoder
-from fabric_cm.credmgr.utils import LOG
+from fabric_cm.credmgr.config import CONFIG_OBJ
+from fabric_cm.credmgr.logging import LOG
 
 
 def main():
@@ -49,10 +49,10 @@ def main():
         app.add_api('swagger.yaml',
                     arguments={'title': 'Fabric Credential Manager API'},
                     pythonic_params=True)
-        port = CONFIG.get('runtime', 'rest-port')
+        port = CONFIG_OBJ.get_rest_port()
 
         # prometheus server
-        prometheus_port = int(CONFIG.get('runtime', 'prometheus-port'))
+        prometheus_port = CONFIG_OBJ.get_prometheus_port()
         prometheus_client.start_http_server(prometheus_port)
 
         # Start up the server to expose the metrics.

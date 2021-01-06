@@ -32,10 +32,9 @@ from fss_utils.jwt_validate import ValidateCode
 from requests_oauthlib import OAuth2Session
 
 from fabric_cm.credmgr.credential_managers.abstract_credential_manager import AbstractCredentialManager
-from fabric_cm.credmgr.utils import LOG
-from fabric_cm.credmgr.utils.utils import get_providers
-from fabric_cm.credmgr.utils.token import FabricToken, JWTManager
-from fabric_cm.credmgr import CONFIG, DEFAULT_TOKEN_LIFE_TIME
+from fabric_cm.credmgr.config import CONFIG_OBJ
+from fabric_cm.credmgr.logging import LOG
+from fabric_cm.credmgr.token.token import FabricToken
 from fabric_cm.credmgr.swagger_server import jwt_validator
 
 
@@ -62,15 +61,13 @@ class OAuthCredmgr(AbstractCredentialManager):
             LOG.warning("JWT Token validator not initialized, skipping validation")
 
         fabric_token = FabricToken(ci_logon_id_token, project, scope, cookie)
-        validty = CONFIG.get('runtime', 'token-lifetime')
-        if validty is None:
-            validty = DEFAULT_TOKEN_LIFE_TIME
-        private_key = CONFIG.get("jwt", "jwt-private-key")
-        pass_phrase = CONFIG.get("jwt", "jwt-pass-phrase")
-        kid = CONFIG.get("jwt", "jwt-public-key-kid")
+        validity = CONFIG_OBJ.get_token_life_time()
+        private_key = CONFIG_OBJ.get_jwt_private_key()
+        pass_phrase = CONFIG_OBJ.get_jwt_private_key_pass_phrase()
+        kid = CONFIG_OBJ.get_jwt_public_key_kid()
 
         id_token = fabric_token.generate_from_ci_logon_token(private_key=private_key,
-                                                             validity_in_seconds=validty, kid=kid,
+                                                             validity_in_seconds=validity, kid=kid,
                                                              pass_phrase=pass_phrase)
         self.log.debug("Fabric Token: %s", id_token)
 
@@ -123,8 +120,8 @@ class OAuthCredmgr(AbstractCredentialManager):
         if OAuth2Session is None or refresh_token is None:
             raise ImportError("No module named OAuth2Session or refresh_token not provided")
 
-        provider = CONFIG.get('oauth', "oauth-provider")
-        providers = get_providers()
+        provider = CONFIG_OBJ.get_oauth_provider()
+        providers = CONFIG_OBJ.get_providers()
 
         refresh_token_dict = {"refresh_token": refresh_token}
 
@@ -157,8 +154,8 @@ class OAuthCredmgr(AbstractCredentialManager):
         if OAuth2Session is None or refresh_token is None:
             raise ImportError("No module named OAuth2Session or revoke_token not provided")
 
-        provider = CONFIG.get('oauth', "oauth-provider")
-        providers = get_providers()
+        provider = CONFIG_OBJ.get_oauth_provider()
+        providers = CONFIG_OBJ.get_providers()
 
         auth = providers[provider]['client_id'] + ":" + providers[provider]['client_secret']
         encoded_auth = base64.b64encode(bytes(auth, "utf-8"))
@@ -180,7 +177,7 @@ class OAuthCredmgr(AbstractCredentialManager):
 
     @staticmethod
     def validate_scope(scope: str):
-        allowed_scopes = CONFIG.get('runtime', 'allowed-scopes')
+        allowed_scopes = CONFIG_OBJ.get_allowed_scopes()
         if scope not in allowed_scopes:
             raise OAuthCredMgrError("Scope %s is not allowed! Allowed scope values: %s", scope, allowed_scopes)
 

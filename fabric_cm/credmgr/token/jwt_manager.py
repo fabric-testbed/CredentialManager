@@ -22,6 +22,8 @@
 # SOFTWARE.
 #
 # Author Komal Thareja (kthare10@renci.org)
+import base64
+import gzip
 from datetime import timedelta, datetime
 
 import jwt
@@ -29,15 +31,23 @@ from authlib.jose import jwk
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 
+from fabric_cm.credmgr.common.exceptions import TokenError
+
 
 class JWTManager:
     @staticmethod
     def encode(*, validity: int, claims: dict, private_key_file_name: str,
-               pass_phrase: str, kid: str) -> str:
+               pass_phrase: str, kid: str, algorithm: str) -> str:
         """
         sign and base64 encode the token
+        :param validity validity in seconds
+        :param claims claims to be added in token
+        :param private_key_file_name private key file name used to sign the token
+        :param pass_phrase private key pass phrase
+        :param kid kid to be added to the header
+        :param algorithm algorithm by which to encode the token
 
-        @return Returns the encoded string for the Fabric token
+        :return Returns the encoded string for the Fabric token
         """
         if pass_phrase is not None and pass_phrase != "":
             pass_phrase = pass_phrase.encode("utf-8")
@@ -54,13 +64,18 @@ class JWTManager:
         claims['iat'] = int(datetime.now().timestamp())
         claims['exp'] = int((datetime.now() + timedelta(seconds=int(validity))).timestamp())
 
-        new_token = str(jwt.encode(claims, private_key, algorithm='RS256', headers={'kid': kid}), 'utf-8')
+        new_token = str(jwt.encode(claims, private_key, algorithm=algorithm, headers={'kid': kid}), 'utf-8')
         return new_token
 
     @staticmethod
-    def encode_public_jwk(public_key_file_name: str, kid: str, alg: str):
+    def encode_public_jwk(*, public_key_file_name: str, kid: str, alg: str):
         """
         Encode Public JWK
+        :param public_key_file_name Public Key File Name
+        :param kid kid to be added to the Jwk
+        :param alg algorithm to be added
+
+        :return JWK for the public key passed
         """
         pem_data = None
         with open(public_key_file_name) as public_key_fh:
@@ -72,3 +87,49 @@ class JWTManager:
         result["alg"] = alg
         result["use"] = "sig"
         return result
+
+    @staticmethod
+    def encode_with_compression(*, claims: dict, secret: str, validity: int, algorithm: str = 'HS256',
+                                compression: bool = True) -> str:
+        """
+        Encode a JWT
+        :claims incoming claims
+        :secret secret
+        :validity validity in seconds
+        :algorithm algorithm
+        :compression compression
+        """
+        if validity is not None:
+            claims['exp'] = int((datetime.now() + timedelta(seconds=int(validity))).timestamp())
+
+        encoded_cookie = jwt.encode(claims, secret, algorithm=algorithm)
+        if compression:
+            compressed_cookie = gzip.compress(encoded_cookie)
+            encoded_cookie = base64.urlsafe_b64encode(compressed_cookie)
+
+        return str(encoded_cookie, 'utf-8')
+
+    @staticmethod
+    def decode(*, cookie: str, secret: str = '', verify: bool = True, compression: bool = True) -> dict:
+        """
+        Decode and validate a JWT
+        :cookie incoming cookie
+        :secret secret
+        :compression compression
+        """
+        algorithm = None
+        try:
+            algorithm = jwt.get_unverified_header(cookie).get('alg', None)
+        except jwt.DecodeError as e:
+            raise TokenError("Unable to parse token {}".format(e))
+
+        if algorithm is None:
+            raise TokenError("Token does not specify algorithm")
+
+        if compression:
+            decoded_64 = base64.urlsafe_b64decode(cookie)
+            uncompressed_cookie = gzip.decompress(decoded_64)
+            cookie = uncompressed_cookie
+
+        decoded_cookie = jwt.decode(cookie, secret, algorithms=[algorithm], verify=verify)
+        return decoded_cookie

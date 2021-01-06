@@ -29,39 +29,14 @@ import logging
 import os
 from logging.handlers import RotatingFileHandler
 
-from fabric_cm.credmgr import CONFIG
+from fabric_cm.credmgr.config import CONFIG_OBJ
 
 
-def get_log_file(log_path: str = None):
+def get_logger():
     """
-    Determine the configured log file
-    @param log_path: path to log file
-    """
-    if (log_path is None) and (CONFIG is not None) and ('logging' in CONFIG) \
-            and ('log-directory' in CONFIG['logging']) and ('log-file' in CONFIG['logging']):
-        log_path = CONFIG.get('logging', "log-directory") + '/' + CONFIG.get('logging', "log-file")
-    elif log_path is None:
-        raise RuntimeError('The log file path must be specified in config or passed as an argument')
-    return log_path
-
-
-def get_log_level(log_level=None):
-    """
-        Determine the configured log level
-        @param log_level: log level
-    """
-    if (log_level is None) and (CONFIG is not None) and ('logging' in CONFIG) and ('log-level' in CONFIG['logging']):
-        log_level = CONFIG.get('logging', "log-level")
-    if log_level is None:
-        log_level = logging.INFO
-    return log_level
-
-
-def get_logger(log_path=None, log_level=None):
-    """
-    Detects the path and level for the log file from the credmgr config and sets
+    Detects the path and level for the log file from the credmgr CONFIG_OBJ and sets
     up a logger. Instead of detecting the path and/or level from the
-    credmgr config, a custom path and/or level for the log file can be passed as
+    credmgr CONFIG_OBJ, a custom path and/or level for the log file can be passed as
     optional arguments.
 
     :param log_path: Path to custom log file
@@ -70,20 +45,16 @@ def get_logger(log_path=None, log_level=None):
     """
 
     # Get the log path
-    if (log_path is None) and (CONFIG is not None) and ('logging' in CONFIG) \
-            and ('log-directory' in CONFIG['logging']) and ('log-file' in CONFIG['logging']):
-        log_path = CONFIG.get('logging', "log-directory") + '/' + CONFIG.get('logging', "log-file")
-    elif log_path is None:
-        raise RuntimeError('The log file path must be specified in config or passed as an argument')
+    log_path = CONFIG_OBJ.get_logger_dir() + '/' + CONFIG_OBJ.get_logger_file()
+    if log_path is None:
+        raise RuntimeError('The log file path must be specified in CONFIG_OBJ or passed as an argument')
 
     # Get the log level
-    if (log_level is None) and (CONFIG is not None) and \
-            ('logging' in CONFIG) and ('log-level' in CONFIG['logging']):
-        log_level = CONFIG.get('logging', "log-level")
+    log_level = CONFIG_OBJ.get_logger_level()
     if log_level is None:
         log_level = logging.INFO
 
-    logger = CONFIG.get('logging', 'logger')
+    logger = CONFIG_OBJ.get_logger_name()
 
     # Set up the root logger
     log = logging.getLogger(logger)
@@ -92,8 +63,8 @@ def get_logger(log_path=None, log_level=None):
     os.makedirs(os.path.dirname(log_path), exist_ok=True)
 
     file_handler = RotatingFileHandler(log_path,
-                                       backupCount=int(CONFIG.get('logging', 'log-retain')),
-                                       maxBytes=int(CONFIG.get('logging', 'log-size')))
+                                       backupCount=CONFIG_OBJ.get_logger_retain(),
+                                       maxBytes=CONFIG_OBJ.get_logger_size())
 
     logging.basicConfig(handlers=[file_handler], format=log_format)
 

@@ -4,8 +4,6 @@ connexion
 swagger-ui-bundle
 python_dateutil
 setuptools
-psycopg2-binary
-sqlalchemy
 PyJWT
 ldap3
 prometheus_client

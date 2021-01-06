@@ -26,19 +26,20 @@ import re
 
 from ldap3 import Connection, Server, ALL
 
-from fabric_cm.credmgr import CONFIG
-from fabric_cm.credmgr.utils import LOG
+from fabric_cm.credmgr.config import CONFIG_OBJ
+from fabric_cm.credmgr.logging import LOG
+
 """
 Handle LDAP interaction to get roles for a user
 """
 
-ldap_host = CONFIG.get('ldap', 'ldap-host')
-ldap_user = CONFIG.get('ldap', 'ldap-user')
-ldap_password = CONFIG.get('ldap', 'ldap-password')
-ldap_search_base = CONFIG.get('ldap', 'ldap-search-base')
+ldap_host = CONFIG_OBJ.get_ldap_host()
+ldap_user = CONFIG_OBJ.get_ldap_user()
+ldap_password = CONFIG_OBJ.get_ldap_pwd()
+ldap_search_base = CONFIG_OBJ.get_ldap_search_base()
 
-project_ignore_list = CONFIG.get('runtime', 'project-names-ignore-list')
-roles_list = CONFIG.get('runtime', 'roles-list')
+project_ignore_list = CONFIG_OBJ.get_project_ignore_list()
+roles_list = CONFIG_OBJ.get_roles()
 
 server = Server(ldap_host, use_ssl=True, get_info=ALL)
 
