@@ -94,10 +94,7 @@ class VouchHelper:
         :param vouch_cookie vouch cookie
         :return decoded Vouch Cookie
         """
-        match = vouch_cookie.partition("{}=".format(self.cookie_name))
-        value = match[2]
-
-        return JWTManager.decode(cookie=value, secret=self.secret, compression=self.compression)
+        return JWTManager.decode(cookie=vouch_cookie, secret=self.secret, compression=self.compression)
 
     def encode(self, *, custom_claims_type: List[CustomClaimsType], p_tokens: PTokens, validity_in_seconds: int) -> str:
         """

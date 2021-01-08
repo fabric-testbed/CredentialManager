@@ -117,24 +117,22 @@ class JWTManager:
         :secret secret
         :compression compression
         """
-        algorithm = None
         try:
-            algorithm = jwt.get_unverified_header(cookie).get('alg', None)
-        except jwt.DecodeError as e:
-            raise TokenError("Unable to parse token {}".format(e))
+            value = cookie
+            if compression:
+                decoded_64 = base64.urlsafe_b64decode(cookie)
+                uncompressed_cookie = gzip.decompress(decoded_64)
+                value = uncompressed_cookie
 
-        if algorithm is None:
-            raise TokenError("Token does not specify algorithm")
+            algorithm = None
+            try:
+                algorithm = jwt.get_unverified_header(value).get('alg', None)
+            except jwt.DecodeError as e:
+                raise TokenError("Unable to parse token {}".format(e))
 
-        if compression:
-            decoded_64 = base64.urlsafe_b64decode(cookie)
-            uncompressed_cookie = gzip.decompress(decoded_64)
-            cookie = uncompressed_cookie
+            if algorithm is None:
+                raise TokenError("Token does not specify algorithm")
 
-        from fabric_cm.credmgr.logging import LOG
-        LOG.debug("Cookie: {}".format(cookie))
-        LOG.debug("secret: {}".format(secret))
-        LOG.debug("algorithm: {}".format(algorithm))
-        LOG.debug("verify: {}".format(verify))
-        decoded_cookie = jwt.decode(cookie, secret, algorithms=[algorithm], verify=verify)
-        return decoded_cookie
+            return jwt.decode(value, secret, algorithms=[algorithm], verify=verify)
+        except Exception as e:
+            raise TokenError("Unable to decode the token: {}".format(e))
