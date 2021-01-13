@@ -30,10 +30,10 @@ import base64
 import requests
 from requests_oauthlib import OAuth2Session
 
-from fabric_cm.credmgr.credential_managers.abstract_credential_manager import AbstractCredentialManager
+from .abstract_credential_manager import AbstractCredentialManager
 from fabric_cm.credmgr.config import CONFIG_OBJ
 from fabric_cm.credmgr.logging import LOG
-from fabric_cm.credmgr.token.token import FabricTokenEncoder
+from fabric_cm.credmgr.token.fabric_token_encoder import FabricTokenEncoder
 from fabric_cm.credmgr.swagger_server import jwt_validator
 from fss_utils.jwt_manager import ValidateCode
 
