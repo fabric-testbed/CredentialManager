@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from fss_utils.jwt_manager import JWTManager
+from fss_utils.jwt_manager import JWTManager, ValidateCode
 from fss_utils.jwt_validate import JWTValidator
 import prometheus_client
 
@@ -24,5 +24,9 @@ jwt_validator = JWTValidator(url=CILOGON_CERTS,
 
 kid = CONFIG_OBJ.get_jwt_public_key_kid()
 public_key = CONFIG_OBJ.get_jwt_public_key()
-jwk_public_key_rsa = JWTManager.encode_jwk(key_file_name=public_key, kid=kid, alg="RS256")
+code, jwk_public_key_rsa = JWTManager.encode_jwk(key_file_name=public_key, kid=kid, alg="RS256")
+if code != ValidateCode.VALID:
+    LOG.error("Failed to encode JWK")
+    raise jwk_public_key_rsa
+
 fabric_jwks = {"keys": [jwk_public_key_rsa]}
