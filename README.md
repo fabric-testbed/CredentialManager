@@ -1,5 +1,7 @@
 [![Requirements Status](https://requires.io/github/fabric-testbed/CredentialManager/requirements.svg?branch=master)](https://requires.io/github/fabric-testbed/CredentialManager/requirements/?branch=master)
 
+[![PyPI](https://img.shields.io/pypi/v/fabric-credmgr?style=plastic)](https://pypi.org/project/fabric-credmgr/)
+
 # CredentialManager
 
  ## Table of Contents
