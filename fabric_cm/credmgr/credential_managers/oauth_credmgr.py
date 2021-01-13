@@ -28,14 +28,14 @@ Module responsible for handling Credmgr REST API logic
 
 import base64
 import requests
-from fss_utils.jwt_validate import ValidateCode
 from requests_oauthlib import OAuth2Session
 
-from fabric_cm.credmgr.credential_managers.abstract_credential_manager import AbstractCredentialManager
+from .abstract_credential_manager import AbstractCredentialManager
 from fabric_cm.credmgr.config import CONFIG_OBJ
 from fabric_cm.credmgr.logging import LOG
-from fabric_cm.credmgr.token.token import FabricToken
+from fabric_cm.credmgr.token.fabric_token_encoder import FabricTokenEncoder
 from fabric_cm.credmgr.swagger_server import jwt_validator
+from fss_utils.jwt_manager import ValidateCode
 
 
 class OAuthCredmgr(AbstractCredentialManager):
@@ -53,25 +53,25 @@ class OAuthCredmgr(AbstractCredentialManager):
         # validate the token
         if jwt_validator is not None:
             LOG.info("Validating CI Logon token")
-            code, e = jwt_validator.validate_jwt(ci_logon_id_token)
+            code, claims_or_exception = jwt_validator.validate_jwt(token=ci_logon_id_token)
             if code is not ValidateCode.VALID:
-                LOG.error(f"Unable to validate provided token: {code}/{e}")
-                raise e
+                LOG.error(f"Unable to validate provided token: {code}/{claims_or_exception}")
+                raise claims_or_exception
+
+            fabric_token_encoder = FabricTokenEncoder(id_token=ci_logon_id_token, idp_claims=claims_or_exception,
+                                                      project=project, scope=scope, cookie=cookie)
+
+            validity = CONFIG_OBJ.get_token_life_time()
+            private_key = CONFIG_OBJ.get_jwt_private_key()
+            pass_phrase = CONFIG_OBJ.get_jwt_private_key_pass_phrase()
+            kid = CONFIG_OBJ.get_jwt_public_key_kid()
+
+            return fabric_token_encoder.encode(private_key=private_key, validity_in_seconds=validity, kid=kid,
+                                               pass_phrase=pass_phrase)
         else:
             LOG.warning("JWT Token validator not initialized, skipping validation")
 
-        fabric_token = FabricToken(ci_logon_id_token, project, scope, cookie)
-        validity = CONFIG_OBJ.get_token_life_time()
-        private_key = CONFIG_OBJ.get_jwt_private_key()
-        pass_phrase = CONFIG_OBJ.get_jwt_private_key_pass_phrase()
-        kid = CONFIG_OBJ.get_jwt_public_key_kid()
-
-        id_token = fabric_token.generate_from_ci_logon_token(private_key=private_key,
-                                                             validity_in_seconds=validity, kid=kid,
-                                                             pass_phrase=pass_phrase)
-        self.log.debug("Fabric Token: %s", id_token)
-
-        return id_token
+        return None
 
     def create_token(self, project: str, scope: str, ci_logon_id_token: str,
                      refresh_token: str, cookie: str = None) -> dict:

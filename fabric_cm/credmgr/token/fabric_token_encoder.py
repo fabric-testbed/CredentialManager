@@ -24,25 +24,26 @@
 # Author Komal Thareja (kthare10@renci.org)
 from datetime import datetime
 from dateutil import tz
+from fss_utils.jwt_manager import JWTManager, ValidateCode
+from fss_utils.vouch_encoder import VouchEncoder, CustomClaimsType, PTokens
 
 from fabric_cm.credmgr.config import CONFIG_OBJ
 from fabric_cm.credmgr.logging import LOG
 from fabric_cm.credmgr.common.exceptions import TokenError
-from fabric_cm.credmgr.token.jwt_manager import JWTManager
 from fabric_cm.credmgr.external_apis.project_registry import ProjectRegistry
-from fabric_cm.credmgr.token.vouch.vouch_helper import VouchHelper, PTokens, CustomClaimsType
 
 
-class FabricToken:
+class FabricTokenEncoder:
     """
     Implements class to transform CILogon ID token to Fabric Id Token
     by adding the project, scope and membership information to the token
     and signing with Fabric Certificate
     """
-    def __init__(self, id_token, project="all", scope="all", cookie: str = None):
+    def __init__(self, id_token, idp_claims: dict, project="all", scope="all", cookie: str = None):
         """
         Constructor
         :param id_token: CI Logon Identity Token
+        :param idp_claims: CI Logon Identity Claims
         :param project: Project for which token is requested
         :param scope: Scope for which token is requested
         :param cookie: Vouch Proxy Cookie
@@ -54,17 +55,15 @@ class FabricToken:
 
         LOG.debug("id_token %s", id_token)
         self.id_token = id_token
+        self.claims = idp_claims
         self.project = project
         self.scope = scope
-        self.id_token = id_token
-        self.claims = None
+        self.cookie = cookie
         self.encoded = False
         self.token = None
-        self.cookie = cookie
         self.unset = True
 
-    def generate_from_ci_logon_token(self, private_key: str, validity_in_seconds: int, kid: str,
-                                     pass_phrase: str = None) -> str:
+    def encode(self, private_key: str, validity_in_seconds: int, kid: str, pass_phrase: str = None) -> str:
         """
         Generate Fabric Token by adding additional claims and signing with Fabric Cert
         :param private_key Private Key to sign the fabric_cm token
@@ -74,34 +73,33 @@ class FabricToken:
         :return JWT String containing encoded Fabric Token
         """
         if self.encoded:
-            LOG.info("Returning previously encoded token for project %s user %s" % (self.project, self.scope))
             return self.token
-
-        self.claims = JWTManager.decode(cookie=self.id_token, verify=False, compression=False)
 
         self._add_fabric_claims()
 
-        self.token = JWTManager.encode(validity=validity_in_seconds, claims=self.claims,
-                                       private_key_file_name=private_key, pass_phrase=pass_phrase, kid=kid,
-                                       algorithm='RS256')
+        code, token_or_exception = JWTManager.encode_and_sign_with_private_key(validity=validity_in_seconds,
+                                                                               claims=self.claims,
+                                                                               private_key_file_name=private_key,
+                                                                               pass_phrase=pass_phrase, kid=kid,
+                                                                               algorithm='RS256')
+        if code != ValidateCode.VALID:
+            LOG.error(f"Failed to encode the Fabric Token: {token_or_exception}")
+            raise token_or_exception
+
+        self.token = token_or_exception
         self.encoded = True
         return self.token
 
-    def get_vouch_cookie(self) -> str:
-        if self.cookie is not None:
-            return self.cookie
-
+    def _get_vouch_cookie(self) -> str:
         vouch_cookie_enabled = CONFIG_OBJ.is_vouch_cookie_enabled()
-        if not vouch_cookie_enabled:
-            return None
+        if not vouch_cookie_enabled or self.cookie is not None:
+            return self.cookie
 
         vouch_secret = CONFIG_OBJ.get_vouch_secret()
         vouch_compression = CONFIG_OBJ.is_vouch_cookie_compressed()
         vouch_claims = CONFIG_OBJ.get_vouch_custom_claims()
         vouch_cookie_lifetime = CONFIG_OBJ.get_vouch_cookie_lifetime()
-        vouch_cookie_name = CONFIG_OBJ.get_vouch_cookie_name()
-        vouch_helper = VouchHelper(secret=vouch_secret, compression=vouch_compression,
-                                   cookie_name=vouch_cookie_name)
+        vouch_helper = VouchEncoder(secret=vouch_secret, compression=vouch_compression)
 
         custom_claims = []
         for c in vouch_claims:
@@ -116,8 +114,14 @@ class FabricToken:
 
         p_tokens = PTokens(id_token=self.id_token, idp_claims=self.claims)
 
-        return vouch_helper.encode(custom_claims_type=custom_claims, p_tokens=p_tokens,
-                                   validity_in_seconds=vouch_cookie_lifetime)
+        code, cookie_or_exception = vouch_helper.encode(custom_claims_type=custom_claims, p_tokens=p_tokens,
+                                                        validity_in_seconds=vouch_cookie_lifetime)
+
+        if code != ValidateCode.VALID:
+            LOG.error(f"Failed to encode the Vouch Cookie: {cookie_or_exception}")
+            raise cookie_or_exception
+
+        return cookie_or_exception
 
     def _add_fabric_claims(self):
         """
@@ -125,7 +129,7 @@ class FabricToken:
         """
         sub = self.claims.get("sub")
         url = CONFIG_OBJ.get_pr_url()
-        project_registry = ProjectRegistry(api_server=url, cookie=self.get_vouch_cookie(),
+        project_registry = ProjectRegistry(api_server=url, cookie=self._get_vouch_cookie(),
                                            cookie_name=CONFIG_OBJ.get_vouch_cookie_name(),
                                            cookie_domain=CONFIG_OBJ.get_vouch_cookie_domain_name(),
                                            id_token=self.id_token)
