@@ -227,26 +227,17 @@ oauth:
 Copy `config` file as `config_template`.
 Adjust the settings to suit your deployment environment
 ```
+[oauth]
 oauth-client-id = 
 oauth-client-secret = 
 
-ldap-host = 
-ldap-user = 
-ldap-password = 
-ldap-search-base =
+[vouch]
+secret = 
+cookie-name = fabric-service
+cookie-domain-name = cookie_domain
 
-project-registry-cert = /etc/credmgr/public.pem
-project-registry-key =  /etc/credmgr/private.pem
-project-registry-pass-phrase =
-
-rest-port = 7000
-prometheus-port = 8100
-enable-project-registry = False 
-# Life time of the Fabric Identity Token specified in seconds
-token-lifetime = 3600
-project-names-ignore-list = Jupyterhub
-roles-list = facility-operators, project-leads
-allowed-scopes = cf, mf, all
+[project-registry]
+project-registry-url = https://fabric-dev.renci.org/
 ```
 ### <a name="deploy"></a>Deployment
 
