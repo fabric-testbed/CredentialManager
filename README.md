@@ -343,38 +343,36 @@ Logstash input:
 ```
 
 ## <a name="metrics"></a>Metrics
-Credential Manager is integrated to following metrics collected by Prometheus. User can view the metrics by 'https://127.0.0.1:8443/metrics' once the container is running.
+Credential Manager is integrated to following metrics collected by Prometheus. 
+User can view the metrics by 'https://127.0.0.1:8443/metrics' once the container is running.
 - Requests_Received : HTTP Requests received
 - Requests_Success : HTTP Requests processed successfully
 - Requests_Failed : HTTP Requests failed
+
+Example output from MVP Deployment can be seen: https://dev-2.fabric-testbed.net/metrics
 
 ### <a name="samples"></a>Sample output
 ```
 # HELP Requests_Received_total HTTP Requests
 # TYPE Requests_Received_total counter
-Requests_Received_total{endpoint="/tokens/create",method="post"} 1.0
-Requests_Received_total{endpoint="/tokens/{userID}",method="get"} 1.0
-Requests_Received_total{endpoint="/tokens/refresh",method="post"} 1.0
-Requests_Received_total{endpoint="/tokens/revoke",method="post"} 1.0
+Requests_Received_total{endpoint="/certs",method="get"} 1.0
+Requests_Received_total{endpoint="/tokens/create",method="post"} 4.0
+# HELP Requests_Received_created HTTP Requests
 # TYPE Requests_Received_created gauge
-Requests_Received_created{endpoint="/tokens/create",method="post"} 1.5893885201837184e+09
-Requests_Received_created{endpoint="/tokens/{userID}",method="get"} 1.5893885393205898e+09
-Requests_Received_created{endpoint="/tokens/refresh",method="post"} 1.589388545705302e+09
-Requests_Received_created{endpoint="/tokens/revoke",method="post"} 1.589388551077782e+09
+Requests_Received_created{endpoint="/certs",method="get"} 1.6105784650048048e+09
+Requests_Received_created{endpoint="/tokens/create",method="post"} 1.6105784819597633e+09
 # HELP Requests_Success_total HTTP Success
 # TYPE Requests_Success_total counter
-Requests_Success_total{endpoint="/tokens/create",method="post"} 1.0
+Requests_Success_total{endpoint="/certs",method="get"} 1.0
+# HELP Requests_Success_created HTTP Success
 # TYPE Requests_Success_created gauge
-Requests_Success_created{endpoint="/tokens/create",method="post"} 1.589388520186303e+09
+Requests_Success_created{endpoint="/certs",method="get"} 1.6105784650058455e+09
 # HELP Requests_Failed_total HTTP Failures
 # TYPE Requests_Failed_total counter
-Requests_Failed_total{endpoint="/tokens/{userID}",method="get"} 1.0
-Requests_Failed_total{endpoint="/tokens/refresh",method="post"} 1.0
-Requests_Failed_total{endpoint="/tokens/revoke",method="post"} 1.0
+Requests_Failed_total{endpoint="/tokens/create",method="post"} 2.0
+# HELP Requests_Failed_created HTTP Failures
 # TYPE Requests_Failed_created gauge
-Requests_Failed_created{endpoint="/tokens/{userID}",method="get"} 1.5893885393271635e+09
-Requests_Failed_created{endpoint="/tokens/refresh",method="post"} 1.5893885458823338e+09
-Requests_Failed_created{endpoint="/tokens/revoke",method="post"} 1.58938855169857e+09
+Requests_Failed_created{endpoint="/tokens/create",method="post"} 1.6105784821310477e+09
 ```
 
 ## <a name="examples"></a>API Examples
