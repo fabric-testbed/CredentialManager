@@ -103,13 +103,18 @@ class FabricTokenEncoder:
 
         custom_claims = []
         for c in vouch_claims:
-            if c.lower() == CustomClaimsType.OPENID.name.lower():
+            c_type = c.strip().upper()
+
+            if c_type == CustomClaimsType.OPENID.name:
                 custom_claims.append(CustomClaimsType.OPENID)
-            elif c.lower() == CustomClaimsType.EMAIL.name.lower():
+
+            if c_type == CustomClaimsType.EMAIL.name:
                 custom_claims.append(CustomClaimsType.EMAIL)
-            elif c.lower() == CustomClaimsType.PROFILE.name.lower():
+
+            if c_type == CustomClaimsType.PROFILE.name:
                 custom_claims.append(CustomClaimsType.PROFILE)
-            elif c.lower() == CustomClaimsType.CILOGON_USER_INFO.name.lower():
+
+            if c_type == CustomClaimsType.CILOGON_USER_INFO.name:
                 custom_claims.append(CustomClaimsType.CILOGON_USER_INFO)
 
         p_tokens = PTokens(id_token=self.id_token, idp_claims=self.claims)
