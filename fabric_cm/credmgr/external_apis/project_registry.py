@@ -27,6 +27,7 @@ import requests
 from fabric_cm.credmgr.config import CONFIG_OBJ
 from fabric_cm.credmgr.logging import LOG
 
+
 class ProjectRegistry:
     """
     Class implements functionality to interface with Project Registry
@@ -38,29 +39,6 @@ class ProjectRegistry:
         self.cookie_domain = cookie_domain
         self.id_token = id_token
 
-    def _cookies(self):
-        s = requests.Session()
-        cookie_obj = requests.cookies.create_cookie(
-            domain=self.cookie_domain,
-            name=self.cookie_name,
-            value=self.cookie
-        )
-        s.cookies.set_cookie(cookie_obj)
-        cookies = s.cookies
-        return cookies
-
-    def _headers(self) -> dict:
-        """
-        Returns the headers
-        :return dict containing header info
-        """
-        headers = {
-            'Accept': 'application/json',
-            'Content-Type': "application/json",
-            'X-Vouch-Idp-Idtoken': self.id_token
-        }
-        return headers
-
     def get_projects_and_roles(self, sub: str):
         """
         Determine Role from Project Registry
@@ -70,19 +48,37 @@ class ProjectRegistry:
         :returns a tuple containing user specific roles and project tags
         """
         if self.api_server is None or self.cookie is None:
-            raise ProjectRegistryError("Project Registry URL: {} or "
-                                       "Cookie: {} not available".format(self.api_server, self.cookie))
+            raise ProjectRegistryError(f"Project Registry URL: {self.api_server} or "
+                                       "Cookie: {self.cookie} not available")
 
         url = self.api_server + "/people/oidc_claim_sub?oidc_claim_sub={}".format(sub)
         ssl_verify = CONFIG_OBJ.is_pr_ssl_verify()
 
-        response = requests.get(url, headers=self._headers(), cookies=self._cookies(), verify=ssl_verify)
+        s = requests.Session()
+        cookie_obj = requests.cookies.create_cookie(
+            name=self.cookie_name,
+            value=self.cookie
+        )
+        s.cookies.set_cookie(cookie_obj)
+        cookies = s.cookies
+        LOG.debug(f"Using vouch cookie: {cookies}")
+
+        s = requests.Session()
+        headers = {
+            'Accept': 'application/json',
+            'Content-Type': "application/json",
+            'X-Vouch-Idp-Idtoken': self.id_token
+        }
+
+        s.headers.update(headers)
+
+        response = s.get(url, verify=ssl_verify)
 
         if response.status_code != 200:
-            raise ProjectRegistryError("Project Registry error occurred "
-                                       "status_code: {} message: {}".format(response.status_code, response.content))
+            raise ProjectRegistryError(f"Project Registry error occurred "
+                                       "status_code: {response.status_code} message: {response.content}")
 
-        LOG.debug("Response : {}".format(response.json()))
+        LOG.debug(f"Response : {response.json()}")
 
         roles = response.json().get('roles', None)
         projects = response.json().get('projects', None)
@@ -90,12 +86,12 @@ class ProjectRegistry:
         for p in projects:
             project_name = p.get('name', None)
             project_uuid = p.get('uuid', None)
-            LOG.debug("Getting tags for Project: {}".format(project_name))
+            LOG.debug(f"Getting tags for Project: {project_name}")
             url = self.api_server + "/projects/{}".format(project_uuid)
-            response = requests.get(url, headers=self._headers(), cookies=self.cookie, verify=ssl_verify)
+            response = s.get(url, verify=ssl_verify)
             if response.status_code != 200:
-                raise ProjectRegistryError("Project Registry error occurred "
-                                           "status_code: {} message: {}".format(response.status_code, response.content))
+                raise ProjectRegistryError(f"Project Registry error occurred "
+                                           "status_code: {response.status_code} message: {response.content}")
             project_tags[project_name] = response.json().get('tags', None)
         return roles, project_tags
 

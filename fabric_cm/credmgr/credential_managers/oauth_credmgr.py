@@ -140,7 +140,7 @@ class OAuthCredmgr(AbstractCredentialManager):
         id_token = self._generate_fabric_token(ci_logon_id_token=id_token,
                                                project=project, scope=scope, cookie=cookie)
 
-        result = {"id_token": id_token, "refresh_token": refresh_token, "cookie": cookie}
+        result = {"id_token": id_token, "refresh_token": refresh_token}
 
         return result
 
