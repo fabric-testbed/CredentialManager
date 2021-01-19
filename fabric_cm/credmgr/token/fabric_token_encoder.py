@@ -131,8 +131,7 @@ class FabricTokenEncoder:
         url = CONFIG_OBJ.get_pr_url()
         project_registry = ProjectRegistry(api_server=url, cookie=self._get_vouch_cookie(),
                                            cookie_name=CONFIG_OBJ.get_vouch_cookie_name(),
-                                           cookie_domain=CONFIG_OBJ.get_vouch_cookie_domain_name(),
-                                           id_token=self.id_token)
+                                           cookie_domain=CONFIG_OBJ.get_vouch_cookie_domain_name())
         roles, projects = project_registry.get_projects_and_roles(sub)
 
         LOG.debug("Projects: %s, Roles: %s", projects, roles)

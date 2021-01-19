@@ -32,12 +32,11 @@ class ProjectRegistry:
     """
     Class implements functionality to interface with Project Registry
     """
-    def __init__(self, api_server: str, cookie: str, cookie_name: str, cookie_domain: str, id_token: str):
+    def __init__(self, api_server: str, cookie: str, cookie_name: str, cookie_domain: str):
         self.api_server = api_server
         self.cookie = cookie
         self.cookie_name = cookie_name
         self.cookie_domain = cookie_domain
-        self.id_token = id_token
 
     def get_projects_and_roles(self, sub: str):
         """
@@ -51,37 +50,39 @@ class ProjectRegistry:
             raise ProjectRegistryError(f"Project Registry URL: {self.api_server} or "
                                        "Cookie: {self.cookie} not available")
 
-        url = self.api_server + "/people/oidc_claim_sub?oidc_claim_sub={}".format(sub)
-        ssl_verify = CONFIG_OBJ.is_pr_ssl_verify()
-
+        # Create Session
         s = requests.Session()
+
+        # Set the Cookie
         cookie_obj = requests.cookies.create_cookie(
             name=self.cookie_name,
             value=self.cookie
         )
         s.cookies.set_cookie(cookie_obj)
-        cookies = s.cookies
-        LOG.debug(f"Using vouch cookie: {cookies}")
+        LOG.debug(f"Using vouch cookie: {s.cookies}")
 
-        s = requests.Session()
+        # Set the headers
         headers = {
             'Accept': 'application/json',
-            'Content-Type': "application/json",
-            'X-Vouch-Idp-Idtoken': self.id_token
+            'Content-Type': "application/json"
         }
-
         s.headers.update(headers)
 
+        # Get User by OIDC SUB Claim
+        url = self.api_server + "/people/oidc_claim_sub?oidc_claim_sub={}".format(sub)
+        ssl_verify = CONFIG_OBJ.is_pr_ssl_verify()
         response = s.get(url, verify=ssl_verify)
 
         if response.status_code != 200:
             raise ProjectRegistryError(f"Project Registry error occurred "
-                                       "status_code: {response.status_code} message: {response.content}")
+                                       f"status_code: {response.status_code} message: {response.content}")
 
         LOG.debug(f"Response : {response.json()}")
 
         roles = response.json().get('roles', None)
         projects = response.json().get('projects', None)
+
+        # Get Per Project Tags
         project_tags = {}
         for p in projects:
             project_name = p.get('name', None)
@@ -91,7 +92,7 @@ class ProjectRegistry:
             response = s.get(url, verify=ssl_verify)
             if response.status_code != 200:
                 raise ProjectRegistryError(f"Project Registry error occurred "
-                                           "status_code: {response.status_code} message: {response.content}")
+                                           f"status_code: {response.status_code} message: {response.content}")
             project_tags[project_name] = response.json().get('tags', None)
         return roles, project_tags
 
