@@ -63,11 +63,6 @@ def main():
         log.error(ex)
         raise ex
 
-    @app.route('/stopServer', methods=['GET'])
-    def stop_server():
-        os.kill(os.getpid(), signal.SIGINT)
-        return jsonify({"success": True, "message": "Server is shutting down..."})
-
 
 if __name__ == '__main__':
     main()
