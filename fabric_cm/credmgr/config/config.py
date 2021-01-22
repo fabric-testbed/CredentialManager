@@ -92,11 +92,11 @@ class Config:
     COOKIE_DOMAIN_NAME = 'cookie-domain-name'
 
     def __init__(self, config_parser: configparser.ConfigParser):
-        self.config = config_parser
+        self.config_parser = config_parser
 
     def _get_config_from_section(self, section_name: str, parameter_name: str) -> str:
         try:
-            return self.config.get(section_name, parameter_name)
+            return self.config_parser.get(section_name, parameter_name)
         except Exception as e:
             raise ConfigError("Missing {} in section {} Error: {}".format(parameter_name, section_name, e))
 
