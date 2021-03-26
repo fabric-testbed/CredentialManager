@@ -148,6 +148,9 @@ class FabricTokenEncoder:
                 projects_to_be_removed.append(project)
         for x in projects_to_be_removed:
             projects.pop(x)
+
+        if len(projects) < 1:
+            raise TokenError("User is not a member of any of the project")
         self.claims['projects'] = projects
         self.claims["roles"] = roles
         self.claims["scope"] = self.scope
