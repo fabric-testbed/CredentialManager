@@ -43,6 +43,14 @@ class OAuthCredmgr(AbstractCredentialManager):
     Credential Manager class responsible for handling various operations supported by REST APIs
     It also provides support for scanning and cleaning up of expired tokens and key files.
     """
+    ID_TOKEN = "id_token"
+    REFRESH_TOKEN = "refresh_token"
+    ERROR = "error"
+    CLIENT_ID = "client_id"
+    CLIENT_SECRET = "client_secret"
+    REVOKE_URI = "revoke_uri"
+    TOKEN_URI = "token_uri"
+    UTF_8 = "utf-8"
 
     def __init__(self):
         self.log = LOG
@@ -99,7 +107,7 @@ class OAuthCredmgr(AbstractCredentialManager):
                                                project=project, scope=scope,
                                                cookie=cookie)
 
-        result = {"id_token": id_token, "refresh_token": refresh_token}
+        result = {self.ID_TOKEN: id_token, self.REFRESH_TOKEN: refresh_token}
         return result
 
     def refresh_token(self, refresh_token: str, project: str, scope: str, cookie: str = None) -> dict:
@@ -123,26 +131,31 @@ class OAuthCredmgr(AbstractCredentialManager):
         provider = CONFIG_OBJ.get_oauth_provider()
         providers = CONFIG_OBJ.get_providers()
 
-        refresh_token_dict = {"refresh_token": refresh_token}
+        refresh_token_dict = {self.REFRESH_TOKEN: refresh_token}
 
         # refresh the token (provides both new refresh and access tokens)
-        oauth_client = OAuth2Session(providers[provider]['client_id'], token=refresh_token_dict)
-        new_token = oauth_client.refresh_token(providers[provider]['token_uri'],
-                                               client_id=providers[provider]['client_id'],
-                                               client_secret=providers[provider]['client_secret'])
+        oauth_client = OAuth2Session(providers[provider][self.CLIENT_ID], token=refresh_token_dict)
+        new_token = oauth_client.refresh_token(providers[provider][self.TOKEN_URI],
+                                               client_id=providers[provider][self.CLIENT_ID],
+                                               client_secret=providers[provider][self.CLIENT_SECRET])
         try:
-            refresh_token = new_token.pop('refresh_token')
-            id_token = new_token.pop('id_token')
+            refresh_token = new_token.pop(self.REFRESH_TOKEN)
+            id_token = new_token.pop(self.ID_TOKEN)
         except KeyError:
             self.log.error("No refresh or id token returned")
-            return None
+            raise OAuthCredMgrError("No refresh or id token returned")
 
-        id_token = self._generate_fabric_token(ci_logon_id_token=id_token,
-                                               project=project, scope=scope, cookie=cookie)
+        try:
+            id_token = self._generate_fabric_token(ci_logon_id_token=id_token,
+                                                   project=project, scope=scope, cookie=cookie)
+            result = {self.ID_TOKEN: id_token, self.REFRESH_TOKEN: refresh_token}
 
-        result = {"id_token": id_token, "refresh_token": refresh_token}
-
-        return result
+            return result
+        except Exception as e:
+            self.log.error(f"Exception error while generating Fabric Token: {e}")
+            self.log.error(f"Failed generating the token but still returning refresh token")
+            error_string = f"error: {str(e)}, {self.REFRESH_TOKEN}: {refresh_token}"
+            raise OAuthCredMgrError(error_string)
 
     def revoke_token(self, refresh_token: str):
         """
@@ -157,29 +170,29 @@ class OAuthCredmgr(AbstractCredentialManager):
         provider = CONFIG_OBJ.get_oauth_provider()
         providers = CONFIG_OBJ.get_providers()
 
-        auth = providers[provider]['client_id'] + ":" + providers[provider]['client_secret']
-        encoded_auth = base64.b64encode(bytes(auth, "utf-8"))
+        auth = providers[provider][self.CLIENT_ID] + ":" + providers[provider][self.CLIENT_SECRET]
+        encoded_auth = base64.b64encode(bytes(auth, self.UTF_8))
 
         headers = {
             'Accept': 'application/json',
             'Content-Type': 'application/x-www-form-urlencoded',
-            'Authorization': 'Basic ' + str(encoded_auth, "utf-8")
+            'Authorization': 'Basic ' + str(encoded_auth, self.UTF_8)
         }
 
-        data = "token={}&token_type_hint=refresh_token".format(refresh_token)
+        data = f"token={refresh_token}&token_type_hint=refresh_token"
 
-        response = requests.post(providers[provider]['revoke_uri'], headers=headers, data=data)
+        response = requests.post(providers[provider][self.REVOKE_URI], headers=headers, data=data)
         self.log.debug("Response Status=%d", response.status_code)
         self.log.debug("Response Reason=%s", response.reason)
-        self.log.debug(str(response.content, "utf-8"))
+        self.log.debug(str(response.content, self.UTF_8))
         if response.status_code != 200:
-            raise OAuthCredMgrError(str(response.content, "utf-8"))
+            raise OAuthCredMgrError(str(response.content, self.UTF_8))
 
     @staticmethod
     def validate_scope(scope: str):
         allowed_scopes = CONFIG_OBJ.get_allowed_scopes()
         if scope not in allowed_scopes:
-            raise OAuthCredMgrError("Scope %s is not allowed! Allowed scope values: %s", scope, allowed_scopes)
+            raise OAuthCredMgrError(f"Scope {scope} is not allowed! Allowed scope values: {allowed_scopes}")
 
 
 class OAuthCredMgrError(Exception):
