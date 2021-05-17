@@ -132,29 +132,33 @@ class OAuthCredmgr(AbstractCredentialManager):
         providers = CONFIG_OBJ.get_providers()
 
         refresh_token_dict = {self.REFRESH_TOKEN: refresh_token}
+        self.log.debug(f"Incoming refresh_token: {refresh_token}")
 
         # refresh the token (provides both new refresh and access tokens)
         oauth_client = OAuth2Session(providers[provider][self.CLIENT_ID], token=refresh_token_dict)
         new_token = oauth_client.refresh_token(providers[provider][self.TOKEN_URI],
                                                client_id=providers[provider][self.CLIENT_ID],
                                                client_secret=providers[provider][self.CLIENT_SECRET])
+
+        new_refresh_token = None
         try:
-            refresh_token = new_token.pop(self.REFRESH_TOKEN)
+            new_refresh_token = new_token.pop(self.REFRESH_TOKEN)
             id_token = new_token.pop(self.ID_TOKEN)
         except KeyError:
             self.log.error("No refresh or id token returned")
             raise OAuthCredMgrError("No refresh or id token returned")
+        self.log.debug(f"new_refresh_token: {new_refresh_token}")
 
         try:
             id_token = self._generate_fabric_token(ci_logon_id_token=id_token,
                                                    project=project, scope=scope, cookie=cookie)
-            result = {self.ID_TOKEN: id_token, self.REFRESH_TOKEN: refresh_token}
+            result = {self.ID_TOKEN: id_token, self.REFRESH_TOKEN: new_refresh_token}
 
             return result
         except Exception as e:
             self.log.error(f"Exception error while generating Fabric Token: {e}")
             self.log.error(f"Failed generating the token but still returning refresh token")
-            error_string = f"error: {str(e)}, {self.REFRESH_TOKEN}: {refresh_token}"
+            error_string = f"error: {str(e)}, {self.REFRESH_TOKEN}: {new_refresh_token}"
             raise OAuthCredMgrError(error_string)
 
     def revoke_token(self, refresh_token: str):
