@@ -1,0 +1,96 @@
+# MIT License
+#
+# Copyright (c) 2020 FABRIC Testbed
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+# Author Komal Thareja (kthare10@renci.org)
+
+# The config file for the daemon portion of the credmgr.
+# After making modifications to this file, please restart credmgr to re-read it.
+
+# This file is a sample; to alter a particular value, uncomment it, and set as desired.
+# credmgr will use sane defaults, in the absence of this configuration file.
+
+
+[runtime]
+rest-port = 7000
+prometheus-port = 8100
+enable-project-registry = True
+enable-vouch-cookie = True
+# Life time of the Fabric Identity Token specified in seconds
+token-lifetime = 3600
+project-names-ignore-list = Jupyterhub
+roles-list = facility-operators, project-leads
+allowed-scopes = cf, mf, all
+
+[logging]
+logger = credmgr
+## The directory in which credmgr should create log files.
+## This directory will be automatically created if it does not exist.
+log-directory = /var/log/credmgr
+#
+## The filename to be used for credmgr's log file.
+log-file = credmgr.log
+#
+## The default log level for credmgr.
+log-level = DEBUG
+#
+## credmgr rotates log files. You may specify how many archived log files to keep here.
+log-retain = 5
+#
+## credmgr rotates log files after they exceed a certain size.
+## You may specify the file size that results in a log file being rotated here.
+log-size = 5000000
+
+[oauth]
+oauth-provider = cilogon
+oauth-token-url = https://cilogon.org/oauth2/token
+oauth-revoke-url = https://cilogon.org/oauth2/revoke
+oauth-jwks-url = https://cilogon.org/oauth2/certs
+# Uses HH:MM:SS (less than 24 hours)
+oauth-key-refresh = 00:10:00
+
+oauth-client-id = 
+oauth-client-secret = 
+
+[ldap]
+ldap-host = 
+ldap-user = 
+ldap-password = 
+ldap-search-base = 
+
+[jwt]
+jwt-public-key = /etc/credmgr/public.pem
+jwt-public-key-kid = b415167211191e2e05b22b54b1d3b7667e764a747722185e722e52e146fe43aa
+jwt-private-key = /etc/credmgr/private.pem
+jwt-pass-phrase =
+
+[project-registry]
+project-registry-url = https://fabric-dev.renci.org/
+ssl_verify = False
+
+[vouch]
+secret =
+compression = True
+custom_claims = OPENID, EMAIL, PROFILE
+# in seconds
+lifetime = 3600
+cookie-name = fabric-service
+cookie-domain-name = cookie_domain
