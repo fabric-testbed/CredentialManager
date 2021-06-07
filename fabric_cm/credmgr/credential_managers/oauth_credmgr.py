@@ -158,7 +158,10 @@ class OAuthCredmgr(AbstractCredentialManager):
         except Exception as e:
             self.log.error(f"Exception error while generating Fabric Token: {e}")
             self.log.error(f"Failed generating the token but still returning refresh token")
-            error_string = f"error: {str(e)}, {self.REFRESH_TOKEN}: {new_refresh_token}"
+            exception_string = str(e)
+            if exception_string.__contains__("could not be associated with a pending flow"):
+                exception_string = "Specified refresh token is expired and can not be found in the database."
+            error_string = f"error: {exception_string}, {self.REFRESH_TOKEN}: {new_refresh_token}"
             raise OAuthCredMgrError(error_string)
 
     def revoke_token(self, refresh_token: str):
@@ -188,9 +191,10 @@ class OAuthCredmgr(AbstractCredentialManager):
         response = requests.post(providers[provider][self.REVOKE_URI], headers=headers, data=data)
         self.log.debug("Response Status=%d", response.status_code)
         self.log.debug("Response Reason=%s", response.reason)
+        self.log.debug("Response content=%s", response.content)
         self.log.debug(str(response.content, self.UTF_8))
         if response.status_code != 200:
-            raise OAuthCredMgrError(str(response.content, self.UTF_8))
+            raise OAuthCredMgrError("Refresh token could not be revoked!")
 
     @staticmethod
     def validate_scope(scope: str):

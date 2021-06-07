@@ -224,7 +224,7 @@ oauth:
 ```
 
 #### Credmgr Config
-Copy `config` file as `config_template`.
+Copy `config_template` file as `config`.
 Adjust the settings to suit your deployment environment
 ```
 [oauth]
