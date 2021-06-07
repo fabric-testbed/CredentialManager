@@ -191,9 +191,10 @@ class OAuthCredmgr(AbstractCredentialManager):
         response = requests.post(providers[provider][self.REVOKE_URI], headers=headers, data=data)
         self.log.debug("Response Status=%d", response.status_code)
         self.log.debug("Response Reason=%s", response.reason)
+        self.log.debug("Response content=%s", response.content)
         self.log.debug(str(response.content, self.UTF_8))
         if response.status_code != 200:
-            raise OAuthCredMgrError(str(response.content, self.UTF_8))
+            raise OAuthCredMgrError("Refresh token could not be revoked!")
 
     @staticmethod
     def validate_scope(scope: str):
