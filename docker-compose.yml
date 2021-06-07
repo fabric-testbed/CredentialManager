@@ -22,7 +22,7 @@ services:
       - nginx
     volumes:
       - ./log/credmgr:/var/log/credmgr
-      - ./config_template:/etc/credmgr/config
+      - ./config:/etc/credmgr/config
       - ./ssl/pubkey.pem:/etc/credmgr/public.pem
       - ./ssl/pubkey.pem:/etc/credmgr/cert.pem
       - ./ssl/privkey.pem:/etc/credmgr/private.pem

@@ -67,8 +67,8 @@ oauth-jwks-url = https://cilogon.org/oauth2/certs
 # Uses HH:MM:SS (less than 24 hours)
 oauth-key-refresh = 00:10:00
 
-oauth-client-id = 
-oauth-client-secret = 
+oauth-client-id = cilogon:/client_id/617cecdd74e32be4d818ca1151531dff
+oauth-client-secret = mf-x9WwBtzNR4y8p4stBL5_peDSumVdHsDMH6k13XqXqZ1nU2Uz56e3HMRQgA_cjiHZ0lfqm0uQfw59XcH5ecg
 
 [ldap]
 ldap-host = 
@@ -83,11 +83,11 @@ jwt-private-key = /etc/credmgr/private.pem
 jwt-pass-phrase =
 
 [project-registry]
-project-registry-url = https://fabric-dev.renci.org/
+project-registry-url = https://dev-1.fabric-testbed.net
 ssl_verify = False
 
 [vouch]
-secret =
+secret = narei7ood7aigheiK3noph9Eesei3miechoakohpheij
 compression = True
 custom_claims = OPENID, EMAIL, PROFILE
 # in seconds
