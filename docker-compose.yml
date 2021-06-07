@@ -33,7 +33,7 @@ services:
 
   vouch-proxy:
     container_name: cm-vouch-proxy
-    image: kthare10/vouch-proxy:refresh_token
+    image: fabrictestbed/vouch-proxy:0.27.1
     #ports:
     #  - 9090:9090
     volumes:
