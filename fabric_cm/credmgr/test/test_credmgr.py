@@ -104,4 +104,4 @@ class TestCredmgr(unittest.TestCase):
 
         response = requests.post(url=self.revoke_url, headers=self.headers, json=value, verify=False)
         self.assertEqual(500, response.status_code)
-        self.assertTrue(response.json().find("server_error") != -1)
+        self.assertTrue(response.json().find("revoke") != -1)
