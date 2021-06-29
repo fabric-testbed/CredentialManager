@@ -25,7 +25,10 @@
 """
 Module for handling version APIs
 """
+from http.client import INTERNAL_SERVER_ERROR
+
 import requests
+from fss_utils.http_errors import cors_response
 
 from fabric_cm.credmgr.swagger_server.models.jwks import Jwks
 from fabric_cm.credmgr.swagger_server.models.version import Version  # noqa: E501
@@ -62,7 +65,7 @@ def version_get():  # noqa: E501
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_GET, VERSION_URL).inc()
-        return str(ex), 500
+        return cors_response(status=INTERNAL_SERVER_ERROR, xerror=str(ex), body=str(ex))
     return response
 
 
