@@ -112,7 +112,8 @@ def tokens_refresh_post(body, project_name=None, scope=None):  # noqa: E501
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_POST, TOKENS_REFRESH_URL).inc()
-        return cors_response(status=INTERNAL_SERVER_ERROR, xerror=str(ex), body=str(ex))
+        msg = str(ex).replace("\n", "")
+        return cors_response(status=INTERNAL_SERVER_ERROR, xerror=msg, body=msg)
 
 
 def tokens_revoke_post(body):  # noqa: E501
@@ -135,5 +136,6 @@ def tokens_revoke_post(body):  # noqa: E501
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_POST, TOKENS_REVOKE_URL).inc()
-        return cors_response(status=INTERNAL_SERVER_ERROR, xerror=str(ex), body=str(ex))
+        msg = str(ex).replace("\n", "")
+        return cors_response(status=INTERNAL_SERVER_ERROR, xerror=msg, body=msg)
     return {}
