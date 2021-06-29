@@ -25,7 +25,10 @@
 """
 Module for handling /tokens APIs
 """
+from http.client import INTERNAL_SERVER_ERROR
+
 import connexion
+from fss_utils.http_errors import cors_response
 
 from fabric_cm.credmgr.credential_managers.oauth_credmgr import OAuthCredmgr
 from fabric_cm.credmgr.swagger_server.models.request import Request  # noqa: E501
@@ -36,6 +39,7 @@ from fabric_cm.credmgr.swagger_server.response.constants import HTTP_METHOD_POST
     TOKENS_CREATE_URL, VOUCH_ID_TOKEN, VOUCH_REFRESH_TOKEN, AUTHORIZATION_ERR
 from fabric_cm.credmgr.config import CONFIG_OBJ
 from fabric_cm.credmgr.logging import LOG
+
 
 def authorize(request):
     ci_logon_id_token = request.headers.get(VOUCH_ID_TOKEN, None)
@@ -77,7 +81,7 @@ def tokens_create_post(project_name=None, scope=None):  # noqa: E501
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_POST, TOKENS_CREATE_URL).inc()
-        return str(ex), 500
+        return cors_response(status=INTERNAL_SERVER_ERROR, xerror=str(ex), body=str(ex))
 
 
 def tokens_refresh_post(body, project_name=None, scope=None):  # noqa: E501
@@ -108,7 +112,7 @@ def tokens_refresh_post(body, project_name=None, scope=None):  # noqa: E501
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_POST, TOKENS_REFRESH_URL).inc()
-        return str(ex), 500
+        return cors_response(status=INTERNAL_SERVER_ERROR, xerror=str(ex), body=str(ex))
 
 
 def tokens_revoke_post(body):  # noqa: E501
@@ -131,5 +135,5 @@ def tokens_revoke_post(body):  # noqa: E501
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_POST, TOKENS_REVOKE_URL).inc()
-        return str(ex), 500
+        return cors_response(status=INTERNAL_SERVER_ERROR, xerror=str(ex), body=str(ex))
     return {}
