@@ -27,9 +27,11 @@
 from setuptools import setup, find_packages
 
 from fabric_cm.credmgr import CONF_DIR, CONF_FILE, LOG_DIR
+from fabric_cm import __VERSION__
+
 
 NAME = "fabric-credmgr"
-VERSION = "0.9"
+VERSION = __VERSION__
 # To install the library, run the following
 #
 # python setup.py install
@@ -65,11 +67,11 @@ setup(
     author='Komal Thareja',
     keywords=["Swagger", "Fabric Credential Manager API"],
     license='MIT',
-    install_requires = REQUIRES,
+    install_requires=REQUIRES,
     packages=find_packages(),
     package_data={'': ['swagger/swagger.yaml']},
     include_package_data=True,
-    data_files = [(CONF_DIR, [CONF_FILE]), (LOG_DIR, [])],
+    data_files=[(LOG_DIR, [])],
     entry_points={
         'console_scripts': ['fabric_cm.credmgr.swagger_server=fabric_cm.credmgr.swagger_server.__main__:main']},
     classifiers=[
