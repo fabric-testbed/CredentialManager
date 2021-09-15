@@ -28,6 +28,7 @@ from fss_utils.jwt_manager import JWTManager, ValidateCode
 from fss_utils.vouch_encoder import VouchEncoder, CustomClaimsType, PTokens
 
 from fabric_cm.credmgr.config import CONFIG_OBJ
+from fabric_cm.credmgr.external_apis.ldap import CmLdapMgrSingleton
 from fabric_cm.credmgr.logging import LOG
 from fabric_cm.credmgr.common.exceptions import TokenError
 from fabric_cm.credmgr.external_apis.project_registry import ProjectRegistry
@@ -134,10 +135,14 @@ class FabricTokenEncoder:
         """
         sub = self.claims.get("sub")
         url = CONFIG_OBJ.get_pr_url()
-        project_registry = ProjectRegistry(api_server=url, cookie=self._get_vouch_cookie(),
-                                           cookie_name=CONFIG_OBJ.get_vouch_cookie_name(),
-                                           cookie_domain=CONFIG_OBJ.get_vouch_cookie_domain_name())
-        roles, projects = project_registry.get_projects_and_roles(sub)
+        if CONFIG_OBJ.is_project_registry_enabled():
+            project_registry = ProjectRegistry(api_server=url, cookie=self._get_vouch_cookie(),
+                                               cookie_name=CONFIG_OBJ.get_vouch_cookie_name(),
+                                               cookie_domain=CONFIG_OBJ.get_vouch_cookie_domain_name())
+            roles, projects = project_registry.get_projects_and_roles(sub)
+        else:
+            email = self.claims.get("email")
+            roles, projects = CmLdapMgrSingleton.get().get_active_projects_and_roles_from_ldap(eppn=None, email=email)
 
         LOG.debug("Projects: %s, Roles: %s", projects, roles)
 

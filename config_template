@@ -36,7 +36,7 @@ enable-project-registry = True
 enable-vouch-cookie = True
 # Life time of the Fabric Identity Token specified in seconds
 token-lifetime = 3600
-project-names-ignore-list = Jupyterhub
+project-names-ignore-list = Jupyterhub, fabric-active-users
 roles-list = facility-operators, project-leads
 allowed-scopes = cf, mf, all
 
