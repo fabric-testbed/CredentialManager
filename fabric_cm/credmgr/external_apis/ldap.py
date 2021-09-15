@@ -74,9 +74,6 @@ class CmLdapMgr:
                                         ])
             if profile_found:
                 attributes = conn.entries[0]['isMemberOf']
-                print("=========================================")
-                print(attributes)
-                print("=========================================")
                 attributes = [attr for attr in attributes if 'active' in attr]
             else:
                 attributes = None
