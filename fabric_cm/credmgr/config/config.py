@@ -45,7 +45,7 @@ class Config:
     ENABLE_PROJECT_REGISTRY = 'enable-project-registry'
     ENABLE_VOUCH_COOKIE = 'enable-vouch-cookie'
     TOKEN_LIFETIME = 'token-lifetime'
-    PROJECT_NAMES_IGNORE_LIST = 'prject-names-ignore-list'
+    PROJECT_NAMES_IGNORE_LIST = 'project-names-ignore-list'
     ROLES_LIST = 'roles-list'
     ALLOWED_SCOPES = 'allowed-scopes'
 
