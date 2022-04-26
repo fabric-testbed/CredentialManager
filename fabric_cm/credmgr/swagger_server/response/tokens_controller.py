@@ -50,7 +50,7 @@ def authorize(request):
     return ci_logon_id_token, refresh_token, cookie
 
 
-def tokens_create_post(project_name=None, scope=None):  # noqa: E501
+def tokens_create_post(project_name, scope=None):  # noqa: E501
     """Generate Fabric OAuth tokens for an user
 
     Request to generate Fabric OAuth tokens for an user  # noqa: E501

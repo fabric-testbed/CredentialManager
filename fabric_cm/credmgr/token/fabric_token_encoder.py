@@ -40,7 +40,7 @@ class FabricTokenEncoder:
     by adding the project, scope and membership information to the token
     and signing with Fabric Certificate
     """
-    def __init__(self, id_token, idp_claims: dict, project="all", scope="all", cookie: str = None):
+    def __init__(self, id_token, idp_claims: dict, project:str, scope="all", cookie: str = None):
         """
         Constructor
         :param id_token: CI Logon Identity Token
@@ -151,7 +151,7 @@ class FabricTokenEncoder:
         projects_to_be_removed = []
         for project in projects.keys():
             LOG.debug("Processing %s", project)
-            if self.project != "all" and self.project not in project:
+            if self.project not in project:
                 projects_to_be_removed.append(project)
         for x in projects_to_be_removed:
             projects.pop(x)
