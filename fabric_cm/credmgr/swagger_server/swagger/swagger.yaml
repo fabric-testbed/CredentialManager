@@ -61,12 +61,11 @@ paths:
       - name: projectName
         in: query
         description: Project Name
-        required: false
+        required: true
         style: form
         explode: true
         schema:
           type: string
-          default: all
       - name: scope
         in: query
         description: Scope for which token is requested
@@ -104,12 +103,11 @@ paths:
       - name: projectName
         in: query
         description: Project Name
-        required: false
+        required: true
         style: form
         explode: true
         schema:
           type: string
-          default: all
       - name: scope
         in: query
         description: Scope for which token is requested
@@ -176,12 +174,8 @@ components:
         refresh_token:
           type: string
           description: Refresh Token
-        cookie:
-          type: string
-          description: Vouch Cookie
       example:
         refresh_token: refresh_token
-        cookie: cookie
         id_token: id_token
     request:
       required:
@@ -254,12 +248,11 @@ components:
       name: projectName
       in: query
       description: Project Name
-      required: false
+      required: true
       style: form
       explode: true
       schema:
         type: string
-        default: all
     scope:
       name: scope
       in: query

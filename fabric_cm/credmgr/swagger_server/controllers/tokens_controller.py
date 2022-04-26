@@ -7,7 +7,7 @@ from fabric_cm.credmgr.swagger_server import util
 from fabric_cm.credmgr.swagger_server.response import tokens_controller as rc
 
 
-def tokens_create_post(project_name=None, scope=None):  # noqa: E501
+def tokens_create_post(project_name, scope=None):  # noqa: E501
     """Generate tokens for an user
 
     Request to generate tokens for an user  # noqa: E501
@@ -22,7 +22,7 @@ def tokens_create_post(project_name=None, scope=None):  # noqa: E501
     return rc.tokens_create_post(project_name=project_name, scope=scope)
 
 
-def tokens_refresh_post(body=None, project_name=None, scope=None):  # noqa: E501
+def tokens_refresh_post(project_name, body=None, scope=None):  # noqa: E501
     """Refresh tokens for an user
 
     Request to refresh OAuth tokens for an user  # noqa: E501
