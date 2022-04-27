@@ -4,3 +4,4 @@ include fabric/credmgr/credential_managers/oauth_credmgr_webserver/templates/*.h
 recursive-include examples *
 include README.md
 include LICENSE
+include requirements.txt
