@@ -48,7 +48,7 @@ class CmLdapMgr:
 
         self.server = Server(host=self.ldap_host, use_ssl=True, get_info=ALL)
 
-    def get_active_projects_and_roles_from_ldap(self, eppn: str, email: str):
+    def get_project_and_roles(self, eppn: str, email: str, project_name: str) -> (list, list):
         """
         Return active projects for a user identified by eppn or email
         @params eppn: eppn
@@ -81,7 +81,7 @@ class CmLdapMgr:
         finally:
             self.lock.release()
         LOG.debug(attributes)
-        projects = None
+        project_tags = None
         roles = None
         if attributes is not None:
             projects = {}
@@ -96,8 +96,12 @@ class CmLdapMgr:
                         else:
                             projects[found] = []
 
-        LOG.debug("Projects: %s, Roles: %s", projects, roles)
-        return roles, projects
+            project_tags = projects.get(project_name, None)
+            if project_tags is None:
+                raise Exception("User is not a member of project: " + project_name)
+
+        LOG.debug("Project Tags: %s, Roles: %s", project_tags, roles)
+        return roles, project_tags
 
 
 class CmLdapMgrSingleton:

@@ -22,6 +22,8 @@
 # SOFTWARE.
 #
 # Author Komal Thareja (kthare10@renci.org)
+from typing import Tuple
+
 import requests
 
 from fabric_cm.credmgr.config import CONFIG_OBJ
@@ -38,10 +40,11 @@ class ProjectRegistry:
         self.cookie_name = cookie_name
         self.cookie_domain = cookie_domain
 
-    def get_projects_and_roles(self, sub: str):
+    def get_project_and_roles(self, sub: str, project_name: str) -> Tuple[list, list]:
         """
         Determine Role from Project Registry
         :param sub: OIDC claim sub
+        :param project_name: Project name
         :param returns the roles and project with tags
 
         :returns a tuple containing user specific roles and project tags
@@ -83,8 +86,10 @@ class ProjectRegistry:
         projects = response.json().get('projects', None)
 
         # Get Per Project Tags
-        project_tags = {}
+        response = None
         for p in projects:
+            if p.get('name') != project_name:
+                continue
             project_name = p.get('name', None)
             project_uuid = p.get('uuid', None)
             LOG.debug(f"Getting tags for Project: {project_name}")
@@ -93,7 +98,9 @@ class ProjectRegistry:
             if response.status_code != 200:
                 raise ProjectRegistryError(f"Project Registry error occurred "
                                            f"status_code: {response.status_code} message: {response.content}")
-            project_tags[project_name] = response.json().get('tags', None)
+        if response is None:
+            raise ProjectRegistryError(f"User is not a member of project: {project_name}")
+        project_tags = response.json().get('tags', None)
         return roles, project_tags
 
 

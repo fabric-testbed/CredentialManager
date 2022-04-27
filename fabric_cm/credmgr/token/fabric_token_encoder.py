@@ -135,30 +135,20 @@ class FabricTokenEncoder:
         """
         sub = self.claims.get("sub")
         url = CONFIG_OBJ.get_pr_url()
-        roles = None
-        projects = None
+
         if CONFIG_OBJ.is_project_registry_enabled():
             project_registry = ProjectRegistry(api_server=url, cookie=self._get_vouch_cookie(),
                                                cookie_name=CONFIG_OBJ.get_vouch_cookie_name(),
                                                cookie_domain=CONFIG_OBJ.get_vouch_cookie_domain_name())
-            roles, projects = project_registry.get_projects_and_roles(sub)
+            roles, project_tags = project_registry.get_project_and_roles(sub, project_name=self.project)
         else:
             email = self.claims.get("email")
-            roles, projects = CmLdapMgrSingleton.get().get_active_projects_and_roles_from_ldap(eppn=None, email=email)
+            roles, project_tags = CmLdapMgrSingleton.get().get_project_and_roles(eppn=None,
+                                                                             email=email,
+                                                                             project_name=self.project)
 
-        LOG.debug("Projects: %s, Roles: %s", projects, roles)
-
-        projects_to_be_removed = []
-        for project in projects.keys():
-            LOG.debug("Processing %s", project)
-            if self.project not in project:
-                projects_to_be_removed.append(project)
-        for x in projects_to_be_removed:
-            projects.pop(x)
-
-        if len(projects) < 1:
-            raise TokenError("User is not a member of any of the project")
-        self.claims['projects'] = projects
+        LOG.debug("Project Tags: %s, Roles: %s", project_tags, roles)
+        self.claims['projects'] = project_tags
         self.claims["roles"] = roles
         self.claims["scope"] = self.scope
         LOG.debug("Claims %s", self.claims)
