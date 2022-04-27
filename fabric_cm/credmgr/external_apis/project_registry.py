@@ -88,6 +88,7 @@ class ProjectRegistry:
         # Get Per Project Tags
         response = None
         for p in projects:
+            LOG.debug(f"Requested Project: {project_name} Project: {p}")
             if p.get('name') != project_name:
                 continue
             project_name = p.get('name', None)

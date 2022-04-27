@@ -148,7 +148,7 @@ class FabricTokenEncoder:
                                                                              project_name=self.project)
 
         LOG.debug("Project Tags: %s, Roles: %s", project_tags, roles)
-        self.claims['projects'] = project_tags
+        self.claims['projects'] = {self.project: project_tags}
         self.claims["roles"] = roles
         self.claims["scope"] = self.scope
         LOG.debug("Claims %s", self.claims)
