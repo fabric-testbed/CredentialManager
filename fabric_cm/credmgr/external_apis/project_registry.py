@@ -40,11 +40,11 @@ class ProjectRegistry:
         self.cookie_name = cookie_name
         self.cookie_domain = cookie_domain
 
-    def get_project_and_roles(self, sub: str, project_name: str) -> Tuple[list, list]:
+    def get_roles_and_project_tags(self, sub: str, project_id: str) -> Tuple[list, list]:
         """
         Determine Role from Project Registry
         :param sub: OIDC claim sub
-        :param project_name: Project name
+        :param project_id: Project Id
         :param returns the roles and project with tags
 
         :returns a tuple containing user specific roles and project tags
@@ -88,8 +88,8 @@ class ProjectRegistry:
         # Get Per Project Tags
         response = None
         for p in projects:
-            LOG.debug(f"Requested Project: {project_name} Project: {p}")
-            if p.get('name') != project_name:
+            LOG.debug(f"Requested Project: {project_id} Project: {p}")
+            if p.get('uuid') != project_id:
                 continue
             project_name = p.get('name', None)
             project_uuid = p.get('uuid', None)
@@ -100,7 +100,7 @@ class ProjectRegistry:
                 raise ProjectRegistryError(f"Project Registry error occurred "
                                            f"status_code: {response.status_code} message: {response.content}")
         if response is None:
-            raise ProjectRegistryError(f"User is not a member of project: {project_name}")
+            raise ProjectRegistryError(f"User is not a member of project: {project_id}")
         project_tags = response.json().get('tags', None)
         return roles, project_tags
 

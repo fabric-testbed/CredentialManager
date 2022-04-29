@@ -82,15 +82,14 @@
         "description": "Request to generate tokens for an user\n",
         "parameters": [
           {
-            "name": "projectName",
+            "name": "projectId",
             "in": "query",
-            "description": "Project Name",
+            "description": "Project Id",
             "required": false,
             "style": "form",
             "explode": true,
             "schema": {
-              "type": "string",
-              "default": "all"
+              "type": "string"
             }
           },
           {
@@ -141,15 +140,14 @@
         "description": "Request to refresh OAuth tokens for an user\n",
         "parameters": [
           {
-            "name": "projectName",
+            "name": "projectId",
             "in": "query",
-            "description": "Project Name",
+            "description": "Project Id",
             "required": false,
             "style": "form",
             "explode": true,
             "schema": {
-              "type": "string",
-              "default": "all"
+              "type": "string"
             }
           },
           {
@@ -319,16 +317,15 @@
       }
     },
     "parameters": {
-      "projectName": {
-        "name": "projectName",
+      "projectId": {
+        "name": "projectId",
         "in": "query",
-        "description": "Project Name",
+        "description": "Project Id",
         "required": false,
         "style": "form",
         "explode": true,
         "schema": {
-          "type": "string",
-          "default": "all"
+          "type": "string"
         }
       },
       "scope": {

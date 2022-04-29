@@ -34,7 +34,7 @@ class TestCredmgr(unittest.TestCase):
         Verify token creation fails with unknown project and scope
         :return:
         """
-        query_string = [('projectName', 'project_name_example'),
+        query_string = [('projectId', 'project_name_example'),
                         ('scope', 'scope_example')]
 
         # Create tokens with unknown project and scope
@@ -48,7 +48,7 @@ class TestCredmgr(unittest.TestCase):
         Verify get token without authentication fails
         :return:
         """
-        query_string = [('projectName', 'RENCI-TEST'),
+        query_string = [('projectId', 'RENCI-TEST'),
                         ('scope', 'measurement')]
 
         # Create tokens with project and scope
@@ -72,7 +72,7 @@ class TestCredmgr(unittest.TestCase):
         self.assertEqual(500, response.status_code)
         self.assertIsNotNone(response.json())
 
-        query_string = [('projectName', 'RENCI-TEST'),
+        query_string = [('projectId', 'RENCI-TEST'),
                         ('scope', 'measurement')]
 
         # valid request with project and scope but unknown token
@@ -81,7 +81,7 @@ class TestCredmgr(unittest.TestCase):
         self.assertEqual(500, response.status_code)
         self.assertIsNotNone(response.json())
 
-        query_string = [('projectName', 'project_name_example'),
+        query_string = [('projectId', 'project_name_example'),
                         ('scope', 'scope_example')]
 
         # valid request with unknonw project and scope but unknown token

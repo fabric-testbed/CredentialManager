@@ -48,12 +48,13 @@ class CmLdapMgr:
 
         self.server = Server(host=self.ldap_host, use_ssl=True, get_info=ALL)
 
-    def get_project_and_roles(self, eppn: str, email: str, project_name: str) -> (list, list):
+    def get_project_and_roles(self, eppn: str, email: str, project_id: str) -> (list, list):
         """
         Return active projects for a user identified by eppn or email
         @params eppn: eppn
         @params email: user email
-        @return list of active projects for user
+        @params project_id: project id
+        @return tuple of roles and project tags(always empty) as tags are not in CoManage
         """
         if eppn:
             ldap_search_filter = '(eduPersonPrincipalName=' + eppn + ')'
@@ -81,10 +82,11 @@ class CmLdapMgr:
         finally:
             self.lock.release()
         LOG.debug(attributes)
-        project_tags = None
+        # CoMange doesn't have project tags; so always return empty list
+        project_tags = []
         roles = None
+        belongs_to_project = False
         if attributes is not None:
-            projects = {}
             roles = []
             for a in attributes:
                 m = re.match('CO:COU:(.+?):members:active', a)
@@ -93,12 +95,11 @@ class CmLdapMgr:
                     if found not in self.project_ignore_list:
                         if found in self.roles_list or "-po" in found or "-pm" in found:
                             roles.append(found)
-                        else:
-                            projects[found] = []
+                        if project_id in found:
+                            belongs_to_project = True
 
-            project_tags = projects.get(project_name, None)
-            if project_tags is None:
-                raise Exception("User is not a member of project: " + project_name)
+            if not belongs_to_project:
+                raise Exception("User is not a member of project: " + project_id)
 
         LOG.debug("Project Tags: %s, Roles: %s", project_tags, roles)
         return roles, project_tags

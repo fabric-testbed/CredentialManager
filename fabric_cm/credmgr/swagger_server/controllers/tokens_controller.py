@@ -7,30 +7,30 @@ from fabric_cm.credmgr.swagger_server import util
 from fabric_cm.credmgr.swagger_server.response import tokens_controller as rc
 
 
-def tokens_create_post(project_name, scope=None):  # noqa: E501
+def tokens_create_post(project_id, scope=None):  # noqa: E501
     """Generate tokens for an user
 
     Request to generate tokens for an user  # noqa: E501
 
-    :param project_name: Project Name
-    :type project_name: str
+    :param project_id: Project Id
+    :type project_id: str
     :param scope: Scope for which token is requested
     :type scope: str
 
     :rtype: Success
     """
-    return rc.tokens_create_post(project_name=project_name, scope=scope)
+    return rc.tokens_create_post(project_id=project_id, scope=scope)
 
 
-def tokens_refresh_post(project_name, body=None, scope=None):  # noqa: E501
+def tokens_refresh_post(project_id, body=None, scope=None):  # noqa: E501
     """Refresh tokens for an user
 
     Request to refresh OAuth tokens for an user  # noqa: E501
 
     :param body: 
     :type body: dict | bytes
-    :param project_name: Project Name
-    :type project_name: str
+    :param project_id: Project Id
+    :type project_id: str
     :param scope: Scope for which token is requested
     :type scope: str
 
@@ -38,7 +38,7 @@ def tokens_refresh_post(project_name, body=None, scope=None):  # noqa: E501
     """
     if connexion.request.is_json:
         body = Request.from_dict(connexion.request.get_json())  # noqa: E501
-    return rc.tokens_refresh_post(body=body, project_name=project_name, scope=scope)
+    return rc.tokens_refresh_post(body=body, project_id=project_id, scope=scope)
 
 
 def tokens_revoke_post(body=None):  # noqa: E501
