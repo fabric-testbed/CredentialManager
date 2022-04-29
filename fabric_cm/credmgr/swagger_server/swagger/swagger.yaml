@@ -58,9 +58,9 @@ paths:
         Request to generate tokens for an user
       operationId: tokens_create_post
       parameters:
-      - name: projectName
+      - name: projectId
         in: query
-        description: Project Name
+        description: Project Id
         required: true
         style: form
         explode: true
@@ -100,9 +100,9 @@ paths:
         Request to refresh OAuth tokens for an user
       operationId: tokens_refresh_post
       parameters:
-      - name: projectName
+      - name: projectId
         in: query
-        description: Project Name
+        description: Project Id
         required: true
         style: form
         explode: true
@@ -244,10 +244,10 @@ components:
         alg: alg
         n: "n"
   parameters:
-    projectName:
-      name: projectName
+    projectId:
+      name: projectId
       in: query
-      description: Project Name
+      description: Project Id
       required: true
       style: form
       explode: true

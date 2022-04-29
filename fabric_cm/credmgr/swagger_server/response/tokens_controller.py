@@ -50,13 +50,13 @@ def authorize(request):
     return ci_logon_id_token, refresh_token, cookie
 
 
-def tokens_create_post(project_name, scope=None):  # noqa: E501
+def tokens_create_post(project_id, scope=None):  # noqa: E501
     """Generate Fabric OAuth tokens for an user
 
     Request to generate Fabric OAuth tokens for an user  # noqa: E501
 
-    :param project_name: Project Name
-    :type project_name: str
+    :param project_id: Project Id
+    :type project_id: str
     :param scope: Scope for which token is requested
     :type scope: str
 
@@ -71,7 +71,7 @@ def tokens_create_post(project_name, scope=None):  # noqa: E501
         credmgr = OAuthCredmgr()
         result = credmgr.create_token(ci_logon_id_token=ci_logon_id_token,
                                       refresh_token=refresh_token,
-                                      project=project_name,
+                                      project=project_id,
                                       scope=scope,
                                       cookie=cookie)
         response = Success.from_dict(result)
@@ -84,15 +84,15 @@ def tokens_create_post(project_name, scope=None):  # noqa: E501
         return cors_response(status=INTERNAL_SERVER_ERROR, xerror=str(ex), body=str(ex))
 
 
-def tokens_refresh_post(body, project_name=None, scope=None):  # noqa: E501
+def tokens_refresh_post(body, project_id=None, scope=None):  # noqa: E501
     """Refresh FABRIC OAuth tokens for an user
 
     Request to refresh OAuth tokens for an user  # noqa: E501
 
     :param body:
     :type body: dict | bytes
-    :param project_name: Project Name
-    :type project_name: str
+    :param project_id: Project Id
+    :type project_id: str
     :param scope: Scope for which token is requested
     :type scope: str
 
@@ -105,7 +105,7 @@ def tokens_refresh_post(body, project_name=None, scope=None):  # noqa: E501
         ci_logon_id_token, refresh_token, cookie = authorize(connexion.request)
         credmgr = OAuthCredmgr()
         response = Success.from_dict(credmgr.refresh_token(refresh_token=body.refresh_token,
-                                                           project=project_name, scope=scope,
+                                                           project=project_id, scope=scope,
                                                            cookie=cookie))
         success_counter.labels(HTTP_METHOD_POST, TOKENS_REFRESH_URL).inc()
         return response

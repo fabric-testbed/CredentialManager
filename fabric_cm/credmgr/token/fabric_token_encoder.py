@@ -140,12 +140,12 @@ class FabricTokenEncoder:
             project_registry = ProjectRegistry(api_server=url, cookie=self._get_vouch_cookie(),
                                                cookie_name=CONFIG_OBJ.get_vouch_cookie_name(),
                                                cookie_domain=CONFIG_OBJ.get_vouch_cookie_domain_name())
-            roles, project_tags = project_registry.get_project_and_roles(sub, project_name=self.project)
+            roles, project_tags = project_registry.get_roles_and_project_tags(sub, project_id=self.project)
         else:
             email = self.claims.get("email")
-            roles, project_tags = CmLdapMgrSingleton.get().get_project_and_roles(eppn=None,
-                                                                             email=email,
-                                                                             project_name=self.project)
+            roles, project_tags = CmLdapMgrSingleton.get().get_roles_and_project_tags(eppn=None,
+                                                                                      email=email,
+                                                                                      project_id=self.project)
 
         LOG.debug("Project Tags: %s, Roles: %s", project_tags, roles)
         self.claims['projects'] = {self.project: project_tags}

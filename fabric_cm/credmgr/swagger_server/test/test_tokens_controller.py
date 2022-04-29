@@ -18,7 +18,7 @@ class TestTokensController(BaseTestCase):
 
         Generate tokens for an user
         """
-        query_string = [('project_name', 'TEST'),
+        query_string = [('project_id', 'TEST'),
                         ('scope', 'all')]
         response = self.client.open(
             '//tokens/create',
@@ -33,7 +33,7 @@ class TestTokensController(BaseTestCase):
         Refresh tokens for an user
         """
         body = Request()
-        query_string = [('project_name', 'TEST'),
+        query_string = [('project_id', 'TEST'),
                         ('scope', 'all')]
         response = self.client.open(
             '//tokens/refresh',
