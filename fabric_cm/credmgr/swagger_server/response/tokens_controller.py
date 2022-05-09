@@ -29,6 +29,7 @@ from http.client import INTERNAL_SERVER_ERROR
 
 import connexion
 from fss_utils.http_errors import cors_response
+from fss_utils.jwt_manager import JWTManager, ValidateCode
 
 from fabric_cm.credmgr.credential_managers.oauth_credmgr import OAuthCredmgr
 from fabric_cm.credmgr.swagger_server.models.request import Request  # noqa: E501
@@ -46,6 +47,14 @@ def authorize(request):
     refresh_token = request.headers.get(VOUCH_REFRESH_TOKEN, None)
     cookie_name = CONFIG_OBJ.get_vouch_cookie_name()
     cookie = request.cookies.get(cookie_name)
+    if ci_logon_id_token is None and refresh_token is None and cookie is not None:
+        vouch_secret = CONFIG_OBJ.get_vouch_secret()
+        vouch_compression = CONFIG_OBJ.is_vouch_cookie_compressed()
+        status, decoded_cookie = JWTManager.decode(cookie=cookie,secret=vouch_secret,
+                                                   compression=vouch_compression, verify=False)
+        if status == ValidateCode.VALID:
+            ci_logon_id_token = decoded_cookie.get('PIdToken', None)
+            refresh_token = decoded_cookie.get('PRefreshToken', None)
 
     return ci_logon_id_token, refresh_token, cookie
 
@@ -66,7 +75,7 @@ def tokens_create_post(project_id, scope=None):  # noqa: E501
     try:
         ci_logon_id_token, refresh_token, cookie = authorize(connexion.request)
         if ci_logon_id_token is None:
-            return AUTHORIZATION_ERR, 401
+            raise Exception(AUTHORIZATION_ERR)
 
         credmgr = OAuthCredmgr()
         result = credmgr.create_token(ci_logon_id_token=ci_logon_id_token,
