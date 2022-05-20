@@ -12,7 +12,7 @@
       "name": "MIT",
       "url": "https://opensource.org/licenses/MIT"
     },
-    "version": "1.0.1"
+    "version": "1.0.2"
   },
   "servers": [
     {
@@ -34,10 +34,11 @@
     "/version": {
       "get": {
         "tags": [
-          "default"
+          "version"
         ],
-        "summary": "version",
+        "summary": "Version",
         "description": "Version",
+        "operationId": "version_get",
         "responses": {
           "200": {
             "description": "OK",
@@ -45,6 +46,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/version"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/status_500_internal_server_error"
                 }
               }
             }
@@ -69,6 +80,16 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/status_500_internal_server_error"
+                }
+              }
+            }
           }
         }
       }
@@ -82,9 +103,9 @@
         "description": "Request to generate tokens for an user\n",
         "parameters": [
           {
-            "name": "projectId",
+            "name": "project_id",
             "in": "query",
-            "description": "Project Id",
+            "description": "Project identified by universally unique identifier",
             "required": false,
             "style": "form",
             "explode": true,
@@ -111,22 +132,60 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/success"
+                  "$ref": "#/components/schemas/tokens"
                 }
               }
             }
           },
           "400": {
-            "description": "Bad request"
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/status_400_bad_request"
+                }
+              }
+            }
           },
           "401": {
-            "description": "Authorization information is missing or invalid"
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/status_401_unauthorized"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/status_403_forbidden"
+                }
+              }
+            }
           },
           "404": {
-            "description": "Token not found"
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/status_404_not_found"
+                }
+              }
+            }
           },
-          "5XX": {
-            "description": "Unexpected error"
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/status_500_internal_server_error"
+                }
+              }
+            }
           }
         }
       }
@@ -140,9 +199,9 @@
         "description": "Request to refresh OAuth tokens for an user\n",
         "parameters": [
           {
-            "name": "projectId",
+            "name": "project_id",
             "in": "query",
-            "description": "Project Id",
+            "description": "Project identified by universally unique identifier",
             "required": false,
             "style": "form",
             "explode": true,
@@ -164,13 +223,7 @@
           }
         ],
         "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/request"
-              }
-            }
-          }
+          "$ref": "#/components/requestBodies/payload_token_post"
         },
         "responses": {
           "200": {
@@ -178,22 +231,60 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/success"
+                  "$ref": "#/components/schemas/tokens"
                 }
               }
             }
           },
           "400": {
-            "description": "Bad request"
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/status_400_bad_request"
+                }
+              }
+            }
           },
           "401": {
-            "description": "Authorization information is missing or invalid"
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/status_401_unauthorized"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/status_403_forbidden"
+                }
+              }
+            }
           },
           "404": {
-            "description": "Token not found"
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/status_404_not_found"
+                }
+              }
+            }
           },
-          "5XX": {
-            "description": "Unexpected error"
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/status_500_internal_server_error"
+                }
+              }
+            }
           }
         }
       }
@@ -206,29 +297,68 @@
         "summary": "Revoke a refresh token for an user",
         "description": "Request to revoke a refresh token for an user\n",
         "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/request"
-              }
-            }
-          }
+          "$ref": "#/components/requestBodies/payload_token_post"
         },
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/status_200_ok_no_content"
+                }
+              }
+            }
           },
           "400": {
-            "description": "Bad request"
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/status_400_bad_request"
+                }
+              }
+            }
           },
           "401": {
-            "description": "Authorization information is missing or invalid"
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/status_401_unauthorized"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/status_403_forbidden"
+                }
+              }
+            }
           },
           "404": {
-            "description": "Token not found"
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/status_404_not_found"
+                }
+              }
+            }
           },
-          "5XX": {
-            "description": "Unexpected error"
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/status_500_internal_server_error"
+                }
+              }
+            }
           }
         }
       }
@@ -236,7 +366,261 @@
   },
   "components": {
     "schemas": {
-      "success": {
+      "status_200_ok_single": {
+        "type": "object",
+        "properties": {
+          "size": {
+            "type": "integer",
+            "default": 1
+          },
+          "status": {
+            "type": "integer",
+            "default": 200
+          },
+          "type": {
+            "type": "string"
+          }
+        }
+      },
+      "status_200_ok_no_content": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/status_200_ok_no_content_data"
+            }
+          },
+          "type": {
+            "type": "string",
+            "default": "no_content"
+          },
+          "size": {
+            "type": "integer",
+            "default": 1
+          },
+          "status": {
+            "type": "integer",
+            "default": 200
+          }
+        }
+      },
+      "status_400_bad_request": {
+        "type": "object",
+        "properties": {
+          "errors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/status_400_bad_request_errors"
+            }
+          }
+        }
+      },
+      "status_401_unauthorized": {
+        "type": "object",
+        "properties": {
+          "errors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/status_401_unauthorized_errors"
+            }
+          },
+          "type": {
+            "type": "string",
+            "default": "error"
+          },
+          "size": {
+            "type": "integer",
+            "default": 1
+          },
+          "status": {
+            "type": "integer",
+            "default": 401
+          }
+        }
+      },
+      "status_403_forbidden": {
+        "type": "object",
+        "properties": {
+          "errors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/status_403_forbidden_errors"
+            }
+          },
+          "type": {
+            "type": "string",
+            "default": "error"
+          },
+          "size": {
+            "type": "integer",
+            "default": 1
+          },
+          "status": {
+            "type": "integer",
+            "default": 403
+          }
+        }
+      },
+      "status_404_not_found": {
+        "type": "object",
+        "properties": {
+          "errors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/status_404_not_found_errors"
+            }
+          },
+          "type": {
+            "type": "string",
+            "default": "error"
+          },
+          "size": {
+            "type": "integer",
+            "default": 1
+          },
+          "status": {
+            "type": "integer",
+            "default": 404
+          }
+        }
+      },
+      "status_500_internal_server_error": {
+        "type": "object",
+        "properties": {
+          "errors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/status_500_internal_server_error_errors"
+            }
+          },
+          "type": {
+            "type": "string",
+            "default": "error"
+          },
+          "size": {
+            "type": "integer",
+            "default": 1
+          },
+          "status": {
+            "type": "integer",
+            "default": 500
+          }
+        }
+      },
+      "status_200_ok_no_content_data": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "default": "No Content"
+          },
+          "details": {
+            "type": "string"
+          }
+        },
+        "example": {
+          "details": "details",
+          "message": "No Content"
+        }
+      },
+      "status_400_bad_request_errors": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "default": "Bad Request"
+          },
+          "details": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "default": "error"
+          },
+          "size": {
+            "type": "integer",
+            "default": 1
+          },
+          "status": {
+            "type": "integer",
+            "default": 400
+          }
+        }
+      },
+      "status_401_unauthorized_errors": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "default": "Unauthorized"
+          },
+          "details": {
+            "type": "string"
+          }
+        }
+      },
+      "status_403_forbidden_errors": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "default": "Forbidden"
+          },
+          "details": {
+            "type": "string"
+          }
+        }
+      },
+      "status_404_not_found_errors": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "default": "Not Found"
+          },
+          "details": {
+            "type": "string"
+          }
+        }
+      },
+      "status_500_internal_server_error_errors": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "default": "Internal Server Error"
+          },
+          "details": {
+            "type": "string"
+          }
+        }
+      },
+      "tokens": {
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/status_200_ok_single"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/token"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "token": {
+        "required": [
+          "created_at",
+          "id_token",
+          "refresh_token"
+        ],
         "type": "object",
         "properties": {
           "id_token": {
@@ -247,9 +631,8 @@
             "type": "string",
             "description": "Refresh Token"
           },
-          "cookie": {
-            "type": "string",
-            "description": "Vouch Cookie"
+          "created_at": {
+            "type": "string"
           }
         }
       },
@@ -266,12 +649,37 @@
         }
       },
       "version": {
-        "properties": {
-          "version": {
-            "type": "string"
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/status_200_ok_single"
           },
-          "gitsha1": {
-            "type": "string"
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/version_data"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "version_data": {
+        "required": [
+          "reference",
+          "version"
+        ],
+        "properties": {
+          "reference": {
+            "type": "string",
+            "example": "https://github.com/fabric-testbed/ControlFramework"
+          },
+          "version": {
+            "type": "string",
+            "example": "1.0.0"
           }
         }
       },
@@ -313,32 +721,20 @@
             "type": "string",
             "description": "Key Id Header Parameter"
           }
-        }
+        },
+        "example": null
       }
     },
-    "parameters": {
-      "projectId": {
-        "name": "projectId",
-        "in": "query",
-        "description": "Project Id",
-        "required": false,
-        "style": "form",
-        "explode": true,
-        "schema": {
-          "type": "string"
-        }
-      },
-      "scope": {
-        "name": "scope",
-        "in": "query",
-        "description": "Scope for which token is requested",
-        "required": false,
-        "style": "form",
-        "explode": true,
-        "schema": {
-          "type": "string",
-          "default": "all"
-        }
+    "requestBodies": {
+      "payload_token_post": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/request"
+            }
+          }
+        },
+        "required": true
       }
     }
   }

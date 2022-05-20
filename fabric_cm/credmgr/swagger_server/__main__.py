@@ -25,13 +25,9 @@
 """
 Main Entry Point
 """
-import os
-import signal
-
 import connexion
 import prometheus_client
 import waitress
-from flask import jsonify
 
 from fabric_cm.credmgr.swagger_server import encoder
 from fabric_cm.credmgr.config import CONFIG_OBJ
