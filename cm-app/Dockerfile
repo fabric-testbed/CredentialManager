@@ -12,7 +12,7 @@ COPY ./docker-entrypoint.sh /docker-entrypoint.sh
 
 WORKDIR /
 
-EXPOSE 3000 5000
+EXPOSE 3000
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["run_server"]

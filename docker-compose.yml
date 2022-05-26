@@ -38,9 +38,8 @@ services:
       dockerfile: Dockerfile
     image: fabrictestbed/cm-app:latest
     container_name: cm-app
-    # ports:
-    #  - 8000:5000
-    #  - 9000:3000
+    ports:
+      - 9000:3000
     # volume mount docker based files so that they don't rebuild on each deployment
     volumes:
     - ./docker_node_modules:/code/node_modules

@@ -3,16 +3,15 @@
 cd /code
 
 if [[ "$1" == 'run_server' ]]; then
-  # defaults to running on port 5000
-  echo "Running npm install"
-  npm install --slient
-  echo "Running npm build"
+  # defaults to running on port 3000
+  echo "Starting install"
+  npm install --silent
+  echo "Starting build"
   npm run build
-  echo "Installing the server"
+  echo "Staring install server"
   npm install -g serve
-  echo "Starting the server"
-  serve -s build -l 5000
-  echo "Server started"
+  echo "Launching server"
+  serve -s build
 elif [[ "$1" == 'run_dev' ]]; then
   # defaults to running on port 3000
   # requires stdin_open = true (or "-i" in "docker run ..." command)

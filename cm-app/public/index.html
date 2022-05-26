@@ -24,7 +24,7 @@
       work correctly both with client-side routing and a non-root public URL.
       Learn how to configure a non-root public URL by running `npm run build`.
     -->
-    <title>FABRIC Credential Manager</title>
+    <title>React App</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
@@ -57,7 +57,28 @@
                     "<button type=\"button\" class=\"btn btn-danger\" onclick=\"window.location.href='/logout'\">" +
                     "Logout" +
                     "</button>" +
-                    "</div>" ;
+                    "</div>" +
+                    "<h3>Create Token</h3>" +
+                    "<div>" +
+                    "<form action=\"create\" method=\"post\">" +
+                        "<p>Project Id:   </p>" +
+                        "<input type=\"text\" name=\"project_id\">" +
+                        "<br>" +
+                        "<p>Scope:   </p>" +
+                        "<input type=\"text\" name=\"scope\">" +
+                        "<br>" +
+                        "<input type=\"submit\" value=\"create\" id=\"create\">" +
+                    "</form>" +
+                    "</div>" +
+                    "<h3>Revoke Token</h3>" +
+                    "<div>" +
+                    "<form action=\"revoke\" method=\"post\">" +
+                        "<p>Token to be revoked:   </p>" +
+                        "<input type=\"text\" name=\"refresh_token\">" +
+                        "<br>" +
+                        "<input type=\"submit\" value=\"revoke\" id=\"revoke\">" +
+                    "</form>" +
+                    "</div>";
             } else {
                 buttons += "" +
                     "<h3>Login to manage tokens</h3>" +
@@ -65,10 +86,7 @@
                     "<button type=\"button\" class=\"btn btn-success\" onclick=\"window.location.href='/login'\">" +
                     "Login" +
                     "</button>" +
-                    "<button type=\"button\" class=\"btn btn-default\" onclick=\"window.location.href='/logout'\" disabled=\"disabled\">" +
-                    "Logout" +
-                    "</button>" +
-                    "</div>";
+                    "</div>" ;
             }
 
             document.getElementById("get-buttons").innerHTML = buttons;
@@ -115,30 +133,6 @@
 
             //get useragent
             data["UserAgent"] = navigator.userAgent;
-
-            //extra code to display the values in html
-            let display = "" +
-                "<table style=\"width:100%\">" +
-                "<tr>" +
-                "<th>Index</th>" +
-                "<th>Attribute/Claim</th>" +
-                "<th>Value</th>" +
-                "</tr>";
-            let i_req = 1;
-            for (let key in data) {
-                if (key !== "") {
-                    //display += "<b>" + key + "</b> : " + data[key] + "<br>";
-                    display += "" +
-                        "<tr>" +
-                        "<td>" + i_req + "</td>" +
-                        "<td><b>" + key + "</b></td>" +
-                        "<td>" + data[key] + "</td>" +
-                        "</tr>";
-                    i_req += 1;
-                }
-            }
-            display += "</table>";
-            document.getElementById("get-headers").innerHTML = display;
         }
     </script>
 </head>
@@ -146,7 +140,7 @@
 <body onload="getHeaders();">
 <noscript>You need to enable JavaScript to run this app.</noscript>
 <div id="get-buttons" class="container">buttons go here</div>
-<div id="get-headers" class="container">header data goes here</div>
+<br>
 <div id="root"></div>
 <!--
   This HTML file is a template.
