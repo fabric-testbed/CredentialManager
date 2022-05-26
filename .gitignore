@@ -126,6 +126,10 @@ venv.bak/
 .dmypy.json
 dmypy.json
 
+# docker
+docker_node_modules/
+docker_build/
+
 # Pyre type checker
 .pyre/
 env

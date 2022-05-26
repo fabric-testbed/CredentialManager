@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <meta name="theme-color" content="#000000"/>
+    <meta
+            name="description"
+            content="FABRIC Credential Manager"
+    />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png"/>
+    <!--
+      manifest.json provides metadata used when your web app is installed on a
+      user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
+    -->
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json"/>
+    <!--
+      Notice the use of %PUBLIC_URL% in the tags above.
+      It will be replaced with the URL of the `public` folder during the build.
+      Only files inside the `public` folder can be referenced from the HTML.
+
+      Unlike "/favicon.ico" or "favicon.ico", "%PUBLIC_URL%/favicon.ico" will
+      work correctly both with client-side routing and a non-root public URL.
+      Learn how to configure a non-root public URL by running `npm run build`.
+    -->
+    <title>FABRIC Credential Manager</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+
+    <style>
+        table, th, td {
+            border: 1px solid black;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 5px;
+        }
+
+        th {
+            text-align: center;
+        }
+    </style>
+
+    <script type="application/javascript">
+        function getButtons(user) {
+            let buttons = "";
+            if (user != null) {
+                buttons += "" +
+                    "<h3>Manage Tokens</h3>" +
+                    "<div>" +
+                    "<button type=\"button\" class=\"btn btn-default\" onclick=\"window.location.href='/login'\" disabled=\"disabled\">" +
+                    "Login" +
+                    "</button>" +
+                    "<button type=\"button\" class=\"btn btn-danger\" onclick=\"window.location.href='/logout'\">" +
+                    "Logout" +
+                    "</button>" +
+                    "</div>" ;
+            } else {
+                buttons += "" +
+                    "<h3>Login to manage tokens</h3>" +
+                    "<div>" +
+                    "<button type=\"button\" class=\"btn btn-success\" onclick=\"window.location.href='/login'\">" +
+                    "Login" +
+                    "</button>" +
+                    "<button type=\"button\" class=\"btn btn-default\" onclick=\"window.location.href='/logout'\" disabled=\"disabled\">" +
+                    "Logout" +
+                    "</button>" +
+                    "</div>";
+            }
+
+            document.getElementById("get-buttons").innerHTML = buttons;
+        }
+    </script>
+
+    <script type="application/javascript">
+        function getHeaders(callback) {
+            let req = new XMLHttpRequest();
+            req.onreadystatechange = function () {
+                if (req.readyState === XMLHttpRequest.DONE) {
+                    //
+                    // The following headers may often be similar
+                    // to those of the original page request...
+                    //
+                    if (callback && typeof callback === 'function') {
+                        callback(req.getAllResponseHeaders());
+                    }
+                }
+            };
+            req.open('HEAD', document.location, false);
+            req.send(null);
+
+            // debug
+            console.log(req.getAllResponseHeaders())
+
+            // get buttons
+            getButtons(req.getResponseHeader('x-vouch-user'))
+
+            // associate array to store all values
+            let data = {};
+            // get all headers in one call and parse each item
+            let headers = req.getAllResponseHeaders();
+            let aHeaders = headers.split('\n');
+            let i = 0;
+            for (i = 0; i < aHeaders.length; i++) {
+                let thisItem = aHeaders[i];
+                let key = thisItem.substring(0, thisItem.indexOf(':'));
+                data[key] = thisItem.substring(thisItem.indexOf(':') + 1);
+            }
+
+            // get referer
+            data["Referer"] = document.referrer;
+
+            //get useragent
+            data["UserAgent"] = navigator.userAgent;
+
+            //extra code to display the values in html
+            let display = "" +
+                "<table style=\"width:100%\">" +
+                "<tr>" +
+                "<th>Index</th>" +
+                "<th>Attribute/Claim</th>" +
+                "<th>Value</th>" +
+                "</tr>";
+            let i_req = 1;
+            for (let key in data) {
+                if (key !== "") {
+                    //display += "<b>" + key + "</b> : " + data[key] + "<br>";
+                    display += "" +
+                        "<tr>" +
+                        "<td>" + i_req + "</td>" +
+                        "<td><b>" + key + "</b></td>" +
+                        "<td>" + data[key] + "</td>" +
+                        "</tr>";
+                    i_req += 1;
+                }
+            }
+            display += "</table>";
+            document.getElementById("get-headers").innerHTML = display;
+        }
+    </script>
+</head>
+
+<body onload="getHeaders();">
+<noscript>You need to enable JavaScript to run this app.</noscript>
+<div id="get-buttons" class="container">buttons go here</div>
+<div id="get-headers" class="container">header data goes here</div>
+<div id="root"></div>
+<!--
+  This HTML file is a template.
+  If you open it directly in the browser, you will see an empty page.
+
+  You can add webfonts, meta tags, or analytics to this file.
+  The build step will place the bundled scripts into the <body> tag.
+
+  To begin the development, run `npm start` or `yarn start`.
+  To create a production bundle, use `npm run build` or `yarn build`.
+-->
+</body>
+</html>

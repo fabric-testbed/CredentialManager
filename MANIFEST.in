@@ -1,7 +1,3 @@
-include fabric/credmgr/credential_managers/oauth_credmgr_webserver/static/*.js
-include fabric/credmgr/credential_managers/oauth_credmgr_webserver/static/images/*.png
-include fabric/credmgr/credential_managers/oauth_credmgr_webserver/templates/*.html
-recursive-include examples *
 include README.md
 include LICENSE
 include requirements.txt
