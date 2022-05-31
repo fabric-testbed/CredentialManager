@@ -47,7 +47,7 @@ This package includes:
 - Python 3.7+
 
 ## <a name="apispec"></a>API
-API Documentation can be found [here](https://app.swaggerhub.com/apis-docs/kthare10/credmgr/1.0.1)
+API Documentation can be found [here](https://app.swaggerhub.com/apis-docs/kthare10/credmgr/1.0.2)
 
 ### <a name="apiversion"></a>Version
 
@@ -63,8 +63,15 @@ Example: Version format
 
 ```json
 {
-  "gitsha1": "Release SHA as string",
-  "version": "Release version as string"
+  "size": 1,
+  "status": 200,
+  "type": "string",
+  "data": [
+    {
+      "reference": "https: //github.com/fabric-testbed/CredentialManager",
+      "version": "1.3"
+    }
+  ]
 }
 ```
 ### <a name="apicerts"></a>Certs
@@ -121,7 +128,8 @@ Example: Token format
 ```json
 {
   "id_token": "id_token",
-  "refresh_token": "refresh_token"
+  "refresh_token": "refresh_token",
+  "created_at": "timestamp at which tokens were created"
 }
 ```
 
@@ -133,32 +141,16 @@ Credmgr uses the [Connexion](https://github.com/zalando/connexion) library on to
 
 
 ### <a name="generate"></a>Generate a new server stub
-In a browser, go to [Swagger definition](https://app.swaggerhub.com/apis/kthare10/credmgr/1.0.1)
+In a browser, go to [Swagger definition](https://app.swaggerhub.com/apis/kthare10/credmgr/1.0.2)
 
 From the generate code icon (downward facing arrow), select Download API > JSON Resolved
 
-A file named kthare10-credmgr-1.0.1-resolved.json should be downloaded. Rename it as openapi.json and copy it to CredentialManager/fabric/credmgr. Run the following command to generate the Flask based server.
+A file named kthare10-credmgr-1.0.2-resolved.json should be downloaded. Rename it as openapi.json and copy it to CredentialManager/fabric/credmgr. Run the following command to generate the Flask based server.
 
 ```bash
 $ cd fabric/credmgr/
-$ cp kthare10-credmgr-1.0.1-resolved.json openapi.json
+$ cp kthare10-credmgr-1.0.2-resolved.json openapi.json
 $ ./update_swagger_stub.sh
-```
-Update the `fabric/credmgr/swagger_server/util.py::_deserialize(data, klass)` to replace from:
-```
-    elif type(klass) == typing.GenericMeta:
-        if klass.__extra__ == list:
-            return _deserialize_list(data, klass.__args__[0])
-        if klass.__extra__ == dict:
-            return _deserialize_dict(data, klass.__args__[1])
-```
-to:
-```
-    elif hasattr(klass, '__origin__'):
-        if klass.__origin__ == list or klass.__origin__ == typing.List:
-            return _deserialize_list(data, klass.__args__[0])
-        if klass.__extra__ == dict:
-            return _deserialize_dict(data, klass.__args__[1])
 ```
 
 Remove existing swagger_server directory and move my_server/swagger_server to swagger_server after verifying all changes are as expected.

@@ -458,7 +458,7 @@ components:
       properties:
         reference:
           type: string
-          example: https://github.com/fabric-testbed/ControlFramework
+          example: https://github.com/fabric-testbed/CredentialManager
         version:
           type: string
           example: 1.0.0
