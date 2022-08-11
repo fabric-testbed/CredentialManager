@@ -1,5 +1,5 @@
 ### For development purposes only ###
-version: '3.6'
+version: "3.6"
 services:
   nginx:
     image: library/nginx:1
@@ -42,8 +42,8 @@ services:
       - 9000:3000
     # volume mount docker based files so that they don't rebuild on each deployment
     volumes:
-    - ./docker_node_modules:/code/node_modules
-    - ./docker_build:/code/build
+      - ./docker_node_modules:/code/node_modules
+      - ./docker_build:/code/build
     stdin_open: true
     restart: unless-stopped
 
