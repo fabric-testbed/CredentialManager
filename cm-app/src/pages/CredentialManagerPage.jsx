@@ -7,7 +7,7 @@ import Button from 'react-bootstrap/Button';
 import Alert from 'react-bootstrap/Alert';
 
 import { createIdToken, refreshToken, revokeToken } from "../services/credentialManagerService.js";
-import { getMyProjects } from "../services/coreApiService";
+import { getProjects } from "../services/coreApiService.js";
 
 import { toast } from "react-toastify";
 
@@ -34,7 +34,7 @@ class CredentialManagerPage extends React.Component {
 
   async componentDidMount(){
     try {
-      const { data: res } = await getMyProjects();
+      const { data: res } = await getProjects();
       this.setState({ projects: res.results });
     } catch (ex) {
       toast.error("Failed to load user's project information. Please reload this page.");

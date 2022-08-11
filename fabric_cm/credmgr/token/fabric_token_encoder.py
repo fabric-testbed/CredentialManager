@@ -133,7 +133,6 @@ class FabricTokenEncoder:
         """
         Set the claims for the Token by adding membership, project and scope
         """
-        sub = self.claims.get("sub")
         url = CONFIG_OBJ.get_pr_url()
 
         if CONFIG_OBJ.is_project_registry_enabled():
@@ -156,6 +155,8 @@ class FabricTokenEncoder:
             }
         self.claims["roles"] = roles
         self.claims["scope"] = self.scope
+        if uuid is not None:
+            self.claims["uuid"] = uuid
         LOG.debug("Claims %s", self.claims)
         self.unset = False
 

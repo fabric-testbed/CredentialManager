@@ -8,11 +8,11 @@ COPY ./package.json ./
 COPY ./package-lock.json ./
 COPY ./src ./src
 COPY ./public ./public
-COPY ./docker-entrypoint.sh /docker-entrypoint.sh
+COPY ./docker-entrypoint.sh ./
 
 WORKDIR /
 
 EXPOSE 3000
 
-ENTRYPOINT ["/docker-entrypoint.sh"]
+ENTRYPOINT ["/code/docker-entrypoint.sh"]
 CMD ["run_server"]
