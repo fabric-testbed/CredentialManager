@@ -5,7 +5,6 @@ VOLUME /code
 WORKDIR /code
 
 COPY ./package.json ./
-COPY ./package-lock.json ./
 COPY ./src ./src
 COPY ./public ./public
 COPY ./docker-entrypoint.sh ./
