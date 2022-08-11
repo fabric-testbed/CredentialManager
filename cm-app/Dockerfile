@@ -1,5 +1,5 @@
 FROM node:lts
-MAINTAINER Michael J. Stealey
+MAINTAINER Komal Thareja
 
 VOLUME /code
 WORKDIR /code

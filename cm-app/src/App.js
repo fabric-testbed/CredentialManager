@@ -1,25 +1,46 @@
-import React from 'react';
-import logo from './logo.svg';
+import React from "react";
+import { BrowserRouter as Router } from "react-router-dom";
+import Header from "./components/Header";
+import Homepage from './pages/Homepage';
+import CredentialManagerPage from './pages/CredentialManagerPage';
+import Footer from "./components/Footer";
+import "./styles/App.scss";
+import { getWhoAmI } from "./services/coreApiService";
 
-function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
-}
+class App extends React.Component {
+  state = {
+    cmUserStatus: "inactive",
+  };
+
+  async componentDidMount() {
+    // if no user status info is stored, call UIS getWhoAmI.
+    if (!localStorage.getItem("cmUserStatus")) {
+      try {
+        const { data } = await getWhoAmI();
+        const user = data.results[0];
+        localStorage.setItem("cmUserID", user.uuid);
+        localStorage.setItem("cmUserStatus", "active");
+      } catch (err) {
+        console.log("/whoami " + err);
+      }
+    }
+
+    this.setState({ userStatus: localStorage.getItem("cmUserStatus") });
+  }
+
+  render() {
+    const { cmUserStatus } = this.state;
+    return (
+        <div className="App">
+          <Router>
+            <Header cmUserStatus={this.state.cmUserStatus} />
+            { cmUserStatus !== "active" && <Homepage /> }
+            { cmUserStatus === "active" && <CredentialManagerPage />}
+            <Footer />
+          </Router>
+        </div>
+      );
+    }
+  }
 
 export default App;
