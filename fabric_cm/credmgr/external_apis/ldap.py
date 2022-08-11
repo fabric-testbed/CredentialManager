@@ -48,7 +48,7 @@ class CmLdapMgr:
 
         self.server = Server(host=self.ldap_host, use_ssl=True, get_info=ALL)
 
-    def get_project_and_roles(self, eppn: str, email: str, project_id: str) -> (list, list):
+    def get_user_and_project_info(self, eppn: str, email: str, project_id: str) -> (list, list):
         """
         Return active projects for a user identified by eppn or email
         @params eppn: eppn

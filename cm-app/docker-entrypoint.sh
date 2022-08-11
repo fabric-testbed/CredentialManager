@@ -6,6 +6,7 @@ if [[ "$1" == 'run_server' ]]; then
   # defaults to running on port 3000
   echo "Starting install"
   npm install --silent
+  npm i color-convert
   echo "Starting build"
   npm run build
   echo "Staring install server"

@@ -31,7 +31,7 @@ from fabric_cm.credmgr.config import CONFIG_OBJ
 from fabric_cm.credmgr.external_apis.ldap import CmLdapMgrSingleton
 from fabric_cm.credmgr.logging import LOG
 from fabric_cm.credmgr.common.exceptions import TokenError
-from fabric_cm.credmgr.external_apis.project_registry import ProjectRegistry
+from fabric_cm.credmgr.external_apis.core_api import CoreApi
 
 
 class FabricTokenEncoder:
@@ -137,18 +137,23 @@ class FabricTokenEncoder:
         url = CONFIG_OBJ.get_pr_url()
 
         if CONFIG_OBJ.is_project_registry_enabled():
-            project_registry = ProjectRegistry(api_server=url, cookie=self._get_vouch_cookie(),
-                                               cookie_name=CONFIG_OBJ.get_vouch_cookie_name(),
-                                               cookie_domain=CONFIG_OBJ.get_vouch_cookie_domain_name())
-            roles, project_tags = project_registry.get_roles_and_project_tags(sub, project_id=self.project)
+            project_registry = CoreApi(api_server=url, cookie=self._get_vouch_cookie(),
+                                       cookie_name=CONFIG_OBJ.get_vouch_cookie_name(),
+                                       cookie_domain=CONFIG_OBJ.get_vouch_cookie_domain_name())
+            uuid, roles, tags, memberships = project_registry.get_user_and_project_info(project_id=self.project)
         else:
+            uuid = None
+            memberships = None
             email = self.claims.get("email")
-            roles, project_tags = CmLdapMgrSingleton.get().get_roles_and_project_tags(eppn=None,
-                                                                                      email=email,
-                                                                                      project_id=self.project)
+            roles, tags = CmLdapMgrSingleton.get().get_user_and_project_info(eppn=None, email=email,
+                                                                             project_id=self.project)
 
-        LOG.debug("Project Tags: %s, Roles: %s", project_tags, roles)
-        self.claims['projects'] = {self.project: project_tags}
+        LOG.debug(f"UUID: {uuid} Roles: {roles} Tags: {tags} Membership: {memberships}")
+        self.claims["project"] = {
+            "uuid": self.project,
+            "tags": tags,
+            "memberships": memberships
+            }
         self.claims["roles"] = roles
         self.claims["scope"] = self.scope
         LOG.debug("Claims %s", self.claims)

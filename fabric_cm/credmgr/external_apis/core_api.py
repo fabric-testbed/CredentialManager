@@ -30,7 +30,7 @@ from fabric_cm.credmgr.config import CONFIG_OBJ
 from fabric_cm.credmgr.logging import LOG
 
 
-class ProjectRegistry:
+class CoreApi:
     """
     Class implements functionality to interface with Project Registry
     """
@@ -40,18 +40,16 @@ class ProjectRegistry:
         self.cookie_name = cookie_name
         self.cookie_domain = cookie_domain
 
-    def get_roles_and_project_tags(self, sub: str, project_id: str) -> Tuple[list, list]:
+    def get_user_and_project_info(self, project_id: str) -> Tuple[str, list, list, list]:
         """
-        Determine Role from Project Registry
-        :param sub: OIDC claim sub
+        Determine User's info using CORE API
         :param project_id: Project Id
-        :param returns the roles and project with tags
+        :return the user uuid, roles, project tags and project membership
 
         :returns a tuple containing user specific roles and project tags
         """
         if self.api_server is None or self.cookie is None:
-            raise ProjectRegistryError(f"Project Registry URL: {self.api_server} or "
-                                       "Cookie: {self.cookie} not available")
+            raise CoreApiError(f"Core URL: {self.api_server} or Cookie: {self.cookie} not available")
 
         # Create Session
         s = requests.Session()
@@ -71,42 +69,47 @@ class ProjectRegistry:
         }
         s.headers.update(headers)
 
-        # Get User by OIDC SUB Claim
-        url = self.api_server + "/people/oidc_claim_sub?oidc_claim_sub={}".format(sub)
+        # Get Project
+        url = f"{self.api_server}/projects/{project_id}"
         ssl_verify = CONFIG_OBJ.is_pr_ssl_verify()
         response = s.get(url, verify=ssl_verify)
 
         if response.status_code != 200:
-            raise ProjectRegistryError(f"Project Registry error occurred "
-                                       f"status_code: {response.status_code} message: {response.content}")
+            raise CoreApiError(f"Core API error occurred status_code: {response.status_code} "
+                               f"message: {response.content}")
 
-        LOG.debug(f"Response : {response.json()}")
+        LOG.debug(f"GET Project Response : {response.json()}")
+        project_tags = response.json().get("results")[0]["tags"]
+        project_memberships = response.json().get("results")[0]["memberships"]
 
-        roles = response.json().get('roles', None)
-        projects = response.json().get('projects', None)
+        # WhoAmI
+        url = f'{self.api_server}/whoami'
+        ssl_verify = CONFIG_OBJ.is_pr_ssl_verify()
+        response = s.get(url, verify=ssl_verify)
+        if response.status_code != 200:
+            raise CoreApiError(f"Core API error occurred status_code: {response.status_code} "
+                               f"message: {response.content}")
 
-        # Get Per Project Tags
-        response = None
-        for p in projects:
-            LOG.debug(f"Requested Project: {project_id} Project: {p}")
-            if p.get('uuid') != project_id:
-                continue
-            project_name = p.get('name', None)
-            project_uuid = p.get('uuid', None)
-            LOG.debug(f"Getting tags for Project: {project_name}")
-            url = self.api_server + "/projects/{}".format(project_uuid)
-            response = s.get(url, verify=ssl_verify)
-            if response.status_code != 200:
-                raise ProjectRegistryError(f"Project Registry error occurred "
-                                           f"status_code: {response.status_code} message: {response.content}")
-        if response is None:
-            raise ProjectRegistryError(f"User is not a member of project: {project_id}")
-        project_tags = response.json().get('tags', None)
-        return roles, project_tags
+        LOG.debug(f"GET WHOAMI Response : {response.json()}")
+        uuid = response.json().get("results")[0]["uuid"]
+
+        # Get User by OIDC SUB Claim
+        url = f"{self.api_server}/people/{uuid}?as_self=true"
+        ssl_verify = CONFIG_OBJ.is_pr_ssl_verify()
+        response = s.get(url, verify=ssl_verify)
+
+        if response.status_code != 200:
+            raise CoreApiError(f"Core API error occurred status_code: {response.status_code} "
+                               f"message: {response.content}")
+
+        LOG.debug(f"GET PEOPLE Response : {response.json()}")
+
+        roles = response.json().get("results")[0]["roles"]
+        return uuid, roles, project_tags, project_memberships
 
 
-class ProjectRegistryError(Exception):
+class CoreApiError(Exception):
     """
-    Project Registry Exception
+    Core Exception
     """
     pass
