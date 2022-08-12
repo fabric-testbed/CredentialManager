@@ -9,7 +9,7 @@ import { getWhoAmI } from "./services/coreApiService";
 
 class App extends React.Component {
   state = {
-    cmUserStatus: "inactive",
+    cmUserStatus: "",
   };
 
   async componentDidMount() {
@@ -20,12 +20,11 @@ class App extends React.Component {
         const user = data.results[0];
         localStorage.setItem("cmUserID", user.uuid);
         localStorage.setItem("cmUserStatus", "active");
+        this.setState({ userStatus: "active" });
       } catch (err) {
         console.log("/whoami " + err);
       }
     }
-
-    this.setState({ userStatus: localStorage.getItem("cmUserStatus") });
   }
 
   render() {

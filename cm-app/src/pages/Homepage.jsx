@@ -33,7 +33,10 @@ class Homepage extends React.Component {
           </a>&nbsp;
           for obtaining and using FABRIC API tokens.
         </div>
-        <button className="btn btn-outline-success">
+        <button
+          className="btn btn-outline-success"
+          onClick={this.handleLogin}
+        >
           Login
         </button>
       </div>
