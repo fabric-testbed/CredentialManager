@@ -16,7 +16,7 @@
   },
   "servers": [
     {
-      "url": "http://127.0.0.1:7000/",
+      "url": "http://127.0.0.1:7000/credmgr/",
       "description": "local development"
     },
     {
