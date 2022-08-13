@@ -9,18 +9,17 @@ import { getWhoAmI } from "./services/coreApiService";
 
 class App extends React.Component {
   state = {
-    cmUserStatus: "",
+    userID: "",
   };
 
   async componentDidMount() {
     // if no user status info is stored, call UIS getWhoAmI.
-    if (!localStorage.getItem("cmUserStatus")) {
+    if (!localStorage.getItem("cmUserID")) {
       try {
         const { data } = await getWhoAmI();
         const user = data.results[0];
         localStorage.setItem("cmUserID", user.uuid);
-        localStorage.setItem("cmUserStatus", "active");
-        this.setState({ userStatus: "active" });
+        this.setState({ userID: user.uuid});
       } catch (err) {
         console.log("/whoami " + err);
       }
@@ -28,13 +27,13 @@ class App extends React.Component {
   }
 
   render() {
-    const { cmUserStatus } = this.state;
+    const { userID } = this.state;
     return (
         <div className="App">
           <Router>
-            <Header cmUserStatus={this.state.cmUserStatus} />
-            { cmUserStatus !== "active" && <Homepage /> }
-            { cmUserStatus === "active" && <CredentialManagerPage />}
+            <Header userID={userID} />
+            { userID === "" && <Homepage /> }
+            { userID !== "" && <CredentialManagerPage userID={userID} />}
             <Footer />
           </Router>
         </div>

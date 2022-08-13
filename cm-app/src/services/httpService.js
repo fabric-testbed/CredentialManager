@@ -7,8 +7,7 @@ axios.interceptors.response.use(null, (error) => {
     if (error.response && error.response.status === 401) {
       // 1. the user has not logged in
       // set status to unauthorized
-      localStorage.setItem("userStatus", "unauthorized");
-      localStorage.removeItem("userID");
+      localStorage.setItem("cmUserID", "");
 
       // do not toast error message.
       return Promise.reject(error);
