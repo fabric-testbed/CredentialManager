@@ -11,7 +11,7 @@ info:
     url: https://opensource.org/licenses/MIT
   version: 1.0.2
 servers:
-- url: http://127.0.0.1:7000/
+- url: http://127.0.0.1:7000/credmgr/
   description: local development
 - url: https://virtserver.swaggerhub.com/kthare10/credmgr/1.0.0
   description: SwaggerHub API Auto Mocking
