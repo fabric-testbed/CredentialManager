@@ -69,9 +69,10 @@ class CoreApi:
         }
         s.headers.update(headers)
 
+        ssl_verify = CONFIG_OBJ.is_core_api_ssl_verify()
+
         # Get Project
         url = f"{self.api_server}/projects/{project_id}"
-        ssl_verify = CONFIG_OBJ.is_core_api_ssl_verify()
         response = s.get(url, verify=ssl_verify)
 
         if response.status_code != 200:
@@ -84,7 +85,6 @@ class CoreApi:
 
         # WhoAmI
         url = f'{self.api_server}/whoami'
-        ssl_verify = CONFIG_OBJ.is_core_api_ssl_verify()
         response = s.get(url, verify=ssl_verify)
         if response.status_code != 200:
             raise CoreApiError(f"Core API error occurred status_code: {response.status_code} "
@@ -93,9 +93,9 @@ class CoreApi:
         LOG.debug(f"GET WHOAMI Response : {response.json()}")
         uuid = response.json().get("results")[0]["uuid"]
 
-        # Get User by OIDC SUB Claim
+        # Get User by UUID to get roles (Facility Operator is not Project Specific,
+        # so need the roles from people end point)
         url = f"{self.api_server}/people/{uuid}?as_self=true"
-        ssl_verify = CONFIG_OBJ.is_core_api_ssl_verify()
         response = s.get(url, verify=ssl_verify)
 
         if response.status_code != 200:
