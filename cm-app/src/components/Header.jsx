@@ -4,8 +4,8 @@ import logo from "../imgs/fabric-brand.png";
 
 class Header extends React.Component {
   handleLogin = () => {
-      // remove old user status stored in browser if there is any.
-      localStorage.removeItem("cmUserStatus");
+      // remove old user id stored in browser if there is any.
+      localStorage.removeItem("cmUserID");
       // nginx handle login url.
       window.location.href = "/login";
   }
@@ -13,8 +13,6 @@ class Header extends React.Component {
 
   handleLogout = () => {
     localStorage.removeItem("cmUserID");
-    // localStorage.removeItem("bastionLogin");
-    localStorage.removeItem("cmUserStatus");
     // nginx handle logout url.
     window.location.href = "/logout";
   }
@@ -33,7 +31,7 @@ class Header extends React.Component {
           FABRIC Credential Manager
         </NavLink>
         <div className="ml-auto">
-          { this.props.cmUserStatus !== "active" ? 
+          { this.props.userID === "" ? 
             <form className="form-inline my-2 my-lg-0">
               <NavLink to="/login">
                 <button
