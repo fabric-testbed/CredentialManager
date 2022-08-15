@@ -57,33 +57,41 @@ class CredentialManagerPage extends React.Component {
     return JSON.stringify(res_json, undefined, 4);
   }
 
-  createToken = async () => {
+  createToken = async (e) => {
+    e.preventDefault();
+
     try {
       const project = this.state.selectedCreateProject;
       const scope = this.state.selectedCreateScope;
-      const { data } = await createIdToken(project, scope);
+      const { data: res } = await createIdToken(project, scope);
+      const token = res["data"][0];
       this.setState({ createCopySuccess: false, createSuccess: true });
-      this.setState({ createToken: this.generateTokenJson(data.id_token, data.refresh_token) });
+      this.setState({ createToken: this.generateTokenJson(token.id_token, token.refresh_token) });
     } catch (ex) {
       toast.error("Failed to create token.");
     }
   }
 
-  refreshToken = async () => {
+  refreshToken = async (e) => {
+    e.preventDefault();
+
     try {
       const project = this.state.selectedRefreshProject;
       const scope = this.state.selectedRefreshScope;
-      const { data } = await refreshToken(project, scope, document.getElementById('refreshTokenTextArea').value);
+      const { data: res } = await refreshToken(project, scope, document.getElementById('refreshTokenTextArea').value);
+      const token = res["data"][0];
       this.setState({ refreshCopySuccess: false, refreshSuccess: true });
-      this.setState({ refreshToken: this.generateTokenJson(data.id_token, data.refresh_token) });
+      this.setState({ refreshToken: this.generateTokenJson(token.id_token, token.refresh_token) });
     }
     catch (ex) {
       this.setState({ refreshSuccess: false });
-      toast.error("Please re-login to refresh the token again.")
+      toast.error("Failed to refresh token.")
     }
   }
 
-  revokeToken = async () => {
+  revokeToken = async (e) => {
+    e.preventDefault();
+    
     try {
       await revokeToken(document.getElementById('revokeTokenTextArea').value);
       this.setState({ revokeSuccess: true });
@@ -95,6 +103,7 @@ class CredentialManagerPage extends React.Component {
   }
 
   copyToken = (e, option) => {
+    e.preventDefault();
     document.getElementById(`${option}TokenTextArea`).select();
     document.execCommand('copy');
     e.target.focus();
@@ -107,6 +116,7 @@ class CredentialManagerPage extends React.Component {
   }
 
   downloadToken = (e, option) => {
+    e.preventDefault();
     const element = document.createElement("a");
     const file = new Blob([document.getElementById(`${option}TokenTextArea`).value], {type: 'application/json'});
     element.href = URL.createObjectURL(file);
@@ -159,7 +169,7 @@ class CredentialManagerPage extends React.Component {
                   {
                     projects.length > 0 && projects.map(project => {
                       return (
-                        <option value={project.name}>{project.name}</option>
+                        <option value={project.uuid}>{project.name}</option>
                       )
                     })
                   }
@@ -188,30 +198,27 @@ class CredentialManagerPage extends React.Component {
             <Col xs={2} className="d-flex flex-row align-items-center justify-content-end">
               <button
                 className="btn btn-outline-success mt-3"
-                onClick={this.createToken}
+                onClick={e => this.createToken(e)}
               >
                 Create Token
               </button>
             </Col>
           </Row>
           { createSuccess && (
-            <Card>
+            <Card className="mt-2">
               <Card.Header className="d-flex flex-row bg-light">
-                <Button
+                <button
                   onClick={e => this.copyToken(e, "create")}
-                  variant="primary"
-                  size="sm"
-                  className="mr-3"
+                  className="btn btn-sm btn-outline-primary mr-2"
                 >
                   Copy
-                </Button>
-                <Button
+                </button>
+                <button
                   onClick={e => this.downloadToken(e, "create")}
-                  variant="primary"
-                  size="sm"
+                  className="btn btn-sm btn-outline-primary"
                 >
                   Download
-                </Button>
+                </button>
               </Card.Header>
               <Card.Body>
                 <Form.Group controlId="exampleForm.ControlTextarea1">
@@ -243,7 +250,7 @@ class CredentialManagerPage extends React.Component {
                   {
                     projects.map(project => {
                       return (
-                        <option value={project.name}>{project.name}</option>
+                        <option value={project.uuid}>{project.name}</option>
                       )
                     })
                   }
@@ -289,21 +296,18 @@ class CredentialManagerPage extends React.Component {
           {refreshSuccess && (
             <Card>
             <Card.Header className="d-flex flex-row bg-light">
-              <Button
+              <button
                 onClick={e => this.copyToken(e, "refresh")}
-                variant="primary"
-                size="sm"
-                className="mr-3"
+                className="btn btn-sm btn-outline-primary mr-2"
               >
                 Copy
-              </Button>
-              <Button
+              </button>
+              <button
                 onClick={e => this.downloadToken(e, "refresh")}
-                variant="primary"
-                size="sm"
+                className="btn btn-sm btn-outline-primary"
               >
                 Download
-              </Button>
+              </button>
             </Card.Header>
             <Card.Body>
               <Form.Group controlId="exampleForm.ControlTextarea1">
@@ -328,7 +332,7 @@ class CredentialManagerPage extends React.Component {
           !refreshSuccess && (
             <button
               className="btn btn-outline-success mt-3"
-              onClick={this.refreshToken}
+              onClick={e => this.refreshToken(e)}
             >
               Refresh Token
             </button>
@@ -357,7 +361,7 @@ class CredentialManagerPage extends React.Component {
           )}
         <button
           className="btn btn-outline-danger mt-3"
-          onClick={this.revokeToken}
+          onClick={e => this.revokeToken(e)}
         >
           Revoke Token
         </button>

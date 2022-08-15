@@ -9,7 +9,7 @@ import { getWhoAmI } from "./services/coreApiService";
 
 class App extends React.Component {
   state = {
-    userID: "",
+    userID: localStorage.getItem("cmUserID") || "",
   };
 
   async componentDidMount() {
@@ -32,8 +32,7 @@ class App extends React.Component {
         <div className="App">
           <Router>
             <Header userID={userID} />
-            { userID === "" && <Homepage /> }
-            { userID !== "" && <CredentialManagerPage userID={userID} />}
+            { userID !== "" ? <CredentialManagerPage userID={userID} /> : <Homepage />}
             <Footer />
           </Router>
         </div>
