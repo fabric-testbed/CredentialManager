@@ -71,7 +71,7 @@ class CoreApi:
 
         # Get Project
         url = f"{self.api_server}/projects/{project_id}"
-        ssl_verify = CONFIG_OBJ.is_pr_ssl_verify()
+        ssl_verify = CONFIG_OBJ.is_core_api_ssl_verify()
         response = s.get(url, verify=ssl_verify)
 
         if response.status_code != 200:
@@ -84,7 +84,7 @@ class CoreApi:
 
         # WhoAmI
         url = f'{self.api_server}/whoami'
-        ssl_verify = CONFIG_OBJ.is_pr_ssl_verify()
+        ssl_verify = CONFIG_OBJ.is_core_api_ssl_verify()
         response = s.get(url, verify=ssl_verify)
         if response.status_code != 200:
             raise CoreApiError(f"Core API error occurred status_code: {response.status_code} "
@@ -95,7 +95,7 @@ class CoreApi:
 
         # Get User by OIDC SUB Claim
         url = f"{self.api_server}/people/{uuid}?as_self=true"
-        ssl_verify = CONFIG_OBJ.is_pr_ssl_verify()
+        ssl_verify = CONFIG_OBJ.is_core_api_ssl_verify()
         response = s.get(url, verify=ssl_verify)
 
         if response.status_code != 200:

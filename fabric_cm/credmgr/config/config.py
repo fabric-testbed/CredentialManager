@@ -194,13 +194,13 @@ class Config:
     def get_ldap_search_base(self):
         return self._get_config_from_section(self.SECTION_LDAP, self.LDAP_SEARCH_BASE)
 
-    def is_pr_ssl_verify(self) -> bool:
+    def is_core_api_ssl_verify(self) -> bool:
         value = self._get_config_from_section(self.SECTION_CORE_API, self.SSL_VERIFY)
         if value.lower() == 'true':
             return True
         return False
 
-    def get_pr_url(self) -> str:
+    def get_core_api_url(self) -> str:
         return self._get_config_from_section(self.SECTION_CORE_API, self.CORE_API_URL)
 
     def get_vouch_secret(self) -> str:

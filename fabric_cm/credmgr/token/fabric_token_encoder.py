@@ -133,7 +133,7 @@ class FabricTokenEncoder:
         """
         Set the claims for the Token by adding membership, project and scope
         """
-        url = CONFIG_OBJ.get_pr_url()
+        url = CONFIG_OBJ.get_core_api_url()
 
         if CONFIG_OBJ.is_core_api_enabled():
             core_api = CoreApi(api_server=url, cookie=self._get_vouch_cookie(),
