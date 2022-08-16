@@ -45,7 +45,7 @@ class CredentialManagerPage extends React.Component {
       const projects = res.results;
       this.setState({ projects });
       if (projects.length > 0) {
-        this.setState({ selectedCreateProject: projects[0], selectedRefreshProject: projects[0]});
+        this.setState({ selectedCreateProject: projects[0].uuid, selectedRefreshProject: projects[0].uuid });
       }
     } catch (ex) {
       toast.error("Failed to load user's project information. Please reload this page.");
@@ -148,15 +148,15 @@ class CredentialManagerPage extends React.Component {
         { 
          projects.length === 0 &&
             <div className="alert alert-warning mt-4" role="alert">
-              <p className="mt-2">To create tokens, you have to be in a project first:</p>
+              <p className="mt-2">To manage tokens, you have to be in a project first:</p>
               <p>
                 <ul>
                   <li>
-                    If you are a <a href={externalLinks.starterFAQLink} target="_blank" rel="noreferrer">professor or research staff member at your institution</a>, 
+                    If you are a <a href={externalLinks.learnArticleStarterQuestions} target="_blank" rel="noreferrer">professor or research staff member at your institution</a>, 
                     please <a href={portalLink} target="_blank" rel="noreferrer">request to be FABRIC Project Lead</a> from FABRIC Portal -&gt; User Profile -&gt; My Roles &amp; Projects page then you can create a project.
                   </li>
                   <li>
-                    If you are a <a href={externalLinks.starterFAQLink} target="_blank" rel="noreferrer">student or other contributor</a>, 
+                    If you are a <a href={externalLinks.learnArticleStarterQuestions} target="_blank" rel="noreferrer">student or other contributor</a>, 
                     please ask your project lead to add you to a project.
                   </li>
                 </ul>

@@ -1,4 +1,5 @@
 import React from "react";
+import { BrowserRouter as Router } from "react-router-dom";
 import Header from "./components/Header";
 import Homepage from './pages/Homepage';
 import CredentialManagerPage from './pages/CredentialManagerPage';
@@ -18,7 +19,7 @@ class App extends React.Component {
         const { data } = await getWhoAmI();
         const user = data.results[0];
         localStorage.setItem("cmUserID", user.uuid);
-        this.serState({ userID: user.uuid });
+        this.setState({ userID: user.uuid });
       } catch (err) {
         console.log("/whoami " + err);
       }
@@ -29,11 +30,13 @@ class App extends React.Component {
     const { userID } = this.state;
     return (
         <div className="App">
-          <Header userID={userID} />
-          {
-            userID !== "" ? <CredentialManagerPage /> : <Homepage />
-          }
-          <Footer />
+          <Router>
+            <Header userID={userID} />
+            {
+              userID !== "" ? <CredentialManagerPage /> : <Homepage />
+            }
+            <Footer />
+          </Router>
         </div>
       );
     }
