@@ -36,13 +36,13 @@ class Config:
     SECTION_OAUTH = 'oauth'
     SECTION_LDAP = 'ldap'
     SECTION_JWT = 'jwt'
-    SECTION_PROJECT_REGISTRY = 'project-registry'
+    SECTION_CORE_API = 'core-api'
     SECTION_VOUCH = 'vouch'
 
     # Runtime parameters
     REST_PORT = 'rest-port'
     PROMETHEUS_PORT = 'prometheus-port'
-    ENABLE_PROJECT_REGISTRY = 'enable-project-registry'
+    ENABLE_CORE_API = 'enable-core-api'
     ENABLE_VOUCH_COOKIE = 'enable-vouch-cookie'
     TOKEN_LIFETIME = 'token-lifetime'
     PROJECT_NAMES_IGNORE_LIST = 'project-names-ignore-list'
@@ -79,7 +79,7 @@ class Config:
     JWT_PRIVATE_KEY_PASS_PHRASE = 'jwt-pass-phrase'
 
     # Project Registry Parameters
-    PROJECT_REGISTRY_URL = 'project-registry-url'
+    CORE_API_URL = 'core-api-url'
     SSL_VERIFY = 'ssl_verify'
 
     # Vouch Parameters
@@ -106,8 +106,8 @@ class Config:
     def get_prometheus_port(self) -> int:
         return int(self._get_config_from_section(self.SECTION_RUNTIME, self.PROMETHEUS_PORT))
 
-    def is_project_registry_enabled(self) -> bool:
-        value = self._get_config_from_section(self.SECTION_RUNTIME, self.ENABLE_PROJECT_REGISTRY)
+    def is_core_api_enabled(self) -> bool:
+        value = self._get_config_from_section(self.SECTION_RUNTIME, self.ENABLE_CORE_API)
         if value.lower() == 'true':
             return True
         return False
@@ -194,14 +194,14 @@ class Config:
     def get_ldap_search_base(self):
         return self._get_config_from_section(self.SECTION_LDAP, self.LDAP_SEARCH_BASE)
 
-    def is_pr_ssl_verify(self) -> bool:
-        value = self._get_config_from_section(self.SECTION_PROJECT_REGISTRY, self.SSL_VERIFY)
+    def is_core_api_ssl_verify(self) -> bool:
+        value = self._get_config_from_section(self.SECTION_CORE_API, self.SSL_VERIFY)
         if value.lower() == 'true':
             return True
         return False
 
-    def get_pr_url(self) -> str:
-        return self._get_config_from_section(self.SECTION_PROJECT_REGISTRY, self.PROJECT_REGISTRY_URL)
+    def get_core_api_url(self) -> str:
+        return self._get_config_from_section(self.SECTION_CORE_API, self.CORE_API_URL)
 
     def get_vouch_secret(self) -> str:
         return self._get_config_from_section(self.SECTION_VOUCH, self.SECRET)

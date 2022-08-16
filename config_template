@@ -32,7 +32,7 @@
 [runtime]
 rest-port = 7000
 prometheus-port = 8100
-enable-project-registry = True
+enable-core-api = True
 enable-vouch-cookie = True
 # Life time of the Fabric Identity Token specified in seconds
 token-lifetime = 3600
@@ -82,8 +82,8 @@ jwt-public-key-kid = b415167211191e2e05b22b54b1d3b7667e764a747722185e722e52e146f
 jwt-private-key = /etc/credmgr/private.pem
 jwt-pass-phrase =
 
-[project-registry]
-project-registry-url = https://fabric-dev.renci.org/
+[core-api]
+core-api-url = https://alpha-6.fabric-testbed.net/
 ssl_verify = False
 
 [vouch]
