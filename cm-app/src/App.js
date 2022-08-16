@@ -1,5 +1,4 @@
 import React from "react";
-import { BrowserRouter as Router } from "react-router-dom";
 import Header from "./components/Header";
 import Homepage from './pages/Homepage';
 import CredentialManagerPage from './pages/CredentialManagerPage';
@@ -9,17 +8,17 @@ import { getWhoAmI } from "./services/coreApiService";
 
 class App extends React.Component {
   state = {
-    userID: localStorage.getItem("cmUserID") || "",
-  };
+    userID: ""
+  }
 
   async componentDidMount() {
     // if no user status info is stored, call UIS getWhoAmI.
-    if (!localStorage.getItem("cmUserID")) {
+    if (!localStorage.getItem("cmUserID") || localStorage.getItem("cmUserID") === "") {
       try {
         const { data } = await getWhoAmI();
         const user = data.results[0];
         localStorage.setItem("cmUserID", user.uuid);
-        this.setState({ userID: user.uuid});
+        this.serState({ userID: user.uuid });
       } catch (err) {
         console.log("/whoami " + err);
       }
@@ -30,11 +29,11 @@ class App extends React.Component {
     const { userID } = this.state;
     return (
         <div className="App">
-          <Router>
-            <Header userID={userID} />
-            { userID !== "" ? <CredentialManagerPage userID={userID} /> : <Homepage />}
-            <Footer />
-          </Router>
+          <Header userID={userID} />
+          {
+            userID !== "" ? <CredentialManagerPage /> : <Homepage />
+          }
+          <Footer />
         </div>
       );
     }
