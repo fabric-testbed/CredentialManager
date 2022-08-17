@@ -11,7 +11,7 @@ services:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf
       - ./ssl/fullchain.pem:/etc/ssl/public.pem
       - ./ssl/privkey.pem:/etc/ssl/private.pem
-    restart: on-failure
+    restart: always
 
   credmgr:
     build:
@@ -30,7 +30,7 @@ services:
     #ports:
     #  - 7000:7000
     #  - 8100:8100
-    restart: on-failure
+    restart: always
 
   cm-app:
     build:
@@ -38,14 +38,14 @@ services:
       dockerfile: Dockerfile
     image: fabrictestbed/cm-app:latest
     container_name: cm-app
-    ports:
-      - 9000:3000
+    #ports:
+    #  - 9000:3000
     # volume mount docker based files so that they don't rebuild on each deployment
     volumes:
       - ./docker_node_modules:/code/node_modules
       - ./docker_build:/code/build
     stdin_open: true
-    restart: unless-stopped
+    restart: always
 
   vouch-proxy:
     container_name: cm-vouch-proxy
@@ -55,4 +55,4 @@ services:
     volumes:
       - ./vouch:/config
       - ./data:/data
-    restart: unless-stopped
+    restart: always
