@@ -82,6 +82,9 @@ class CoreApi:
         project_tags = response.json().get("results")[0]["tags"]
         project_memberships = response.json().get("results")[0]["memberships"]
 
+        if not project_memberships["is_member"]:
+            raise CoreApiError(f"User is not a member of Project: {project_id}")
+
         # WhoAmI
         url = f'{self.api_server}/whoami'
         response = s.get(url, verify=ssl_verify)
