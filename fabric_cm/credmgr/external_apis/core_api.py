@@ -82,7 +82,8 @@ class CoreApi:
         project_tags = response.json().get("results")[0]["tags"]
         project_memberships = response.json().get("results")[0]["memberships"]
 
-        if not project_memberships["is_member"]:
+        if not project_memberships["is_member"] and not project_memberships["is_creator"] and \
+                not project_memberships["is_owner"]:
             raise CoreApiError(f"User is not a member of Project: {project_id}")
 
         # WhoAmI
