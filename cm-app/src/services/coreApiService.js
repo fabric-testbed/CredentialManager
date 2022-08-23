@@ -9,5 +9,5 @@ export function getWhoAmI(){
 
 export function getProjects() {
   const userID = localStorage.getItem("cmUserID");
-  return http.get(`${apiEndpoint}/projects?offset=0&limit=20&person_uuid=${userID}`);
+  return http.get(`${apiEndpoint}/projects?offset=0&limit=200&person_uuid=${userID}`);
 }

@@ -49,7 +49,6 @@ class CredentialManagerPage extends React.Component {
       }
     } catch (ex) {
       toast.error("Failed to load user's project information. Please reload this page.");
-      console.log("Failed to load user information: " + ex.response.data);
     }
   }
 
@@ -215,6 +214,7 @@ class CredentialManagerPage extends React.Component {
               <Col xs={2} className="d-flex flex-row align-items-center justify-content-end">
                 <button
                   className="btn btn-outline-success mt-3"
+                  disabled={createSuccess}
                   onClick={e => this.createToken(e)}
                 >
                   Create Token
@@ -222,33 +222,38 @@ class CredentialManagerPage extends React.Component {
               </Col>
             </Row>
             { createSuccess && (
-              <Card className="mt-2">
-                <Card.Header className="d-flex flex-row bg-light">
-                  <button
-                    onClick={e => this.copyToken(e, "create")}
-                    className="btn btn-sm btn-outline-primary mr-2"
-                  >
-                    Copy
-                  </button>
-                  <button
-                    onClick={e => this.downloadToken(e, "create")}
-                    className="btn btn-sm btn-outline-primary"
-                  >
-                    Download
-                  </button>
-                </Card.Header>
-                <Card.Body>
-                  <Form.Group>
-                    <Form.Control
-                      ref={(textarea) => this.textArea = textarea}
-                      as="textarea"
-                      id="createTokenTextArea"
-                      defaultValue={createToken}
-                      rows={6}
-                    />
-                  </Form.Group>
-                </Card.Body>
-              </Card>
+              <div className="mt-2">
+                <Card>
+                  <Card.Header className="d-flex flex-row bg-light">
+                    <button
+                      onClick={e => this.copyToken(e, "create")}
+                      className="btn btn-sm btn-outline-primary mr-2"
+                    >
+                      Copy
+                    </button>
+                    <button
+                      onClick={e => this.downloadToken(e, "create")}
+                      className="btn btn-sm btn-outline-primary"
+                    >
+                      Download
+                    </button>
+                  </Card.Header>
+                  <Card.Body>
+                    <Form.Group>
+                      <Form.Control
+                        ref={(textarea) => this.textArea = textarea}
+                        as="textarea"
+                        id="createTokenTextArea"
+                        defaultValue={createToken}
+                        rows={6}
+                      />
+                    </Form.Group>
+                  </Card.Body>
+                </Card>
+                <div className="alert alert-warning mb-2" role="alert">
+                  If you need to use multiple tokens in parallel in e.g. separate API sessions, please log out and log back in to generate new tokens.
+                </div>
+              </div>
             )}
             {createCopySuccess && (
               <Alert variant="success">
