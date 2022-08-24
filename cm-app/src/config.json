@@ -1,4 +1,4 @@
 {
-  "fabricCoreApiUrl": "https://alpha-6.fabric-testbed.net",
-  "credentialManagerApiUrl": "https://alpha-2.fabric-testbed.net/credmgr/tokens"
+  "fabricCoreApiUrl": "https://core-api.fabric-testbed.net",
+  "credentialManagerApiUrl": "https://cm.fabric-testbed.net/credmgr/tokens"
 }

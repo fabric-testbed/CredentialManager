@@ -228,8 +228,8 @@ secret =
 cookie-name = fabric-service
 cookie-domain-name = cookie_domain
 
-[project-registry]
-project-registry-url = https://fabric-dev.renci.org/
+[core-api]
+core-api-url = https://core-api.fabric-testbed.net/
 ```
 ### <a name="deploy"></a>Deployment
 
