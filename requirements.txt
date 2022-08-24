@@ -4,11 +4,10 @@ connexion
 swagger-ui-bundle
 python_dateutil
 setuptools
-PyJWT==1.7.1
 ldap3
 prometheus_client
 waitress
 six
 cryptography
 authlib
-fabric_fss_utils==0.15
+fabric_fss_utils==1.2.2

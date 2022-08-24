@@ -39,22 +39,8 @@ VERSION = __VERSION__
 # prerequisite: setuptools
 # http://pypi.python.org/pypi/setuptools
 
-REQUIRES = [
-        'requests',
-        'requests_oauthlib',
-        'connexion',
-        'swagger-ui-bundle',
-        'python_dateutil',
-        'setuptools',
-        'psycopg2-binary',
-        'sqlalchemy',
-        'PyJWT',
-        'ldap3',
-        'prometheus_client',
-        'waitress',
-        'six',
-        'cryptography'
-        ]
+with open("requirements.txt", "r") as fh:
+    requirements = fh.read()
 
 setup(
     name=NAME,
@@ -67,7 +53,7 @@ setup(
     author='Komal Thareja',
     keywords=["Swagger", "Fabric Credential Manager API"],
     license='MIT',
-    install_requires=REQUIRES,
+    install_requires=requirements,
     packages=find_packages(),
     package_data={'': ['swagger/swagger.yaml']},
     include_package_data=True,
