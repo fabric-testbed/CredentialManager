@@ -25,48 +25,12 @@
 """
 Module for handling version APIs
 """
-from http.client import INTERNAL_SERVER_ERROR
-
-import requests
-from fss_utils.http_errors import cors_response
 
 from fabric_cm.credmgr.swagger_server.models.jwks import Jwks
-from fabric_cm.credmgr.swagger_server.models.version import Version  # noqa: E501
 from fabric_cm.credmgr.swagger_server import received_counter, success_counter, failure_counter, fabric_jwks
-from fabric_cm.credmgr.swagger_server.response.constants import VERSION_URL, HTTP_METHOD_GET, CERTS_URL
+from fabric_cm.credmgr.swagger_server.response.constants import HTTP_METHOD_GET, CERTS_URL
 from fabric_cm.credmgr.logging import LOG
-
-def version_get():  # noqa: E501
-    """version
-
-    Version # noqa: E501
-
-
-    :rtype: Version
-    """
-    received_counter.labels(HTTP_METHOD_GET, VERSION_URL).inc()
-    try:
-        version = '1.0.0'
-        tag = '1.0.0'
-        url = "https://api.github.com/repos/fabric-testbesd/CredentialManager/git/refs/tags/{}".format(tag)
-
-        response = Version()
-        response.version = version
-        response.gitsha1 = 'Not Available'
-
-        result = requests.get(url)
-        if result.status_code == 200 and result.json() is not None:
-            object_json = result.json().get("object", None)
-            if object_json is not None:
-                sha = object_json.get("sha", None)
-                if sha is not None:
-                    response.gitsha1 = sha
-        success_counter.labels(HTTP_METHOD_GET, VERSION_URL).inc()
-    except Exception as ex:
-        LOG.exception(ex)
-        failure_counter.labels(HTTP_METHOD_GET, VERSION_URL).inc()
-        return cors_response(status=INTERNAL_SERVER_ERROR, xerror=str(ex), body=str(ex))
-    return response
+from fabric_cm.credmgr.swagger_server.response.cors_response import cors_200, cors_500
 
 
 def certs_get():  # noqa: E501
@@ -82,8 +46,8 @@ def certs_get():  # noqa: E501
         response = Jwks.from_dict(fabric_jwks)
         LOG.debug(response)
         success_counter.labels(HTTP_METHOD_GET, CERTS_URL).inc()
-        return response
+        return cors_200(response_body=response)
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_GET, CERTS_URL).inc()
-        return str(ex), 500
+        return cors_500(details=str(ex))

@@ -27,6 +27,8 @@ Module responsible for handling Credmgr REST API logic
 """
 
 import base64
+from datetime import datetime
+
 import requests
 from requests_oauthlib import OAuth2Session
 
@@ -45,6 +47,8 @@ class OAuthCredmgr(AbstractCredentialManager):
     """
     ID_TOKEN = "id_token"
     REFRESH_TOKEN = "refresh_token"
+    CREATED_AT = "created_at"
+    TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
     ERROR = "error"
     CLIENT_ID = "client_id"
     CLIENT_SECRET = "client_secret"
@@ -107,7 +111,8 @@ class OAuthCredmgr(AbstractCredentialManager):
                                                project=project, scope=scope,
                                                cookie=cookie)
 
-        result = {self.ID_TOKEN: id_token, self.REFRESH_TOKEN: refresh_token}
+        result = {self.ID_TOKEN: id_token, self.REFRESH_TOKEN: refresh_token,
+                  self.CREATED_AT: datetime.strftime(datetime.utcnow(), self.TIME_FORMAT)}
         return result
 
     def refresh_token(self, refresh_token: str, project: str, scope: str, cookie: str = None) -> dict:
@@ -152,7 +157,8 @@ class OAuthCredmgr(AbstractCredentialManager):
         try:
             id_token = self._generate_fabric_token(ci_logon_id_token=id_token,
                                                    project=project, scope=scope, cookie=cookie)
-            result = {self.ID_TOKEN: id_token, self.REFRESH_TOKEN: new_refresh_token}
+            result = {self.ID_TOKEN: id_token, self.REFRESH_TOKEN: new_refresh_token,
+                      self.CREATED_AT: datetime.strftime(datetime.utcnow(), self.TIME_FORMAT)}
 
             return result
         except Exception as e:

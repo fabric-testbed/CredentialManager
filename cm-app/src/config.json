@@ -1,0 +1,4 @@
+{
+  "fabricCoreApiUrl": "https://core-api.fabric-testbed.net",
+  "credentialManagerApiUrl": "https://cm.fabric-testbed.net/credmgr/tokens"
+}

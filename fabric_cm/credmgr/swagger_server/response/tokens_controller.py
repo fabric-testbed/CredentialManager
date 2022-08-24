@@ -28,18 +28,17 @@ Module for handling /tokens APIs
 from http.client import INTERNAL_SERVER_ERROR
 
 import connexion
-from fss_utils.http_errors import cors_response
 from fss_utils.jwt_manager import JWTManager, ValidateCode
 
 from fabric_cm.credmgr.credential_managers.oauth_credmgr import OAuthCredmgr
+from fabric_cm.credmgr.swagger_server.models import Tokens, Token, Status200OkNoContent, Status200OkNoContentData
 from fabric_cm.credmgr.swagger_server.models.request import Request  # noqa: E501
-from fabric_cm.credmgr.swagger_server.models.success import Success  # noqa: E501
 from fabric_cm.credmgr.swagger_server import received_counter, success_counter, failure_counter
-from fabric_cm.credmgr.swagger_server.response.constants import HTTP_METHOD_POST, \
-    TOKENS_REVOKE_URL, TOKENS_REFRESH_URL, \
-    TOKENS_CREATE_URL, VOUCH_ID_TOKEN, VOUCH_REFRESH_TOKEN, AUTHORIZATION_ERR
+from fabric_cm.credmgr.swagger_server.response.constants import HTTP_METHOD_POST, TOKENS_REVOKE_URL, \
+    TOKENS_REFRESH_URL, TOKENS_CREATE_URL, VOUCH_ID_TOKEN, VOUCH_REFRESH_TOKEN
 from fabric_cm.credmgr.config import CONFIG_OBJ
 from fabric_cm.credmgr.logging import LOG
+from fabric_cm.credmgr.swagger_server.response.cors_response import cors_401, cors_200, cors_500
 
 
 def authorize(request):
@@ -75,25 +74,29 @@ def tokens_create_post(project_id, scope=None):  # noqa: E501
     try:
         ci_logon_id_token, refresh_token, cookie = authorize(connexion.request)
         if ci_logon_id_token is None:
-            raise Exception(AUTHORIZATION_ERR)
+            return cors_401(details="No CI Logon Id Token in the request")
 
         credmgr = OAuthCredmgr()
-        result = credmgr.create_token(ci_logon_id_token=ci_logon_id_token,
+        token_dict = credmgr.create_token(ci_logon_id_token=ci_logon_id_token,
                                       refresh_token=refresh_token,
                                       project=project_id,
                                       scope=scope,
                                       cookie=cookie)
-        response = Success.from_dict(result)
-        LOG.debug(result)
+        response = Tokens()
+        token = Token().from_dict(token_dict)
+        response.data = [token]
+        response.size = 1
+        response.type = "token"
+        LOG.debug(response)
         success_counter.labels(HTTP_METHOD_POST, TOKENS_CREATE_URL).inc()
-        return response
+        return cors_200(response_body=response)
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_POST, TOKENS_CREATE_URL).inc()
-        return cors_response(status=INTERNAL_SERVER_ERROR, xerror=str(ex), body=str(ex))
+        return cors_500(details=str(ex))
 
 
-def tokens_refresh_post(body, project_id=None, scope=None):  # noqa: E501
+def tokens_refresh_post(body: Request, project_id=None, scope=None):  # noqa: E501
     """Refresh FABRIC OAuth tokens for an user
 
     Request to refresh OAuth tokens for an user  # noqa: E501
@@ -108,21 +111,23 @@ def tokens_refresh_post(body, project_id=None, scope=None):  # noqa: E501
     :rtype: Success
     """
     received_counter.labels(HTTP_METHOD_POST, TOKENS_REFRESH_URL).inc()
-    if connexion.request.is_json:
-        body = Request.from_dict(connexion.request.get_json())  # noqa: E501
     try:
         ci_logon_id_token, refresh_token, cookie = authorize(connexion.request)
         credmgr = OAuthCredmgr()
-        response = Success.from_dict(credmgr.refresh_token(refresh_token=body.refresh_token,
-                                                           project=project_id, scope=scope,
-                                                           cookie=cookie))
+        token_dict = credmgr.refresh_token(refresh_token=body.refresh_token, project=project_id, scope=scope,
+                                           cookie=cookie)
+        response = Tokens()
+        token = Token().from_dict(token_dict)
+        response.data = [token]
+        response.size = 1
+        response.type = "token"
+        LOG.debug(response)
         success_counter.labels(HTTP_METHOD_POST, TOKENS_REFRESH_URL).inc()
-        return response
+        return cors_200(response_body=response)
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_POST, TOKENS_REFRESH_URL).inc()
-        msg = str(ex).replace("\n", "")
-        return cors_response(status=INTERNAL_SERVER_ERROR, xerror=msg, body=msg)
+        return cors_500(details=str(ex))
 
 
 def tokens_revoke_post(body):  # noqa: E501
@@ -142,9 +147,17 @@ def tokens_revoke_post(body):  # noqa: E501
         credmgr = OAuthCredmgr()
         credmgr.revoke_token(refresh_token=body.refresh_token)
         success_counter.labels(HTTP_METHOD_POST, TOKENS_REVOKE_URL).inc()
+        response = Status200OkNoContent()
+        response_data = Status200OkNoContentData()
+        response_data.details = f"Token '{body.refresh_token}' has been successfully revoked"
+        response = Status200OkNoContent()
+        response.data = [response_data]
+        response.size = len(response.data)
+        response.status = 200
+        response.type = 'no_content'
+        return cors_200(response_body=response)
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_POST, TOKENS_REVOKE_URL).inc()
-        msg = str(ex).replace("\n", "")
-        return cors_response(status=INTERNAL_SERVER_ERROR, xerror=msg, body=msg)
-    return {}
+        return cors_500(details=str(ex))
+

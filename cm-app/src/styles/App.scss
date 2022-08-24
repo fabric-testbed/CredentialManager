@@ -1,0 +1,77 @@
+@import "./custom.scss";
+html,
+body {
+  height: 100%;
+}
+
+.container {
+  min-height: 80vh;
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+}
+
+a {
+  color: $primary-color-dark;
+  text-decoration: none;
+}
+
+p a {
+  color: $primary-color;
+  font-weight: 600;
+}
+
+a:hover {
+  color: $primary-color-light;
+  text-decoration: none;
+}
+
+/* App Header Navbar */
+.navbar {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.nav-item {
+  padding-top: 4px;
+  padding-bottom: 2px;
+}
+
+.nav-item a {
+  border-bottom: 3px $bg-light solid;
+}
+
+.nav-item a.active,
+.nav-item a:hover {
+  border-bottom: 3px $primary-color solid;
+}
+
+.nav-item .dropdown-menu a.active,
+.nav-item .dropdown-menu a:hover {
+  border-bottom: none;
+}
+
+.dropdown-item.active,
+.dropdown-item:active {
+  color: $black;
+  text-decoration: none;
+  background-color: $white;
+}
+
+
+.app-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 5rem;
+  margin-top: 0;
+  padding: 0 2rem;
+  right: 0;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+}
+
+.app-footer div {
+  width: 100%;
+}

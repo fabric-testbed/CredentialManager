@@ -1,0 +1,7 @@
+{
+  "portalLinkAlpha": "https://alpha-4.fabric-testbed.net/",
+  "portalLinkBeta": "https://beta-4.fabric-testbed.net/",
+  "portalLinkProduction": "https://portal.fabric-testbed.net/",
+  "learnArticleFabricTokens": "https://learn.fabric-testbed.net/knowledge-base/obtaining-and-using-fabric-api-tokens/",
+  "learnArticleStarterQuestions": "https://learn.fabric-testbed.net/knowledge-base/fabric-user-roles-and-project-permissions/#managing-projects-in-the-real-world"
+}
