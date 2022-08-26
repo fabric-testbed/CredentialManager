@@ -1,7 +1,8 @@
 import http from './httpService';
 import { default as configData } from "../config.json";
+import checkCmAppType from "../utils/checkCmAppType";
 
-const apiEndpoint = configData.fabricCoreApiUrl;
+const apiEndpoint = configData.fabricCoreApiUrl[checkCmAppType()];
 
 export function getWhoAmI(){
   return http.get(`${apiEndpoint}/whoami`);

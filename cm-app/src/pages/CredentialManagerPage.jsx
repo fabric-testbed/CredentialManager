@@ -140,7 +140,7 @@ class CredentialManagerPage extends React.Component {
     const { projects, scopeOptions, createSuccess, createToken,
       createCopySuccess, refreshToken, refreshSuccess, refreshCopySuccess, revokeSuccess  } = this.state;
     
-    const portalLink = this.portalLinkMap[checkCmAppType(window.location.href)];
+    const portalLink = this.portalLinkMap[checkCmAppType()];
 
     return (
       <div className="container">

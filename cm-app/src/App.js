@@ -18,14 +18,10 @@ class App extends React.Component {
 
   async componentDidMount() {
     // check if auth cookie exists
-    const appType = checkCmAppType(window.location.href);
+    const appType = checkCmAppType();
     const authCookieName = configData.authCookieName[appType];
     const isAuthenticated = hasCookie(authCookieName)
     this.setState({ isAuthenticated });
-
-    console.log(appType)
-    console.log(authCookieName)
-    console.log(isAuthenticated)
 
     if(isAuthenticated) {
       // set user id.

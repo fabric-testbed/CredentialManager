@@ -1,7 +1,8 @@
 import http from './httpService';
 import { default as config } from "../config.json";
+import checkCmAppType from "../utils/checkCmAppType";
 
-const apiEndpoint = config.credentialManagerApiUrl;
+const apiEndpoint = config.credentialManagerApiUrl[checkCmAppType()];
 
 export function createIdToken(projectId, scope) {
   return http.post(apiEndpoint + "/create?project_id=" + projectId + "&scope=" + scope);

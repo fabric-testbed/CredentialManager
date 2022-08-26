@@ -1,10 +1,10 @@
-export default function checkCmAppType(url) {
+export default function checkCmAppType() {
   // decide current portal is alpha, beta or production.
-  if (url.includes("alpha")) {
+  if (window.location.href.includes("alpha")) {
     return "alpha";
   }
 
-  if (url.includes("beta")) {
+  if (window.location.href.includes("beta")) {
     return "beta";
   }
 
