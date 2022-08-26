@@ -1,19 +1,34 @@
 import { hasCookie } from "./hasCookie";
+import sleep from "./sleep";
 
-function getCookieByName(name) {
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) return parts.pop().split(';').shift();
+function getCookieValue(cookieName) {
+  let name = cookieName + "=";
+  let decodedCookie = decodeURIComponent(document.cookie);
+  let ca = decodedCookie.split(';');
+  for(let i = 0; i <ca.length; i++) {
+    let c = ca[i];
+    while (c.charAt(0) === ' ') {
+      c = c.substring(1);
+    }
+    if (c.indexOf(name) === 0) {
+      return c.substring(name.length, c.length);
+    }
+  }
+  return "";
 }
 
-export function setCoreCookie(cookiename) {
+export async function setCoreCookie(cookiename) {
   const coreCookieName = cookiename.substring(0, cookiename.length - 3);
-
+  console.log(coreCookieName)
   if (hasCookie(coreCookieName)) { return; }
   
-  const cookieValue = getCookieByName(cookiename);
+  await sleep(150);
+
+  const cookieValue = getCookieValue(cookiename)
+
   var d = new Date();
-  d.setTime(d.getTime() + (3600000));
+  // number of minutes until jwt expires: 240
+  d.setTime(d.getTime() + (14400000));
   var expires = "expires=" + d.toUTCString();
   
   // set a cookie with the same value

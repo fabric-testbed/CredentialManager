@@ -42,7 +42,7 @@ class CredentialManagerPage extends React.Component {
 
   async componentDidMount(){
     // if no core cookie exists, add one
-    setCoreCookie(this.props.authCookieName);
+    await setCoreCookie(this.props.authCookieName);
 
     try {
       const { data } = await getWhoAmI();

@@ -1,6 +1,6 @@
 export function hasCookie(cookiename) {
   var d = new Date();
-  d.setTime(d.getTime() + (1000));
+  d.setTime(d.getTime() + (100));
   var expires = "expires=" + d.toUTCString();
   
   // set a cookie with the same name of http-only cookie
