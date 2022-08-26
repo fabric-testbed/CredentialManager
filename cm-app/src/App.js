@@ -13,7 +13,8 @@ import { toast } from "react-toastify";
 
 class App extends React.Component {
   state = {
-    isAuthenticated: false
+    authCookieName: "",
+    isAuthenticated: false,
   }
 
   async componentDidMount() {
@@ -21,17 +22,19 @@ class App extends React.Component {
     const appType = checkCmAppType();
     const authCookieName = configData.authCookieName[appType];
     const isAuthenticated = hasCookie(authCookieName)
-    this.setState({ isAuthenticated });
+    this.setState({ authCookieName, isAuthenticated });
   }
 
   render() {
-    const { isAuthenticated } = this.state;
+    const { authCookieName, isAuthenticated } = this.state;
     return (
         <div className="App">
           <Router>
             <Header isAuthenticated={isAuthenticated} />
             {
-              isAuthenticated ? <CredentialManagerPage /> : <Homepage />
+              isAuthenticated ? 
+              <CredentialManagerPage authCookieName={authCookieName} /> : 
+              <Homepage />
             }
             <Footer />
           </Router>
