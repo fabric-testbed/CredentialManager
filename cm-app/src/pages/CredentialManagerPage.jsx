@@ -41,7 +41,9 @@ class CredentialManagerPage extends React.Component {
 
   async componentDidMount(){
     try {
-      const { data: res } = await getProjects();
+      const { data } = await getWhoAmI();
+      const user = data.results[0];
+      const { data: res } = await getProjects(user.uuid);
       const projects = res.results;
       this.setState({ projects });
       if (projects.length > 0) {

@@ -6,7 +6,6 @@ axios.defaults.withCredentials = true;
 axios.interceptors.response.use(null, (error) => {
     if (error.response && error.response.status === 401) {
       // no auth cookie or cookie is expired.
-      localStorage.setItem("cmUserID", "");
       window.location.href = "/logout";
 
       // do not toast error message.

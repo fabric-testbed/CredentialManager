@@ -8,7 +8,6 @@ export function getWhoAmI(){
   return http.get(`${apiEndpoint}/whoami`);
 }
 
-export function getProjects() {
-  const userID = localStorage.getItem("cmUserID");
+export function getProjects(userID) {
   return http.get(`${apiEndpoint}/projects?offset=0&limit=200&person_uuid=${userID}`);
 }

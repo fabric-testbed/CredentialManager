@@ -22,17 +22,6 @@ class App extends React.Component {
     const authCookieName = configData.authCookieName[appType];
     const isAuthenticated = hasCookie(authCookieName)
     this.setState({ isAuthenticated });
-
-    if(isAuthenticated) {
-      // set user id.
-      try {
-        const { data } = await getWhoAmI();
-        const user = data.results[0];
-        localStorage.setItem("cmUserID", user.uuid);
-      } catch (err) {
-        toast.error("Failed to load user information.")
-      }
-    }
   }
 
   render() {
