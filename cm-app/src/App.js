@@ -7,6 +7,7 @@ import Footer from "./components/Footer";
 import "./styles/App.scss";
 import { getWhoAmI } from "./services/coreApiService";
 import checkCmAppType from "./utils/checkCmAppType";
+import { hasCookie } from "./utils/hasCookie";
 import { default as configData } from "./config.json";
 import { toast } from "react-toastify";
 
@@ -19,9 +20,12 @@ class App extends React.Component {
     // check if auth cookie exists
     const appType = checkCmAppType(window.location.href);
     const authCookieName = configData.authCookieName[appType];
-    // const isAuthenticated = document.cookie.indexOf(`${authCookieName}=`);
-    const isAuthenticated = document.cookie.includes(`${authCookieName}=`)
+    const isAuthenticated = hasCookie(authCookieName)
     this.setState({ isAuthenticated });
+
+    console.log(appType)
+    console.log(authCookieName)
+    console.log(isAuthenticated)
 
     if(isAuthenticated) {
       // set user id.

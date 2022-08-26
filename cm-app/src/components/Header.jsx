@@ -31,7 +31,8 @@ class Header extends React.Component {
           FABRIC Credential Manager
         </NavLink>
         <div className="ml-auto">
-          { this.props.isAuthenticated === "" ? 
+          { 
+            !this.props.isAuthenticated ? 
             <form className="form-inline my-2 my-lg-0">
               <NavLink to="/login">
                 <button
