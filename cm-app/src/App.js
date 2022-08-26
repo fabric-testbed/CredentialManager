@@ -5,9 +5,9 @@ import Homepage from './pages/Homepage';
 import CredentialManagerPage from './pages/CredentialManagerPage';
 import Footer from "./components/Footer";
 import "./styles/App.scss";
-import { hasAuthCookie } from "./utils/checkAuthCookie";
-import { checkCmAppType } from "./utils/checkCmAppType";
-import { default as configData } from "config.json";
+import { getWhoAmI } from "./services/coreApiService";
+import checkCmAppType from "./utils/checkCmAppType";
+import { default as configData } from "./config.json";
 import { toast } from "react-toastify";
 
 class App extends React.Component {
@@ -19,7 +19,8 @@ class App extends React.Component {
     // check if auth cookie exists
     const appType = checkCmAppType(window.location.href);
     const authCookieName = configData.authCookieName[appType];
-    const isAuthenticated = hasAuthCookie(authCookieName)
+    // const isAuthenticated = document.cookie.indexOf(`${authCookieName}=`);
+    const isAuthenticated = document.cookie.includes(`${authCookieName}=`)
     this.setState({ isAuthenticated });
 
     if(isAuthenticated) {
@@ -41,7 +42,7 @@ class App extends React.Component {
           <Router>
             <Header isAuthenticated={isAuthenticated} />
             {
-              isAuthenticated !== "" ? <CredentialManagerPage /> : <Homepage />
+              isAuthenticated ? <CredentialManagerPage /> : <Homepage />
             }
             <Footer />
           </Router>
