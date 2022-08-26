@@ -5,9 +5,8 @@ axios.defaults.withCredentials = true;
 
 axios.interceptors.response.use(null, (error) => {
     if (error.response && error.response.status === 401) {
-      // 1. the user has not logged in
-      // set status to unauthorized
-      localStorage.setItem("cmUserID", "");
+      // no auth cookie or cookie is expired.
+      window.location.href = "/logout";
 
       // do not toast error message.
       return Promise.reject(error);

@@ -6,9 +6,10 @@ import Col from 'react-bootstrap/Col';
 import Alert from 'react-bootstrap/Alert';
 
 import { createIdToken, refreshToken, revokeToken } from "../services/credentialManagerService.js";
-import { getProjects } from "../services/coreApiService.js";
+import { getProjects, getWhoAmI } from "../services/coreApiService.js";
 import { default as externalLinks } from "../services/externalLinks.json";
 import checkCmAppType from "../utils/checkCmAppType";
+// import { setCoreCookie } from "../utils/setCoreCookie";
 
 import { toast } from "react-toastify";
 
@@ -40,8 +41,13 @@ class CredentialManagerPage extends React.Component {
   }
 
   async componentDidMount(){
+    // if no core cookie exists, add one
+    // await setCoreCookie(this.props.authCookieName);
+
     try {
-      const { data: res } = await getProjects();
+      const { data } = await getWhoAmI();
+      const user = data.results[0];
+      const { data: res } = await getProjects(user.uuid);
       const projects = res.results;
       this.setState({ projects });
       if (projects.length > 0) {
@@ -140,7 +146,7 @@ class CredentialManagerPage extends React.Component {
     const { projects, scopeOptions, createSuccess, createToken,
       createCopySuccess, refreshToken, refreshSuccess, refreshCopySuccess, revokeSuccess  } = this.state;
     
-    const portalLink = this.portalLinkMap[checkCmAppType(window.location.href)];
+    const portalLink = this.portalLinkMap[checkCmAppType()];
 
     return (
       <div className="container">

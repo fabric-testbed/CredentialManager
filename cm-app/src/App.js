@@ -5,35 +5,34 @@ import Homepage from './pages/Homepage';
 import CredentialManagerPage from './pages/CredentialManagerPage';
 import Footer from "./components/Footer";
 import "./styles/App.scss";
-import { getWhoAmI } from "./services/coreApiService";
+import checkCmAppType from "./utils/checkCmAppType";
+import { hasCookie } from "./utils/hasCookie";
+import { default as configData } from "./config.json";
 
 class App extends React.Component {
   state = {
-    userID: ""
+    authCookieName: "",
+    isAuthenticated: false,
   }
 
   async componentDidMount() {
-    // if no user status info is stored, call UIS getWhoAmI.
-    if (!localStorage.getItem("cmUserID") || localStorage.getItem("cmUserID") === "") {
-      try {
-        const { data } = await getWhoAmI();
-        const user = data.results[0];
-        localStorage.setItem("cmUserID", user.uuid);
-        this.setState({ userID: user.uuid });
-      } catch (err) {
-        console.log("/whoami " + err);
-      }
-    }
+    // check if auth cookie exists
+    const appType = checkCmAppType();
+    const authCookieName = configData.authCookieName[appType];
+    const isAuthenticated = hasCookie(authCookieName)
+    this.setState({ authCookieName, isAuthenticated });
   }
 
   render() {
-    const { userID } = this.state;
+    const { authCookieName, isAuthenticated } = this.state;
     return (
         <div className="App">
           <Router>
-            <Header userID={userID} />
+            <Header isAuthenticated={isAuthenticated} />
             {
-              userID !== "" ? <CredentialManagerPage /> : <Homepage />
+              isAuthenticated ? 
+              <CredentialManagerPage authCookieName={authCookieName} /> : 
+              <Homepage />
             }
             <Footer />
           </Router>
