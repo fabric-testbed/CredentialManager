@@ -5,11 +5,9 @@ import Homepage from './pages/Homepage';
 import CredentialManagerPage from './pages/CredentialManagerPage';
 import Footer from "./components/Footer";
 import "./styles/App.scss";
-import { getWhoAmI } from "./services/coreApiService";
 import checkCmAppType from "./utils/checkCmAppType";
 import { hasCookie } from "./utils/hasCookie";
 import { default as configData } from "./config.json";
-import { toast } from "react-toastify";
 
 class App extends React.Component {
   state = {

@@ -9,7 +9,7 @@ import { createIdToken, refreshToken, revokeToken } from "../services/credential
 import { getProjects, getWhoAmI } from "../services/coreApiService.js";
 import { default as externalLinks } from "../services/externalLinks.json";
 import checkCmAppType from "../utils/checkCmAppType";
-import { setCoreCookie } from "../utils/setCoreCookie";
+// import { setCoreCookie } from "../utils/setCoreCookie";
 
 import { toast } from "react-toastify";
 
@@ -42,7 +42,7 @@ class CredentialManagerPage extends React.Component {
 
   async componentDidMount(){
     // if no core cookie exists, add one
-    await setCoreCookie(this.props.authCookieName);
+    // await setCoreCookie(this.props.authCookieName);
 
     try {
       const { data } = await getWhoAmI();
