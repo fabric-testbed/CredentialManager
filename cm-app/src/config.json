@@ -1,4 +1,9 @@
 {
   "fabricCoreApiUrl": "https://core-api.fabric-testbed.net",
-  "credentialManagerApiUrl": "https://cm.fabric-testbed.net/credmgr/tokens"
+  "credentialManagerApiUrl": "https://cm.fabric-testbed.net/credmgr/tokens",
+  "authCookieName": {
+    "alpha": "fabric-service-alpha-cm",
+    "beta": "fabric-service-beta-cm",
+    "production": "fabric-service-cm"
+  }
 }
