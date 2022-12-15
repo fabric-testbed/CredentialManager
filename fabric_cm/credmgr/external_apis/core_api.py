@@ -83,7 +83,7 @@ class CoreApi:
         # Get Project
         if project_id.lower() == "all":
             # Get All projects
-            url = f"{self.api_server}/projects?offset=0&limit=50&person_uuid={uuid}&sort_by=name&order_by=asc"
+            url = f"{self.api_server}/projects?offset=0&limit=10&person_uuid={uuid}&sort_by=name&order_by=asc"
         else:
             url = f"{self.api_server}/projects/{project_id}"
         response = s.get(url, verify=ssl_verify)
@@ -93,17 +93,25 @@ class CoreApi:
                                f"message: {response.content}")
 
         LOG.debug(f"GET Project Response : {response.json()}")
-        projects = response.json().get("results")
+        projects_res = response.json().get("results")
 
-        if len(projects) == 0:
+        if len(projects_res) == 0:
             raise CoreApiError(f"User is not a member of Project: {project_id}")
 
-        for p in projects:
+        projects = []
+        for p in projects_res:
             project_memberships = p.get("memberships")
 
             if not project_memberships["is_member"] and not project_memberships["is_creator"] and \
                     not project_memberships["is_owner"]:
                 raise CoreApiError(f"User is not a member of Project: {p.get('uuid')}")
+            project = {
+                "name": p.get("name"),
+                "memberships": p.get("memberships"),
+                "tags": p.get("tags"),
+                "uuid": p.get("uuid")
+            }
+            projects.append(project)
 
         # Get User by UUID to get roles (Facility Operator is not Project Specific,
         # so need the roles from people end point)
