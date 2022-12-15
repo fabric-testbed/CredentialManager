@@ -83,7 +83,7 @@ class CoreApi:
         # Get Project
         if project_id.lower() == "all":
             # Get All projects
-            url = f"{self.api_server}/projects?offset=0&limit=10&person_uuid={uuid}&sort_by=name&order_by=asc"
+            url = f"{self.api_server}/projects?offset=0&limit=50&person_uuid={uuid}&sort_by=name&order_by=asc"
         else:
             url = f"{self.api_server}/projects/{project_id}"
         response = s.get(url, verify=ssl_verify)
@@ -107,10 +107,14 @@ class CoreApi:
                 raise CoreApiError(f"User is not a member of Project: {p.get('uuid')}")
             project = {
                 "name": p.get("name"),
-                "memberships": p.get("memberships"),
-                "tags": p.get("tags"),
                 "uuid": p.get("uuid")
             }
+
+            # Only pass tags and membership when token is requested for a specific project
+            if project_id.lower() != "all":
+                project["tags"] = p.get("tags")
+                project["memberships"] = p.get("memberships")
+
             projects.append(project)
 
         # Get User by UUID to get roles (Facility Operator is not Project Specific,
