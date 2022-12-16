@@ -40,7 +40,7 @@ class FabricTokenEncoder:
     by adding the project, scope and membership information to the token
     and signing with Fabric Certificate
     """
-    def __init__(self, id_token, idp_claims: dict, project:str, scope="all", cookie: str = None):
+    def __init__(self, id_token, idp_claims: dict, project: str, scope: str = "all", cookie: str = None):
         """
         Constructor
         :param id_token: CI Logon Identity Token
@@ -137,22 +137,21 @@ class FabricTokenEncoder:
 
         if CONFIG_OBJ.is_core_api_enabled():
             core_api = CoreApi(api_server=url, cookie=self._get_vouch_cookie(),
-                                       cookie_name=CONFIG_OBJ.get_vouch_cookie_name(),
-                                       cookie_domain=CONFIG_OBJ.get_vouch_cookie_domain_name())
-            uuid, roles, tags, memberships = core_api.get_user_and_project_info(project_id=self.project)
+                               cookie_name=CONFIG_OBJ.get_vouch_cookie_name(),
+                               cookie_domain=CONFIG_OBJ.get_vouch_cookie_domain_name())
+            uuid, roles, projects = core_api.get_user_and_project_info(project_id=self.project)
         else:
             uuid = None
-            memberships = None
             email = self.claims.get("email")
             roles, tags = CmLdapMgrSingleton.get().get_user_and_project_info(eppn=None, email=email,
                                                                              project_id=self.project)
+            projects = [{
+                "uuid": self.project,
+                "tags": tags
+            }]
 
-        LOG.debug(f"UUID: {uuid} Roles: {roles} Tags: {tags} Membership: {memberships}")
-        self.claims["project"] = {
-            "uuid": self.project,
-            "tags": tags,
-            "memberships": memberships
-            }
+        LOG.debug(f"UUID: {uuid} Roles: {roles} Projects: {projects}")
+        self.claims["projects"] = projects
         self.claims["roles"] = roles
         self.claims["scope"] = self.scope
         if uuid is not None:

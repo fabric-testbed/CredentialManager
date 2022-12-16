@@ -40,11 +40,11 @@ class CoreApi:
         self.cookie_name = cookie_name
         self.cookie_domain = cookie_domain
 
-    def get_user_and_project_info(self, project_id: str) -> Tuple[str, list, list, list]:
+    def get_user_and_project_info(self, project_id: str) -> Tuple[str, list, list]:
         """
         Determine User's info using CORE API
         :param project_id: Project Id
-        :return the user uuid, roles, project tags and project membership
+        :return the user uuid, roles, projects
 
         :returns a tuple containing user specific roles and project tags
         """
@@ -70,22 +70,6 @@ class CoreApi:
         s.headers.update(headers)
         ssl_verify = CONFIG_OBJ.is_core_api_ssl_verify()
 
-        # Get Project
-        url = f"{self.api_server}/projects/{project_id}"
-        response = s.get(url, verify=ssl_verify)
-
-        if response.status_code != 200:
-            raise CoreApiError(f"Core API error occurred status_code: {response.status_code} "
-                               f"message: {response.content}")
-
-        LOG.debug(f"GET Project Response : {response.json()}")
-        project_tags = response.json().get("results")[0]["tags"]
-        project_memberships = response.json().get("results")[0]["memberships"]
-
-        if not project_memberships["is_member"] and not project_memberships["is_creator"] and \
-                not project_memberships["is_owner"]:
-            raise CoreApiError(f"User is not a member of Project: {project_id}")
-
         # WhoAmI
         url = f'{self.api_server}/whoami'
         response = s.get(url, verify=ssl_verify)
@@ -95,6 +79,43 @@ class CoreApi:
 
         LOG.debug(f"GET WHOAMI Response : {response.json()}")
         uuid = response.json().get("results")[0]["uuid"]
+
+        # Get Project
+        if project_id.lower() == "all":
+            # Get All projects
+            url = f"{self.api_server}/projects?offset=0&limit=50&person_uuid={uuid}&sort_by=name&order_by=asc"
+        else:
+            url = f"{self.api_server}/projects/{project_id}"
+        response = s.get(url, verify=ssl_verify)
+
+        if response.status_code != 200:
+            raise CoreApiError(f"Core API error occurred status_code: {response.status_code} "
+                               f"message: {response.content}")
+
+        LOG.debug(f"GET Project Response : {response.json()}")
+        projects_res = response.json().get("results")
+
+        if len(projects_res) == 0:
+            raise CoreApiError(f"User is not a member of Project: {project_id}")
+
+        projects = []
+        for p in projects_res:
+            project_memberships = p.get("memberships")
+
+            if not project_memberships["is_member"] and not project_memberships["is_creator"] and \
+                    not project_memberships["is_owner"]:
+                raise CoreApiError(f"User is not a member of Project: {p.get('uuid')}")
+            project = {
+                "name": p.get("name"),
+                "uuid": p.get("uuid")
+            }
+
+            # Only pass tags and membership when token is requested for a specific project
+            if project_id.lower() != "all":
+                project["tags"] = p.get("tags")
+                project["memberships"] = p.get("memberships")
+
+            projects.append(project)
 
         # Get User by UUID to get roles (Facility Operator is not Project Specific,
         # so need the roles from people end point)
@@ -108,7 +129,7 @@ class CoreApi:
         LOG.debug(f"GET PEOPLE Response : {response.json()}")
 
         roles = response.json().get("results")[0]["roles"]
-        return uuid, roles, project_tags, project_memberships
+        return uuid, roles, projects
 
 
 class CoreApiError(Exception):
