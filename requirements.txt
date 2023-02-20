@@ -10,4 +10,4 @@ waitress
 six
 cryptography
 authlib
-fabric_fss_utils==1.2.2
+fabric_fss_utils==1.4.0
