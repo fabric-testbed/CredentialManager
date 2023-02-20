@@ -99,7 +99,7 @@ class CoreApi:
         projects = []
         for p in projects_res:
             expires_on = p.get("expires_on")
-            expires_on_dt = datetime.datetime.fromisoformat(date_string=expires_on)
+            expires_on_dt = datetime.datetime.fromisoformat(expires_on)
             now = datetime.datetime.now(tz=datetime.timezone.utc)
             if now > expires_on_dt:
                 # Do not include the expired project in the token for "all" get slices
