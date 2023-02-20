@@ -99,15 +99,16 @@ class CoreApi:
         projects = []
         for p in projects_res:
             expires_on = p.get("expires_on")
-            expires_on_dt = datetime.datetime.fromisoformat(expires_on)
-            now = datetime.datetime.now(tz=datetime.timezone.utc)
-            if now > expires_on_dt:
-                # Do not include the expired project in the token for "all" get slices
-                if project_id.lower() == "all":
-                    continue
-                # Fail a request of the token for an expired token
-                else:
-                    raise CoreApiError(f"Project {p.get('name')} is expired!")
+            if expires_on is not None:
+                expires_on_dt = datetime.datetime.fromisoformat(expires_on)
+                now = datetime.datetime.now(tz=datetime.timezone.utc)
+                if now > expires_on_dt:
+                    # Do not include the expired project in the token for "all" get slices
+                    if project_id.lower() == "all":
+                        continue
+                    # Fail a request of the token for an expired token
+                    else:
+                        raise CoreApiError(f"Project {p.get('name')} is expired!")
 
             project_memberships = p.get("memberships")
 
