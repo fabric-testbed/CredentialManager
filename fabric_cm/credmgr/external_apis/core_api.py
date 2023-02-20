@@ -22,6 +22,7 @@
 # SOFTWARE.
 #
 # Author Komal Thareja (kthare10@renci.org)
+import datetime
 from typing import Tuple
 
 import requests
@@ -95,11 +96,20 @@ class CoreApi:
         LOG.debug(f"GET Project Response : {response.json()}")
         projects_res = response.json().get("results")
 
-        if len(projects_res) == 0:
-            raise CoreApiError(f"User is not a member of Project: {project_id}")
-
         projects = []
         for p in projects_res:
+            expires_on = p.get("expires_on")
+            if expires_on is not None:
+                expires_on_dt = datetime.datetime.fromisoformat(expires_on)
+                now = datetime.datetime.now(tz=datetime.timezone.utc)
+                if now > expires_on_dt:
+                    # Do not include the expired project in the token for "all" get slices
+                    if project_id.lower() == "all":
+                        continue
+                    # Fail a request of the token for an expired token
+                    else:
+                        raise CoreApiError(f"Project {p.get('name')} is expired!")
+
             project_memberships = p.get("memberships")
 
             if not project_memberships["is_member"] and not project_memberships["is_creator"] and \
@@ -116,6 +126,9 @@ class CoreApi:
                 project["memberships"] = p.get("memberships")
 
             projects.append(project)
+
+        if len(projects) == 0:
+            raise CoreApiError(f"User is not a member of Project: {project_id}")
 
         # Get User by UUID to get roles (Facility Operator is not Project Specific,
         # so need the roles from people end point)
