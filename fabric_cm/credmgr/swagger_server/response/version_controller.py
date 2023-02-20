@@ -15,7 +15,7 @@ def version_get() -> Version:  # noqa: E501
         received_counter.labels(HTTP_METHOD_GET, VERSION_URL).inc()
         version = VersionData()
         version.reference = __API_REFERENCE__
-        version.version = __VERSION__
+        version.version = __version__
         response = Version()
         response.data = [version]
         response.size = len(response.data)
