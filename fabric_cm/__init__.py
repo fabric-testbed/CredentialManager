@@ -1,2 +1,2 @@
-__VERSION__ = "1.4.0"
+__version__ = "1.5.0b1"
 __API_REFERENCE__ = "https://github.com/fabric-testbed/CredentialManager"
