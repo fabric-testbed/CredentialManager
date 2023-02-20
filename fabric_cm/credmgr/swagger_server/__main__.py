@@ -41,7 +41,7 @@ def main():
     log = LOG
     try:
         app = connexion.App(__name__, specification_dir='swagger/')
-        app.app.json_encoder = encoder.JSONEncoder
+        app.json_provider_class = encoder.JSONEncoder
         app.add_api('swagger.yaml',
                     arguments={'title': 'Fabric Credential Manager API'},
                     pythonic_params=True)

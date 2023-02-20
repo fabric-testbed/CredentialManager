@@ -1,7 +1,7 @@
 from fabric_cm.credmgr.swagger_server import received_counter, success_counter, failure_counter
 from fabric_cm.credmgr.swagger_server.models.version import Version
 from fabric_cm.credmgr.swagger_server.models.version_data import VersionData
-from fabric_cm import __VERSION__, __API_REFERENCE__
+from fabric_cm import __version__, __API_REFERENCE__
 from fabric_cm.credmgr.swagger_server.response.constants import HTTP_METHOD_GET, VERSION_URL
 from fabric_cm.credmgr.swagger_server.response.cors_response import cors_500, cors_200
 
@@ -15,7 +15,7 @@ def version_get() -> Version:  # noqa: E501
         received_counter.labels(HTTP_METHOD_GET, VERSION_URL).inc()
         version = VersionData()
         version.reference = __API_REFERENCE__
-        version.version = __VERSION__
+        version.version = __version__
         response = Version()
         response.data = [version]
         response.size = len(response.data)
