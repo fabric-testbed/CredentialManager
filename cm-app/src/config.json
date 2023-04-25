@@ -10,8 +10,8 @@
     "production": "https://cm.fabric-testbed.net/credmgr/tokens"
   },
   "authCookieName": {
-    "alpha": "fabric-service-alpha-cm",
-    "beta": "fabric-service-beta-cm",
-    "production": "fabric-service-cm"
+    "alpha": "fabric-service-alpha",
+    "beta": "fabric-service-beta",
+    "production": "fabric-service"
   }
 }
