@@ -4,15 +4,17 @@ import logo from "../imgs/fabric-brand.png";
 
 class Header extends React.Component {
   handleLogin = () => {
-      // nginx handle login url.
-      window.location.href = "/login";
+    // remove old user status stored in browser.
+    localStorage.removeItem("cmUserStatus");
+    // nginx handle login url.
+    window.location.href = "/login";
   }
 
 
   handleLogout = () => {
+    localStorage.removeItem("cmUserStatus");
     // nginx handle logout url.
     window.location.href = "/logout";
-    localStorage.removeItem("cmUserStatus");
   }
 
   render() {
@@ -34,7 +36,7 @@ class Header extends React.Component {
             <form className="form-inline my-2 my-lg-0">
               <NavLink to="/login">
                 <button
-                  onClick={this.handleLogin}
+                  onClick={() => this.handleLogin()}
                   className="btn btn-outline-success my-2 my-sm-0 mr-2"
                 >
                   Log in
@@ -44,7 +46,7 @@ class Header extends React.Component {
             <form className="form-inline my-2 my-lg-0">
               <NavLink to="/logout">
                 <button
-                  onClick={this.handleLogout}
+                  onClick={() => this.handleLogout()}
                   className="btn btn-outline-success my-2 my-sm-0"
                 >
                   Log out

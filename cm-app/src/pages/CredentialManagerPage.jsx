@@ -9,6 +9,7 @@ import { getProjects } from "../services/coreApiService.js";
 import { default as externalLinks } from "../services/externalLinks.json";
 import checkCmAppType from "../utils/checkCmAppType";
 import { toast } from "react-toastify";
+import logo from "../imgs/fabric-brand.png";
 
 class CredentialManagerPage extends React.Component {
   state = {
@@ -38,15 +39,17 @@ class CredentialManagerPage extends React.Component {
   }
 
   async componentDidMount(){
-    try {
-      const { data: res } = await getProjects(localStorage.getItem("cmUserID"));
-      const projects = res.results;
-      this.setState({ projects });
-      if (projects.length > 0) {
-        this.setState({ selectedCreateProject: projects[0].uuid, selectedRefreshProject: projects[0].uuid });
+    if(this.props.cmUserStatus === "active") {
+      try {
+        const { data: res } = await getProjects(localStorage.getItem("cmUserID"));
+        const projects = res.results;
+        this.setState({ projects });
+        if (projects.length > 0) {
+          this.setState({ selectedCreateProject: projects[0].uuid, selectedRefreshProject: projects[0].uuid });
+        }
+      } catch (ex) {
+        toast.error("Failed to load user's project information. Please reload this page.");
       }
-    } catch (ex) {
-      toast.error("Failed to load user's project information. Please reload this page.");
     }
   }
 
@@ -141,6 +144,7 @@ class CredentialManagerPage extends React.Component {
     const portalLink = this.portalLinkMap[checkCmAppType()];
 
     return (
+      this.props.cmUserStatus === "active" ?
       <div className="container">
         { 
          projects.length === 0 &&
@@ -387,7 +391,30 @@ class CredentialManagerPage extends React.Component {
           </button>
          </div>
         }
-      </div>
+      </div> :
+          <div className="container d-flex flex-column align-items-center p-4">
+          <h1>
+            FABRIC Credential Manager
+          </h1>
+          <img
+            src={logo}
+            width="490"
+            height="210"
+            className="d-inline-block align-top my-4"
+            alt=""
+          />
+          <div className="alert alert-primary mb-4" role="alert">
+            Please consult &nbsp;
+            <a
+              href="https://learn.fabric-testbed.net/knowledge-base/obtaining-and-using-fabric-api-tokens/"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <b>this guide</b>
+            </a>&nbsp;
+            for obtaining and using FABRIC API tokens.
+          </div>
+        </div>
     )
   }
 }
