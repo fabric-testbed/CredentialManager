@@ -4,7 +4,6 @@ import Card from 'react-bootstrap/Card';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Alert from 'react-bootstrap/Alert';
-
 import { createIdToken, refreshToken, revokeToken } from "../services/credentialManagerService.js";
 import { getProjects, getWhoAmI } from "../services/coreApiService.js";
 import { default as externalLinks } from "../services/externalLinks.json";
@@ -41,9 +40,6 @@ class CredentialManagerPage extends React.Component {
   }
 
   async componentDidMount(){
-    // if no core cookie exists, add one
-    // await setCoreCookie(this.props.authCookieName);
-
     try {
       const { data } = await getWhoAmI();
       const user = data.results[0];
