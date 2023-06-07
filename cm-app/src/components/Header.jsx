@@ -30,7 +30,7 @@ class Header extends React.Component {
         </NavLink>
         <div className="ml-auto">
           { 
-            !this.props.isAuthenticated ? 
+            !localStorage.getItem("cmUserStatus") === "active" ? 
             <form className="form-inline my-2 my-lg-0">
               <NavLink to="/login">
                 <button

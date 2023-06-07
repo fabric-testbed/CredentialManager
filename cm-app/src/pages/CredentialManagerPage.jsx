@@ -5,11 +5,9 @@ import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Alert from 'react-bootstrap/Alert';
 import { createIdToken, refreshToken, revokeToken } from "../services/credentialManagerService.js";
-import { getProjects, getWhoAmI } from "../services/coreApiService.js";
+import { getProjects } from "../services/coreApiService.js";
 import { default as externalLinks } from "../services/externalLinks.json";
 import checkCmAppType from "../utils/checkCmAppType";
-// import { setCoreCookie } from "../utils/setCoreCookie";
-
 import { toast } from "react-toastify";
 
 class CredentialManagerPage extends React.Component {
@@ -40,17 +38,8 @@ class CredentialManagerPage extends React.Component {
   }
 
   async componentDidMount(){
-    let user;
     try {
-      const { data } = await getWhoAmI();
-      user = data.results[0];
-    } catch (err) {
-      localStorage.setItem("unauthorized");
-      window.reload();
-    }
-
-    try {
-      const { data: res } = await getProjects(user.uuid);
+      const { data: res } = await getProjects(localStorage.getItem("cmUserID"));
       const projects = res.results;
       this.setState({ projects });
       if (projects.length > 0) {

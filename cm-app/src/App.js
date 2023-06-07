@@ -9,10 +9,6 @@ import { getWhoAmI } from "./services/coreApiService.js";
 import { toast } from "react-toastify";
 
 class App extends React.Component {
-  state = {
-    isAuthenticated: false,
-  }
-
   async componentDidMount() {
     if (!localStorage.getItem("cmUserStatus")) {
       try {
@@ -37,17 +33,15 @@ class App extends React.Component {
           }
       }
     }
-    this.setState({ isAuthenticated: localStorage.getItem("cmUserStatus") === "active" });
   }
 
   render() {
-    const { isAuthenticated } = this.state;
     return (
         <div className="App">
           <Router>
-            <Header isAuthenticated={isAuthenticated} />
+            <Header/>
             {
-              isAuthenticated ? 
+              localStorage.getItem("cmUserStatus") === "active" ? 
               <CredentialManagerPage /> : 
               <Homepage />
             }
