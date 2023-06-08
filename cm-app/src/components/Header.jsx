@@ -32,7 +32,17 @@ class Header extends React.Component {
         </NavLink>
         <div className="ml-auto">
           { 
-            !localStorage.getItem("cmUserStatus") === "active" ? 
+            this.props.cmUserStatus === "active" ?
+            <form className="form-inline my-2 my-lg-0">
+              <NavLink to="/logout">
+                <button
+                  onClick={() => this.handleLogout()}
+                  className="btn btn-outline-success my-2 my-sm-0"
+                >
+                  Log out
+                </button>
+              </NavLink>
+            </form> :
             <form className="form-inline my-2 my-lg-0">
               <NavLink to="/login">
                 <button
@@ -40,19 +50,6 @@ class Header extends React.Component {
                   className="btn btn-outline-success my-2 my-sm-0 mr-2"
                 >
                   Log in
-                </button>
-              </NavLink>
-            </form> :
-            <form className="form-inline my-2 my-lg-0">
-              <NavLink to="/cm">
-                Manage Tokens
-              </NavLink>
-              <NavLink to="/logout">
-                <button
-                  onClick={() => this.handleLogout()}
-                  className="btn btn-outline-success my-2 my-sm-0"
-                >
-                  Log out
                 </button>
               </NavLink>
             </form>

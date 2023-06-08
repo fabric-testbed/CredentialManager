@@ -38,17 +38,15 @@ class CredentialManagerPage extends React.Component {
   }
 
   async componentDidMount(){
-    if(this.props.cmUserStatus === "active") {
-      try {
-        const { data: res } = await getProjects(localStorage.getItem("cmUserID"));
-        const projects = res.results;
-        this.setState({ projects });
-        if (projects.length > 0) {
-          this.setState({ selectedCreateProject: projects[0].uuid, selectedRefreshProject: projects[0].uuid });
-        }
-      } catch (ex) {
-        toast.error("Failed to load user's project information. Please reload this page.");
+    try {
+      const { data: res } = await getProjects(localStorage.getItem("cmUserID"));
+      const projects = res.results;
+      this.setState({ projects });
+      if (projects.length > 0) {
+        this.setState({ selectedCreateProject: projects[0].uuid, selectedRefreshProject: projects[0].uuid });
       }
+    } catch (ex) {
+      toast.error("Failed to load user's project information. Please reload this page.");
     }
   }
 

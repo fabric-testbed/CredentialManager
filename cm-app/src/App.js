@@ -49,10 +49,10 @@ class App extends React.Component {
           <Router>
             <Header cmUserStatus={cmUserStatus} />
             <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/login" element={<Home />} />
-              <Route path="/logout" element={<Home />} />
-              <Route path="/cm" element={<CredentialManagerPage />} />
+              <Route path="/" element={<Home cmUserStatus={cmUserStatus} />} />
+              <Route path="/login" element={<Home cmUserStatus={cmUserStatus} />} />
+              <Route path="/logout" element={<Home cmUserStatus={cmUserStatus} />} />
+              <Route path="/cm" element={<CredentialManagerPage cmUserStatus={cmUserStatus}/>} />
             </Routes>
             <Footer />
           </Router>
