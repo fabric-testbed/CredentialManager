@@ -4,13 +4,10 @@ import Card from 'react-bootstrap/Card';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Alert from 'react-bootstrap/Alert';
-
 import { createIdToken, refreshToken, revokeToken } from "../services/credentialManagerService.js";
-import { getProjects, getWhoAmI } from "../services/coreApiService.js";
+import { getProjects } from "../services/coreApiService.js";
 import { default as externalLinks } from "../services/externalLinks.json";
 import checkCmAppType from "../utils/checkCmAppType";
-// import { setCoreCookie } from "../utils/setCoreCookie";
-
 import { toast } from "react-toastify";
 
 class CredentialManagerPage extends React.Component {
@@ -41,13 +38,8 @@ class CredentialManagerPage extends React.Component {
   }
 
   async componentDidMount(){
-    // if no core cookie exists, add one
-    // await setCoreCookie(this.props.authCookieName);
-
     try {
-      const { data } = await getWhoAmI();
-      const user = data.results[0];
-      const { data: res } = await getProjects(user.uuid);
+      const { data: res } = await getProjects(localStorage.getItem("cmUserID"));
       const projects = res.results;
       this.setState({ projects });
       if (projects.length > 0) {
@@ -79,7 +71,6 @@ class CredentialManagerPage extends React.Component {
       const project = this.state.selectedRefreshProject;
       const scope = this.state.selectedRefreshScope;
       const { data: res } = await refreshToken(project, scope, document.getElementById('refreshTokenTextArea').value);
-      const token = res["data"][0];
       this.setState({ refreshCopySuccess: false, refreshSuccess: true });
       this.setState({ refreshToken: JSON.stringify(res["data"][0], undefined, 4) });
     }
@@ -151,7 +142,7 @@ class CredentialManagerPage extends React.Component {
     return (
       <div className="container">
         { 
-         projects.length === 0 &&
+          projects.length === 0 &&
             <div className="alert alert-warning mt-4" role="alert">
               <p className="mt-2">To manage tokens, you have to be in a project first:</p>
               <p>
@@ -169,8 +160,8 @@ class CredentialManagerPage extends React.Component {
             </div>
         }
         { 
-         projects.length > 0 && <div>
-           <div className="alert alert-primary mb-2" role="alert">
+          projects.length > 0 && <div>
+            <div className="alert alert-primary mb-2" role="alert">
             Please consult &nbsp;
             <a
               href={externalLinks.learnArticleFabricTokens}
@@ -393,7 +384,7 @@ class CredentialManagerPage extends React.Component {
           >
             Revoke Token
           </button>
-         </div>
+          </div>
         }
       </div>
     )

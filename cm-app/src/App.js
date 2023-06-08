@@ -1,39 +1,50 @@
 import React from "react";
-import { BrowserRouter as Router } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Header from "./components/Header";
-import Homepage from './pages/Homepage';
+import Home from './pages/Home';
 import CredentialManagerPage from './pages/CredentialManagerPage';
 import Footer from "./components/Footer";
 import "./styles/App.scss";
-import checkCmAppType from "./utils/checkCmAppType";
-import { hasCookie } from "./utils/hasCookie";
-import { default as configData } from "./config.json";
+import { getWhoAmI } from "./services/coreApiService.js";
+import { toast } from "react-toastify";
 
 class App extends React.Component {
   state = {
-    authCookieName: "",
-    isAuthenticated: false,
+    cmUserStatus: ""
   }
 
   async componentDidMount() {
-    // check if auth cookie exists
-    const appType = checkCmAppType();
-    const authCookieName = configData.authCookieName[appType];
-    const isAuthenticated = hasCookie(authCookieName)
-    this.setState({ authCookieName, isAuthenticated });
+    if (!localStorage.getItem("cmUserStatus")) {
+      try {
+        const { data } = await getWhoAmI();
+        const user = data.results[0];
+        if (user.enrolled) {
+          localStorage.setItem("cmUserID", user.uuid);
+          localStorage.setItem("cmUserStatus", "active");
+        } else {
+          toast.error("Please enroll to FABRIC in the Portal first.");
+        }
+      } catch (err) {
+          localStorage.setItem("cmUserStatus", "unauthorized");
+      }
+    }
+
+    this.setState({ cmUserStatus: localStorage.getItem("cmUserStatus") });
   }
 
   render() {
-    const { authCookieName, isAuthenticated } = this.state;
+    const { cmUserStatus } = this.state;
+
     return (
         <div className="App">
           <Router>
-            <Header isAuthenticated={isAuthenticated} />
-            {
-              isAuthenticated ? 
-              <CredentialManagerPage authCookieName={authCookieName} /> : 
-              <Homepage />
-            }
+            <Header cmUserStatus={cmUserStatus} />
+            <Routes>
+              <Route path="/" element={<Home cmUserStatus={cmUserStatus} />} />
+              <Route path="/login" element={<Home cmUserStatus={cmUserStatus} />} />
+              <Route path="/logout" element={<Home cmUserStatus={cmUserStatus} />} />
+              <Route path="/cm" element={<CredentialManagerPage cmUserStatus={cmUserStatus}/>} />
+            </Routes>
             <Footer />
           </Router>
         </div>
