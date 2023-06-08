@@ -22,13 +22,13 @@ class Header extends React.Component {
     return (
       <nav className="navbar navbar-expand-lg navbar-light bg-light p-2 d-flex flex-row justify-content-between">
         <NavLink className="navbar-brand" to="/">
-          <img
+          {/* <img
             src={logo}
             width="70"
             height="30"
             className="d-inline-block align-top"
             alt=""
-          />
+          /> */}
           FABRIC Credential Manager
         </NavLink>
         <div className="ml-auto">

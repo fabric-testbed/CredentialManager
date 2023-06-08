@@ -10,13 +10,13 @@ class Home extends React.Component {
           <h1>
             FABRIC Credential Manager
           </h1>
-          <img
+          {/* <img
             src={logo}
             width="490"
             height="210"
             className="d-inline-block align-top my-4"
             alt="FABRIC Logo"
-          />
+          /> */}
           <div className="alert alert-primary mb-4" role="alert">
             Please consult &nbsp;
             <a
