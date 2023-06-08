@@ -1,8 +1,8 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Header from "./components/Header";
-import CredentialManagerPage from './pages/CredentialManagerPage';
 import Home from './pages/Home';
+import CredentialManagerPage from './pages/CredentialManagerPage';
 import Footer from "./components/Footer";
 import "./styles/App.scss";
 import { getWhoAmI } from "./services/coreApiService.js";

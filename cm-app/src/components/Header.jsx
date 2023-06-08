@@ -13,6 +13,7 @@ class Header extends React.Component {
 
   handleLogout = () => {
     localStorage.removeItem("cmUserStatus");
+    localStorage.removeItem("cmUserID");
     // nginx handle logout url.
     window.location.href = "/logout";
   }

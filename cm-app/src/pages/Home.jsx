@@ -15,7 +15,7 @@ class Home extends React.Component {
             width="490"
             height="210"
             className="d-inline-block align-top my-4"
-            alt=""
+            alt="FABRIC Logo"
           />
           <div className="alert alert-primary mb-4" role="alert">
             Please consult &nbsp;
