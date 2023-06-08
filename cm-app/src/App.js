@@ -1,7 +1,8 @@
 import React from "react";
-import { BrowserRouter as Router } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Header from "./components/Header";
 import CredentialManagerPage from './pages/CredentialManagerPage';
+import Home from './pages/Home';
 import Footer from "./components/Footer";
 import "./styles/App.scss";
 import { getWhoAmI } from "./services/coreApiService.js";
@@ -47,7 +48,12 @@ class App extends React.Component {
         <div className="App">
           <Router>
             <Header cmUserStatus={cmUserStatus} />
-            <CredentialManagerPage cmUserStatus={cmUserStatus} />
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/login" element={<Home />} />
+              <Route path="/logout" element={<Home />} />
+              <Route path="/cm" element={<CredentialManagerPage />} />
+            </Routes>
             <Footer />
           </Router>
         </div>

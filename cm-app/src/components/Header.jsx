@@ -44,6 +44,9 @@ class Header extends React.Component {
               </NavLink>
             </form> :
             <form className="form-inline my-2 my-lg-0">
+              <NavLink to="/cm">
+                Manage Tokens
+              </NavLink>
               <NavLink to="/logout">
                 <button
                   onClick={() => this.handleLogout()}
