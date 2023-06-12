@@ -28,7 +28,7 @@ dependencies = [
     "six",
     "cryptography",
     "authlib",
-    "fabric_fss_utils==1.5.0.rc1"]
+    "fabric_fss_utils==1.5.0"]
 
 [project.urls]
 Home = "https://fabric-testbed.net/"
