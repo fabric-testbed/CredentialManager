@@ -41,8 +41,8 @@ class Tokens(Base):
     """
     __tablename__ = 'Tokens'
     token_id = Column(Integer, Sequence('token_id', start=1, increment=1), autoincrement=True, primary_key=True)
-    user_id = Column(String, unique=True, nullable=False, index=True)
-    user_email = Column(String, unique=True, nullable=False, index=True)
+    user_id = Column(String, nullable=False, index=True)
+    user_email = Column(String, nullable=False, index=True)
     project_id = Column(String, nullable=False, index=True)
     project_name = Column(String, nullable=False, index=True)
     state = Column(Integer, nullable=False, index=True)
