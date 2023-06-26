@@ -167,9 +167,9 @@ class OAuthCredMgr(AbcCredMgr):
             # Generate SHA256 hash
             token_hash = self.__generate_sha256(token=token)
 
-            state = TokenState.Active.value
+            state = TokenState.Active
             if refresh:
-                state = TokenState.Refreshed.value
+                state = TokenState.Refreshed
 
             created_from = 'a.b.c.d'
 
@@ -177,12 +177,12 @@ class OAuthCredMgr(AbcCredMgr):
             # TODO project name and remote IP
             DB_OBJ.add_token(user_id=token_encoder.claims["uuid"], user_email=token_encoder.claims["email"],
                              project_id=project, token_hash=token_hash, created_at=created_at,
-                             expires_at=expires_at, state=state, project_name=project, created_from=created_from)
+                             expires_at=expires_at, state=state.value, project_name=project, created_from=created_from)
 
             return {self.TOKEN_HASH: token_hash,
                     self.CREATED_AT: created_at,
                     self.EXPIRES_AT: expires_at,
-                    self.STATE: state,
+                    self.STATE: str(state),
                     self.CREATED_FROM: created_from,
                     self.ID_TOKEN: token}
         else:
