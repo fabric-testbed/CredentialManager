@@ -46,7 +46,7 @@ class Tokens(Base):
     project_id = Column(String, nullable=False, index=True)
     project_name = Column(String, nullable=False, index=True)
     state = Column(Integer, nullable=False, index=True)
-    token_has = Column(String, nullable=False, index=True)
+    token_hash = Column(String, nullable=False, index=True)
     created_from = Column(String, nullable=False)
     created_at = Column(TIMESTAMP, nullable=True)
     expires_at = Column(TIMESTAMP, nullable=True)

@@ -171,13 +171,13 @@ class OAuthCredMgr(AbcCredMgr):
             if refresh:
                 state = TokenState.Refreshed.value
 
-            created_from = None
+            created_from = 'a.b.c.d'
 
             # Add token meta info to the database
             # TODO project name and remote IP
             DB_OBJ.add_token(user_id=token_encoder.claims["uuid"], user_email=token_encoder.claims["email"],
                              project_id=project, token_hash=token_hash, created_at=created_at,
-                             expires_at=expires_at, state=state, project_name=None, created_from=created_from)
+                             expires_at=expires_at, state=state, project_name=project, created_from=created_from)
 
             return {self.TOKEN_HASH: token_hash,
                     self.CREATED_AT: created_at,
