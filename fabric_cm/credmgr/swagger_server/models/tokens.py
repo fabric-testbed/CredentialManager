@@ -6,7 +6,7 @@ from datetime import date, datetime  # noqa: F401
 from typing import List, Dict  # noqa: F401
 
 from fabric_cm.credmgr.swagger_server.models.base_model_ import Model
-from fabric_cm.credmgr.swagger_server.models.status200_ok_single import Status200OkSingle  # noqa: F401,E501
+from fabric_cm.credmgr.swagger_server.models.status200_ok_paginated import Status200OkPaginated  # noqa: F401,E501
 from fabric_cm.credmgr.swagger_server.models.token import Token  # noqa: F401,E501
 from fabric_cm.credmgr.swagger_server import util
 
@@ -16,9 +16,13 @@ class Tokens(Model):
 
     Do not edit the class manually.
     """
-    def __init__(self, size: int=1, status: int=200, type: str=None, data: List[Token]=None):  # noqa: E501
+    def __init__(self, limit: int=None, offset: int=None, size: int=None, status: int=200, type: str=None, data: List[Token]=None):  # noqa: E501
         """Tokens - a model defined in Swagger
 
+        :param limit: The limit of this Tokens.  # noqa: E501
+        :type limit: int
+        :param offset: The offset of this Tokens.  # noqa: E501
+        :type offset: int
         :param size: The size of this Tokens.  # noqa: E501
         :type size: int
         :param status: The status of this Tokens.  # noqa: E501
@@ -29,6 +33,8 @@ class Tokens(Model):
         :type data: List[Token]
         """
         self.swagger_types = {
+            'limit': int,
+            'offset': int,
             'size': int,
             'status': int,
             'type': str,
@@ -36,11 +42,15 @@ class Tokens(Model):
         }
 
         self.attribute_map = {
+            'limit': 'limit',
+            'offset': 'offset',
             'size': 'size',
             'status': 'status',
             'type': 'type',
             'data': 'data'
         }
+        self._limit = limit
+        self._offset = offset
         self._size = size
         self._status = status
         self._type = type
@@ -56,6 +66,48 @@ class Tokens(Model):
         :rtype: Tokens
         """
         return util.deserialize_model(dikt, cls)
+
+    @property
+    def limit(self) -> int:
+        """Gets the limit of this Tokens.
+
+
+        :return: The limit of this Tokens.
+        :rtype: int
+        """
+        return self._limit
+
+    @limit.setter
+    def limit(self, limit: int):
+        """Sets the limit of this Tokens.
+
+
+        :param limit: The limit of this Tokens.
+        :type limit: int
+        """
+
+        self._limit = limit
+
+    @property
+    def offset(self) -> int:
+        """Gets the offset of this Tokens.
+
+
+        :return: The offset of this Tokens.
+        :rtype: int
+        """
+        return self._offset
+
+    @offset.setter
+    def offset(self, offset: int):
+        """Sets the offset of this Tokens.
+
+
+        :param offset: The offset of this Tokens.
+        :type offset: int
+        """
+
+        self._offset = offset
 
     @property
     def size(self) -> int:

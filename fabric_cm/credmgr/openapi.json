@@ -550,8 +550,8 @@
         "tags": [
           "tokens"
         ],
-        "summary": "Get token revoke list i.e. list of revoked identity token hashes",
-        "description": "Get token revoke list i.e. list of revoked identity token hashes for a user in a project\n",
+        "summary": "Get tokens",
+        "description": "Get tokens for a user in a project\n",
         "parameters": [
           {
             "name": "token_hash",
