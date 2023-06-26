@@ -314,10 +314,15 @@ class OAuthCredMgr(AbcCredMgr):
 
     def get_tokens(self, *, user_id: str, user_email: str, project_id: str, token_hash: str,
                    expires: datetime, states: List[str], offset: int, limit: int) -> List[Dict[str, Any]]:
-        return DB_OBJ.get_tokens(user_id=user_id, user_email=user_email, project_id=project_id,
-                                 token_hash=token_hash, expires=expires,
-                                 states=TokenState.translate_list(states=states),
-                                 offset=offset, limit=limit)
+        tokens = DB_OBJ.get_tokens(user_id=user_id, user_email=user_email, project_id=project_id,
+                                   token_hash=token_hash, expires=expires,
+                                   states=TokenState.translate_list(states=states),
+                                   offset=offset, limit=limit)
+        # Change the state from integer value to string
+        for t in tokens:
+            t[self.STATE] = str(TokenState(t[self.STATE]))
+
+        return tokens
 
     @staticmethod
     def validate_scope(scope: str):
