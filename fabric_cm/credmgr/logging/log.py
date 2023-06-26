@@ -65,7 +65,9 @@ def get_logger():
     file_handler = RotatingFileHandler(log_path,
                                        backupCount=CONFIG_OBJ.get_logger_retain(),
                                        maxBytes=CONFIG_OBJ.get_logger_size())
+    file_handler.setFormatter(logging.Formatter(log_format))
+    log.addHandler(file_handler)
 
-    logging.basicConfig(handlers=[file_handler], format=log_format)
+    #logging.basicConfig(handlers=[file_handler], format=log_format)
 
     return log, file_handler

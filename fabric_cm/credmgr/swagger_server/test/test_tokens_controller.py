@@ -6,12 +6,14 @@ from flask import json
 from six import BytesIO
 
 from fabric_cm.credmgr.swagger_server.models.request import Request  # noqa: E501
+from fabric_cm.credmgr.swagger_server.models.revoke_list import RevokeList  # noqa: E501
 from fabric_cm.credmgr.swagger_server.models.status200_ok_no_content import Status200OkNoContent  # noqa: E501
 from fabric_cm.credmgr.swagger_server.models.status400_bad_request import Status400BadRequest  # noqa: E501
 from fabric_cm.credmgr.swagger_server.models.status401_unauthorized import Status401Unauthorized  # noqa: E501
 from fabric_cm.credmgr.swagger_server.models.status403_forbidden import Status403Forbidden  # noqa: E501
 from fabric_cm.credmgr.swagger_server.models.status404_not_found import Status404NotFound  # noqa: E501
 from fabric_cm.credmgr.swagger_server.models.status500_internal_server_error import Status500InternalServerError  # noqa: E501
+from fabric_cm.credmgr.swagger_server.models.token_post import TokenPost  # noqa: E501
 from fabric_cm.credmgr.swagger_server.models.tokens import Tokens  # noqa: E501
 from fabric_cm.credmgr.swagger_server.test import BaseTestCase
 
@@ -25,10 +27,31 @@ class TestTokensController(BaseTestCase):
         Generate tokens for an user
         """
         query_string = [('project_id', 'project_id_example'),
-                        ('scope', 'all')]
+                        ('scope', 'all'),
+                        ('lifetime', 1512)]
         response = self.client.open(
-            '//tokens/create',
+            '/credmgr//tokens/create',
             method='POST',
+            query_string=query_string)
+        self.assert200(response,
+                       'Response body is : ' + response.data.decode('utf-8'))
+
+    def test_tokens_get(self):
+        """Test case for tokens_get
+
+        Get token revoke list i.e. list of revoked identity token hashes
+        """
+        query_string = [('token_hash', 'token_hash_example'),
+                        ('project_id', 'project_id_example'),
+                        ('user_id', 'user_id_example'),
+                        ('user_email', 'user_email_example'),
+                        ('expires', 'expires_example'),
+                        ('states', 'states_example'),
+                        ('limit', 200),
+                        ('offset', 1)]
+        response = self.client.open(
+            '/credmgr//tokens',
+            method='GET',
             query_string=query_string)
         self.assert200(response,
                        'Response body is : ' + response.data.decode('utf-8'))
@@ -42,7 +65,7 @@ class TestTokensController(BaseTestCase):
         query_string = [('project_id', 'project_id_example'),
                         ('scope', 'all')]
         response = self.client.open(
-            '//tokens/refresh',
+            '/credmgr//tokens/refresh',
             method='POST',
             data=json.dumps(body),
             content_type='application/json',
@@ -50,14 +73,42 @@ class TestTokensController(BaseTestCase):
         self.assert200(response,
                        'Response body is : ' + response.data.decode('utf-8'))
 
+    def test_tokens_revoke_list_get(self):
+        """Test case for tokens_revoke_list_get
+
+        Get token revoke list i.e. list of revoked identity token hashes
+        """
+        query_string = [('project_id', 'project_id_example'),
+                        ('user_id', 'user_id_example')]
+        response = self.client.open(
+            '/credmgr//tokens/revoke_list',
+            method='GET',
+            query_string=query_string)
+        self.assert200(response,
+                       'Response body is : ' + response.data.decode('utf-8'))
+
     def test_tokens_revoke_post(self):
         """Test case for tokens_revoke_post
 
-        Revoke a refresh token for an user
+        Revoke a token for an user
         """
         body = Request()
         response = self.client.open(
-            '//tokens/revoke',
+            '/credmgr//tokens/revoke',
+            method='POST',
+            data=json.dumps(body),
+            content_type='application/json')
+        self.assert200(response,
+                       'Response body is : ' + response.data.decode('utf-8'))
+
+    def test_tokens_revokes_post(self):
+        """Test case for tokens_revokes_post
+
+        Revoke a token
+        """
+        body = TokenPost()
+        response = self.client.open(
+            '/credmgr//tokens/revokes',
             method='POST',
             data=json.dumps(body),
             content_type='application/json')

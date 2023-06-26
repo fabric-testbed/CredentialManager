@@ -34,7 +34,7 @@ from fabric_cm.credmgr.common.exceptions import TokenError
 from fabric_cm.credmgr.external_apis.core_api import CoreApi
 
 
-class FabricTokenEncoder:
+class TokenEncoder:
     """
     Implements class to transform CILogon ID token to Fabric Id Token
     by adding the project, scope and membership information to the token
@@ -75,6 +75,8 @@ class FabricTokenEncoder:
         """
         if self.encoded:
             return self.token
+
+        self._validate_lifetime(validity=validity_in_seconds)
 
         self._add_fabric_claims()
 
@@ -128,6 +130,21 @@ class FabricTokenEncoder:
             raise cookie_or_exception
 
         return cookie_or_exception
+
+    def _validate_lifetime(self, *, validity: int):
+        """
+        Set the claims for the Token by adding membership, project and scope
+        """
+        if validity == CONFIG_OBJ.get_token_life_time():
+            return True
+
+        url = CONFIG_OBJ.get_core_api_url()
+
+        core_api = CoreApi(api_server=url, cookie=self._get_vouch_cookie(),
+                           cookie_name=CONFIG_OBJ.get_vouch_cookie_name(),
+                           cookie_domain=CONFIG_OBJ.get_vouch_cookie_domain_name())
+        # TODO validate if the user is allowed to request long lived tokens
+        return True
 
     def _add_fabric_claims(self):
         """

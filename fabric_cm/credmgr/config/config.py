@@ -38,6 +38,7 @@ class Config:
     SECTION_JWT = 'jwt'
     SECTION_CORE_API = 'core-api'
     SECTION_VOUCH = 'vouch'
+    SECTION_DATABASE = 'database'
 
     # Runtime parameters
     REST_PORT = 'rest-port'
@@ -77,6 +78,12 @@ class Config:
     JWT_PUBLIC_KEY_KID = 'jwt-public-key-kid'
     JWT_PRIVATE_KEY = 'jwt-private-key'
     JWT_PRIVATE_KEY_PASS_PHRASE = 'jwt-pass-phrase'
+
+    # Database Parameters
+    DB_USER = "db-user"
+    DB_PASSWORD = "db-password"
+    DB_NAME = "db-name"
+    DB_HOST = "db-host"
 
     # Project Registry Parameters
     CORE_API_URL = 'core-api-url'
@@ -238,3 +245,15 @@ class Config:
         providers[provider]['revoke_uri'] = self.get_oauth_revoke_url()
 
         return providers
+
+    def get_database_name(self) -> str:
+        return self._get_config_from_section(section_name=self.SECTION_DATABASE, parameter_name=self.DB_NAME)
+
+    def get_database_user(self) -> str:
+        return self._get_config_from_section(section_name=self.SECTION_DATABASE, parameter_name=self.DB_USER)
+
+    def get_database_password(self) -> str:
+        return self._get_config_from_section(section_name=self.SECTION_DATABASE, parameter_name=self.DB_PASSWORD)
+
+    def get_database_host(self) -> str:
+        return self._get_config_from_section(section_name=self.SECTION_DATABASE, parameter_name=self.DB_HOST)

@@ -95,8 +95,6 @@ class Token(Model):
         :param refresh_token: The refresh_token of this Token.
         :type refresh_token: str
         """
-        if refresh_token is None:
-            raise ValueError("Invalid value for `refresh_token`, must not be `None`")  # noqa: E501
 
         self._refresh_token = refresh_token
 

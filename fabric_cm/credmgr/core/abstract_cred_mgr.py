@@ -25,18 +25,18 @@
 """
 Base class for Credential Manager
 """
-from abc import ABCMeta, abstractmethod
-import six
+from abc import abstractmethod, ABC
+from datetime import datetime
+from typing import List, Dict, Any
 
 
-@six.add_metaclass(ABCMeta)
-class AbstractCredentialManager:
+class AbcCredMgr(ABC):
     """
     Abstract Credential Manager class
     """
     @abstractmethod
     def create_token(self, project: str, scope: str, ci_logon_id_token: str,
-                     refresh_token: str, cookie: str = None) -> dict:
+                     refresh_token: str, cookie: str = None, lifetime: int = 1) -> dict:
         """
         Generates key file and return authorization url for user to authenticate itself and also returns user id
 
@@ -45,6 +45,7 @@ class AbstractCredentialManager:
         @param ci_logon_id_token: CI logon Identity Token
         @param refresh_token: Refresh Token
         @param cookie: Vouch Proxy Cookie
+        @param lifetime: Token lifetime in hours default(1 hour)
 
         @returns dict containing id_token and refresh_token
         @raises Exception in case of error
@@ -71,4 +72,34 @@ class AbstractCredentialManager:
 
         @returns dictionary containing status of the operation
         @raises Exception in case of error
+        """
+
+    @abstractmethod
+    def revoke_identity_token(self, token_hash: str):
+        """
+        Revoke a fabric identity token
+
+        @returns dictionary containing status of the operation
+        @raises Exception in case of error
+        """
+
+    @abstractmethod
+    def get_token_revoke_list(self, project_id: str, user_id: str) -> List[str]:
+        """Get token revoke list i.e. list of revoked identity token hashes
+
+        Get token revoke list i.e. list of revoked identity token hashes for a user in a project  # noqa: E501
+
+        :param project_id: Project identified by universally unique identifier
+        :type project_id: str
+        :param user_id: User identified by universally unique identifier
+        :type user_id: str
+
+        @return list of sting
+        """
+    @abstractmethod
+    def get_tokens(self, *, user_id: str, user_email: str, project_id: str, token_hash: str,
+                   expires: datetime, states: List[int], offset: int, limit: int) -> List[Dict[str, Any]]:
+        """
+        Get Tokens
+        @return list of tokens
         """

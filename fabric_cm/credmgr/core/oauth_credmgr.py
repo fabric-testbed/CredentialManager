@@ -27,20 +27,65 @@ Module responsible for handling Credmgr REST API logic
 """
 
 import base64
-from datetime import datetime
+import enum
+import hashlib
+from datetime import datetime, timezone, timedelta
+from enum import Enum
+from typing import List, Dict, Any, Tuple
 
 import requests
 from requests_oauthlib import OAuth2Session
 
-from .abstract_credential_manager import AbstractCredentialManager
+from . import DB_OBJ
+from .abstract_cred_mgr import AbcCredMgr
 from fabric_cm.credmgr.config import CONFIG_OBJ
 from fabric_cm.credmgr.logging import LOG
-from fabric_cm.credmgr.token.fabric_token_encoder import FabricTokenEncoder
+from fabric_cm.credmgr.token.token_encoder import TokenEncoder
 from fabric_cm.credmgr.swagger_server import jwt_validator
 from fss_utils.jwt_manager import ValidateCode
 
 
-class OAuthCredmgr(AbstractCredentialManager):
+class OAuthCredMgrError(Exception):
+    """
+    CredMgr Exception
+    """
+
+
+class TokenState(Enum):
+    Nascent = enum.auto()
+    Active = enum.auto()
+    Refreshed = enum.auto()
+    Revoked = enum.auto()
+    Expired = enum.auto()
+
+    def __str__(self):
+        return self.name
+
+    @classmethod
+    def list_values(cls) -> List[int]:
+        return list(map(lambda c: c.value, cls))
+
+    @classmethod
+    def list_names(cls) -> List[str]:
+        return list(map(lambda c: c.name, cls))
+
+    @staticmethod
+    def translate_list(states: List[str]) -> List[int] or None:
+        if states is None or len(states) == 0:
+            return states
+
+        incoming_states = list(map(lambda x: x.lower(), states))
+
+        result = TokenState.list_values()
+
+        for s in TokenState:
+            if s.name.lower() not in incoming_states:
+                result.remove(s.value)
+
+        return result
+
+
+class OAuthCredMgr(AbcCredMgr):
     """
     Credential Manager class responsible for handling various operations supported by REST APIs
     It also provides support for scanning and cleaning up of expired tokens and key files.
@@ -48,20 +93,51 @@ class OAuthCredmgr(AbstractCredentialManager):
     ID_TOKEN = "id_token"
     REFRESH_TOKEN = "refresh_token"
     CREATED_AT = "created_at"
-    TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+    EXPIRES_AT = "expires_at"
+    TOKEN_HASH = "token_hash"
+    STATE = "state"
+    CREATED_FROM = "created_from"
     ERROR = "error"
     CLIENT_ID = "client_id"
     CLIENT_SECRET = "client_secret"
     REVOKE_URI = "revoke_uri"
     TOKEN_URI = "token_uri"
     UTF_8 = "utf-8"
+    TIME_FORMAT = "%Y-%m-%d %H:%M:%S %z"
 
     def __init__(self):
         self.log = LOG
 
-    def _generate_fabric_token(self, ci_logon_id_token: str, project: str,
-                               scope: str, cookie: str = None):
+    @staticmethod
+    def __generate_sha256(*, token: str):
+        """
+        Generate SHA 256 for a token
+        @param token token string
+        """
+        # Create a new SHA256 hash object
+        sha256_hash = hashlib.sha256()
+
+        # Convert the string to bytes and update the hash object
+        sha256_hash.update(token.encode('utf-8'))
+
+        # Get the hexadecimal representation of the hash
+        sha256_hex = sha256_hash.hexdigest()
+
+        return sha256_hex
+
+    def __generate_token_and_save_info(self, ci_logon_id_token: str, project: str, scope: str, cookie: str = None,
+                                       lifetime: int = 1, refresh: bool = False) -> Dict[str, str]:
+        """
+        Generate Fabric Token and save the corresponding meta information in the database
+        @param ci_logon_id_token    CI logon Identity Token
+        @param project              Project Id
+        @param scope                Token scope; allowed values (cf, mf, all)
+        @param cookie               Vouch Cookie
+        @param lifetime             Token lifetime in hours; default 1 hour; max is 9 weeks i.e. 1512 hours
+        @param refresh              Flag indicating if token was refreshed (True) or created new (False)
+        """
         self.log.debug("CILogon Token: %s", ci_logon_id_token)
+
         # validate the token
         if jwt_validator is not None:
             LOG.info("Validating CI Logon token")
@@ -70,23 +146,50 @@ class OAuthCredmgr(AbstractCredentialManager):
                 LOG.error(f"Unable to validate provided token: {code}/{claims_or_exception}")
                 raise claims_or_exception
 
-            fabric_token_encoder = FabricTokenEncoder(id_token=ci_logon_id_token, idp_claims=claims_or_exception,
-                                                      project=project, scope=scope, cookie=cookie)
+            # Create an encoder
+            token_encoder = TokenEncoder(id_token=ci_logon_id_token, idp_claims=claims_or_exception, project=project,
+                                         scope=scope, cookie=cookie)
 
-            validity = CONFIG_OBJ.get_token_life_time()
+            # convert lifetime to seconds
+            validity = lifetime * 3600
             private_key = CONFIG_OBJ.get_jwt_private_key()
             pass_phrase = CONFIG_OBJ.get_jwt_private_key_pass_phrase()
             kid = CONFIG_OBJ.get_jwt_public_key_kid()
 
-            return fabric_token_encoder.encode(private_key=private_key, validity_in_seconds=validity, kid=kid,
-                                               pass_phrase=pass_phrase)
+            # token timestamps
+            created_at = datetime.now(timezone.utc)
+            expires_at = created_at + timedelta(hours=lifetime)
+
+            # create/encode the token
+            token = token_encoder.encode(private_key=private_key, validity_in_seconds=validity, kid=kid,
+                                         pass_phrase=pass_phrase)
+
+            # Generate SHA256 hash
+            token_hash = self.__generate_sha256(token=token)
+
+            state = TokenState.Active.value
+            if refresh:
+                state = TokenState.Refreshed.value
+
+            created_from = None
+
+            # Add token meta info to the database
+            # TODO project name and remote IP
+            DB_OBJ.add_token(user_id=token_encoder.claims["uuid"], user_email=token_encoder.claims["email"],
+                             project_id=project, token_hash=token_hash, created_at=created_at,
+                             expires_at=expires_at, state=state, project_name=None, created_from=created_from)
+
+            return {self.TOKEN_HASH: token_hash,
+                    self.CREATED_AT: created_at,
+                    self.EXPIRES_AT: expires_at,
+                    self.STATE: state,
+                    self.CREATED_FROM: created_from,
+                    self.ID_TOKEN: token}
         else:
             LOG.warning("JWT Token validator not initialized, skipping validation")
 
-        return None
-
-    def create_token(self, project: str, scope: str, ci_logon_id_token: str,
-                     refresh_token: str, cookie: str = None) -> dict:
+    def create_token(self, project: str, scope: str, ci_logon_id_token: str, refresh_token: str,
+                     cookie: str = None, lifetime: int = 1) -> dict:
         """
         Generates key file and return authorization url for user to
         authenticate itself and also returns user id
@@ -96,6 +199,7 @@ class OAuthCredmgr(AbstractCredentialManager):
         @param ci_logon_id_token: CI logon Identity Token
         @param refresh_token: Refresh Token
         @param cookie: Vouch Proxy Cookie
+        @param lifetime: Token lifetime in hours default(1 hour)
 
         @returns dict containing id_token and refresh_token
         @raises Exception in case of error
@@ -107,12 +211,13 @@ class OAuthCredmgr(AbstractCredentialManager):
             raise OAuthCredMgrError("CredMgr: Cannot request to create a token, "
                                     "Missing required parameter 'project' or 'scope'!")
 
-        id_token = self._generate_fabric_token(ci_logon_id_token=ci_logon_id_token,
-                                               project=project, scope=scope,
-                                               cookie=cookie)
+        # Generate the Token
+        result = self.__generate_token_and_save_info(ci_logon_id_token=ci_logon_id_token, project=project, scope=scope,
+                                                     cookie=cookie, lifetime=lifetime)
 
-        result = {self.ID_TOKEN: id_token, self.REFRESH_TOKEN: refresh_token,
-                  self.CREATED_AT: datetime.strftime(datetime.utcnow(), self.TIME_FORMAT)}
+        # Only include refresh token for short lived tokens
+        if lifetime * 3600 == CONFIG_OBJ.get_token_life_time():
+            result[self.REFRESH_TOKEN] = refresh_token
         return result
 
     def refresh_token(self, refresh_token: str, project: str, scope: str, cookie: str = None) -> dict:
@@ -145,7 +250,6 @@ class OAuthCredmgr(AbstractCredentialManager):
                                                client_id=providers[provider][self.CLIENT_ID],
                                                client_secret=providers[provider][self.CLIENT_SECRET])
 
-        new_refresh_token = None
         try:
             new_refresh_token = new_token.pop(self.REFRESH_TOKEN)
             id_token = new_token.pop(self.ID_TOKEN)
@@ -155,11 +259,9 @@ class OAuthCredmgr(AbstractCredentialManager):
         self.log.debug(f"new_refresh_token: {new_refresh_token}")
 
         try:
-            id_token = self._generate_fabric_token(ci_logon_id_token=id_token,
-                                                   project=project, scope=scope, cookie=cookie)
-            result = {self.ID_TOKEN: id_token, self.REFRESH_TOKEN: new_refresh_token,
-                      self.CREATED_AT: datetime.strftime(datetime.utcnow(), self.TIME_FORMAT)}
-
+            result = self.__generate_token_and_save_info(ci_logon_id_token=id_token, project=project, scope=scope,
+                                                         cookie=cookie, refresh=True)
+            result[self.REFRESH_TOKEN] = new_refresh_token
             return result
         except Exception as e:
             self.log.error(f"Exception error while generating Fabric Token: {e}")
@@ -202,14 +304,23 @@ class OAuthCredmgr(AbstractCredentialManager):
         if response.status_code != 200:
             raise OAuthCredMgrError("Refresh token could not be revoked!")
 
+    def revoke_identity_token(self, token_hash: str):
+        # TODO
+        pass
+
+    def get_token_revoke_list(self, project_id: str, user_id: str) -> List[str]:
+        # TODO
+        pass
+
+    def get_tokens(self, *, user_id: str, user_email: str, project_id: str, token_hash: str,
+                   expires: datetime, states: List[str], offset: int, limit: int) -> List[Dict[str, Any]]:
+        return DB_OBJ.get_tokens(user_id=user_id, user_email=user_email, project_id=project_id,
+                                 token_hash=token_hash, expires=expires,
+                                 states=TokenState.translate_list(states=states),
+                                 offset=offset, limit=limit)
+
     @staticmethod
     def validate_scope(scope: str):
         allowed_scopes = CONFIG_OBJ.get_allowed_scopes()
         if scope not in allowed_scopes:
             raise OAuthCredMgrError(f"Scope {scope} is not allowed! Allowed scope values: {allowed_scopes}")
-
-
-class OAuthCredMgrError(Exception):
-    """
-    Credmgr Exception
-    """

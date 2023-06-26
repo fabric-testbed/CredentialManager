@@ -87,6 +87,16 @@ paths:
         schema:
           type: string
           default: all
+      - name: lifetime
+        in: query
+        description: Lifetime of the token requested in hours
+        required: false
+        style: form
+        explode: true
+        schema:
+          maximum: 1512
+          type: integer
+          default: 1
       responses:
         "200":
           description: OK
@@ -191,13 +201,61 @@ paths:
               schema:
                 $ref: '#/components/schemas/status_500_internal_server_error'
       x-openapi-router-controller: fabric_cm.credmgr.swagger_server.controllers.tokens_controller
+  /tokens/revokes:
+    post:
+      tags:
+      - tokens
+      summary: Revoke a token
+      description: |
+        Request to revoke a token
+      operationId: tokens_revokes_post
+      requestBody:
+        $ref: '#/components/requestBodies/payload_token'
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_200_ok_no_content'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_400_bad_request'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_401_unauthorized'
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_403_forbidden'
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_404_not_found'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_500_internal_server_error'
+      x-openapi-router-controller: fabric_cm.credmgr.swagger_server.controllers.tokens_controller
   /tokens/revoke:
     post:
       tags:
       - tokens
-      summary: Revoke a refresh token for an user
+      summary: Revoke a token for an user
       description: |
-        Request to revoke a refresh token for an user
+        Request to revoke a token for an user
       operationId: tokens_revoke_post
       requestBody:
         $ref: '#/components/requestBodies/payload_token_post'
@@ -239,8 +297,213 @@ paths:
               schema:
                 $ref: '#/components/schemas/status_500_internal_server_error'
       x-openapi-router-controller: fabric_cm.credmgr.swagger_server.controllers.tokens_controller
+  /tokens/revoke_list:
+    get:
+      tags:
+      - tokens
+      summary: Get token revoke list i.e. list of revoked identity token hashes
+      description: |
+        Get token revoke list i.e. list of revoked identity token hashes for a user in a project
+      operationId: tokens_revoke_list_get
+      parameters:
+      - name: project_id
+        in: query
+        description: Project identified by universally unique identifier
+        required: true
+        style: form
+        explode: true
+        schema:
+          type: string
+      - name: user_id
+        in: query
+        description: User identified by universally unique identifier
+        required: true
+        style: form
+        explode: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/revoke_list'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_400_bad_request'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_401_unauthorized'
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_403_forbidden'
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_404_not_found'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_500_internal_server_error'
+      x-openapi-router-controller: fabric_cm.credmgr.swagger_server.controllers.tokens_controller
+  /tokens:
+    get:
+      tags:
+      - tokens
+      summary: Get token revoke list i.e. list of revoked identity token hashes
+      description: |
+        Get token revoke list i.e. list of revoked identity token hashes for a user in a project
+      operationId: tokens_get
+      parameters:
+      - name: token_hash
+        in: query
+        description: Token identified by SHA256 hash
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+      - name: project_id
+        in: query
+        description: Project identified by universally unique identifier
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+      - name: user_id
+        in: query
+        description: User identified by universally unique identifier
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+      - name: user_email
+        in: query
+        description: User identified by email
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+      - name: expires
+        in: query
+        description: Search for tokens with expiry time lesser than the specified
+          expiration time
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+      - name: states
+        in: query
+        description: Search for Tokens in the specified states
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - Nascent
+            - Active
+            - Refreshed
+            - Revoked
+            - Expired
+      - name: limit
+        in: query
+        description: maximum number of results to return per page (1 or more)
+        required: false
+        style: form
+        explode: true
+        schema:
+          maximum: 200
+          minimum: 1
+          type: integer
+          format: int32
+          default: 5
+      - name: offset
+        in: query
+        description: number of items to skip before starting to collect the result
+          set
+        required: false
+        style: form
+        explode: true
+        schema:
+          minimum: 0
+          type: integer
+          format: int32
+          default: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/tokens'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_400_bad_request'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_401_unauthorized'
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_403_forbidden'
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_404_not_found'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_500_internal_server_error'
+      x-openapi-router-controller: fabric_cm.credmgr.swagger_server.controllers.tokens_controller
 components:
   schemas:
+    status_200_ok_paginated:
+      type: object
+      properties:
+        limit:
+          type: integer
+        offset:
+          type: integer
+        size:
+          type: integer
+        status:
+          type: integer
+          default: 200
+        type:
+          type: string
     status_200_ok_single:
       type: object
       properties:
@@ -408,10 +671,20 @@ components:
           default: Internal Server Error
         details:
           type: string
-    tokens:
+    revoke_list:
       type: object
       allOf:
       - $ref: '#/components/schemas/status_200_ok_single'
+      - type: object
+        properties:
+          data:
+            type: array
+            items:
+              type: string
+    tokens:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/status_200_ok_paginated'
       - type: object
         properties:
           data:
@@ -421,18 +694,39 @@ components:
     token:
       required:
       - created_at
-      - id_token
-      - refresh_token
+      - created_from
+      - expires_at
+      - state
+      - token_hash
       type: object
       properties:
+        token_hash:
+          type: string
+          description: Identity Token SHA256 Hash
+        created_at:
+          type: string
+          description: Token creation time
+        expires_at:
+          type: string
+          description: Token expiry time
+        state:
+          type: string
+          description: Token state
+          enum:
+          - Nascent
+          - Active
+          - Refreshed
+          - Revoked
+          - Expired
+        created_from:
+          type: string
+          description: Remote IP from where the token create request was received
         id_token:
           type: string
           description: Identity Token
         refresh_token:
           type: string
           description: Refresh Token
-        created_at:
-          type: string
     request:
       required:
       - refresh_token
@@ -441,6 +735,21 @@ components:
         refresh_token:
           type: string
           description: Refresh Token
+    token_post:
+      required:
+      - token
+      - type
+      type: object
+      properties:
+        type:
+          type: string
+          description: Token Type
+          enum:
+          - identity
+          - refresh
+        token:
+          type: string
+          description: Refresh Token or Token Hash
     version:
       type: object
       allOf:
@@ -476,13 +785,13 @@ components:
           use: use
           kid: kid
           alg: alg
-          "n": "n"
+          n: "n"
         - kty: kty
           e: e
           use: use
           kid: kid
           alg: alg
-          "n": "n"
+          n: "n"
     jwks_keys:
       type: object
       properties:
@@ -492,7 +801,7 @@ components:
         e:
           type: string
           description: Exponent Parameter
-        "n":
+        n:
           type: string
           description: Modulus Parameter
         use:
@@ -510,12 +819,18 @@ components:
         use: use
         kid: kid
         alg: alg
-        "n": "n"
+        n: "n"
   requestBodies:
     payload_token_post:
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/request'
+      required: true
+    payload_token:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/token_post'
       required: true
 

@@ -20,6 +20,8 @@ from fabric_cm.credmgr.swagger_server.models.status404_not_found_errors import S
 from fabric_cm.credmgr.swagger_server.models.status500_internal_server_error import Status500InternalServerError
 from fabric_cm.credmgr.swagger_server.models.status500_internal_server_error_errors import Status500InternalServerErrorErrors
 from fabric_cm.credmgr.swagger_server.models.token import Token
+from fabric_cm.credmgr.swagger_server.models.token_post import TokenPost
 from fabric_cm.credmgr.swagger_server.models.tokens import Tokens
+from fabric_cm.credmgr.swagger_server.models.revoke_list import RevokeList
 from fabric_cm.credmgr.swagger_server.models.version import Version
 from fabric_cm.credmgr.swagger_server.models.version_data import VersionData

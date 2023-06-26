@@ -19,7 +19,7 @@ class TestDefaultController(BaseTestCase):
         Return Public Keys to verify signature of the tokens
         """
         response = self.client.open(
-            '//certs',
+            '/credmgr//certs',
             method='GET')
         self.assert200(response,
                        'Response body is : ' + response.data.decode('utf-8'))
