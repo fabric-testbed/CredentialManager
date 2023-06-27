@@ -1,6 +1,6 @@
 import os
 from functools import wraps
-from typing import Union
+from typing import Union, Tuple
 
 from fabric_cm.credmgr.core.oauth_credmgr import OAuthCredMgr
 from fabric_cm.credmgr.swagger_server import jwt_validator
@@ -60,7 +60,7 @@ def login_or_token_required(f):
     return decorated_function
 
 
-def vouch_authorize() -> dict:
+def vouch_authorize() -> Union[dict, None]:
     """
     Decode vouch cookie and extract identity and refresh tokens
     @return tuple containing ci logon identity token, refresh token and cookie
@@ -78,15 +78,18 @@ def vouch_authorize() -> dict:
         if status == ValidateCode.VALID:
             ci_logon_id_token = decoded_cookie.get('PIdToken')
             refresh_token = decoded_cookie.get('PRefreshToken')
-            claims = decoded_cookie.get('CustomClaims')
 
     if ci_logon_id_token is not None and refresh_token is not None and cookie is not None:
+        code, claims_or_exception = jwt_validator.validate_jwt(token=ci_logon_id_token, verify_exp=True)
+        if code is not ValidateCode.VALID:
+            LOG.error(f"Unable to validate provided token: {code}/{claims_or_exception}")
+            return None
+
         result = {OAuthCredMgr.REFRESH_TOKEN: refresh_token,
                   OAuthCredMgr.ID_TOKEN: ci_logon_id_token,
                   OAuthCredMgr.COOKIE: cookie}
-        if claims is not None:
-            for key, value in claims.items():
-                result[key] = value
+        for key, value in claims_or_exception.items():
+            result[key] = value
         return result
 
 
@@ -98,7 +101,7 @@ def validate_authorization_token(token: str) -> Union[dict, None]:
     if token is not None:
         token = token.replace('Bearer ', '')
         LOG.info("Validating Fabric token")
-        code, claims_or_exception = jwt_validator.validate_jwt(token=token)
+        code, claims_or_exception = jwt_validator.validate_jwt(token=token, verify_exp=True)
         if code is not ValidateCode.VALID:
             LOG.error(f"Unable to validate provided token: {code}/{claims_or_exception}")
             return None
