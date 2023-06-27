@@ -1,6 +1,6 @@
 import os
 from functools import wraps
-from typing import Tuple, Union
+from typing import Union
 
 from fabric_cm.credmgr.core.oauth_credmgr import OAuthCredMgr
 from fabric_cm.credmgr.swagger_server import jwt_validator
@@ -45,7 +45,7 @@ def login_or_token_required(f):
                 details = 'Login or Token required'
                 LOG.info(f"login_or_token_required(): {details}")
                 return cors_401(details=details)
-        if os.getenv('VOUCH_COOKIE_NAME') not in request.cookies:
+        if CONFIG_OBJ.get_vouch_cookie_name() not in request.cookies:
             details = 'Login or Token required'
             LOG.info(f"login_or_token_required(): {details}")
             return cors_401(details=details)
