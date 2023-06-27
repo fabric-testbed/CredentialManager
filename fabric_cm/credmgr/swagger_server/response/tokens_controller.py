@@ -42,6 +42,7 @@ from fabric_cm.credmgr.swagger_server.response.constants import HTTP_METHOD_POST
 from fabric_cm.credmgr.config import CONFIG_OBJ
 from fabric_cm.credmgr.logging import LOG
 from fabric_cm.credmgr.swagger_server.response.cors_response import cors_401, cors_200, cors_500, cors_400
+from fabric_cm.credmgr.swagger_server.response.decorators import login_required, login_or_token_required
 
 
 def authorize(request):
@@ -61,7 +62,8 @@ def authorize(request):
     return ci_logon_id_token, refresh_token, cookie
 
 
-def tokens_create_post(project_id: str, scope: str = None, lifetime: int = 1):  # noqa: E501
+@login_required
+def tokens_create_post(project_id: str, scope: str = None, lifetime: int = 1, claims: dict = None):  # noqa: E501
     """Generate Fabric OAuth tokens for an user
 
     Request to generate Fabric OAuth tokens for an user  # noqa: E501
@@ -72,18 +74,17 @@ def tokens_create_post(project_id: str, scope: str = None, lifetime: int = 1):  
     :type scope: str
     :param lifetime: Lifetime of the token requested in hours
     :type lifetime: int
+    :param claims: claims
 
     :rtype: Success
     """
     received_counter.labels(HTTP_METHOD_POST, TOKENS_CREATE_URL).inc()
     try:
-        ci_logon_id_token, refresh_token, cookie = authorize(connexion.request)
-        if ci_logon_id_token is None:
-            return cors_401(details="No CI Logon Id Token in the request")
-
         credmgr = OAuthCredMgr()
-        token_dict = credmgr.create_token(ci_logon_id_token=ci_logon_id_token, refresh_token=refresh_token,
-                                          project=project_id, scope=scope, cookie=cookie, lifetime=lifetime)
+        token_dict = credmgr.create_token(ci_logon_id_token=claims.get(OAuthCredMgr.ID_TOKEN),
+                                          refresh_token=claims.get(OAuthCredMgr.REFRESH_TOKEN),
+                                          cookie=claims.get(OAuthCredMgr.COOKIE),
+                                          project=project_id, scope=scope, lifetime=lifetime)
         response = Tokens()
         token = Token().from_dict(token_dict)
         response.data = [token]
@@ -132,13 +133,16 @@ def tokens_refresh_post(body: Request, project_id=None, scope=None):  # noqa: E5
         return cors_500(details=str(ex))
 
 
-def tokens_revoke_post(body: Request):  # noqa: E501
+@login_required
+def tokens_revoke_post(body: Request, claims: dict = None):  # noqa: E501
     """Revoke a refresh token for an user
 
     Request to revoke a refresh token for an user  # noqa: E501
 
     :param body:
     :type body: dict | bytes
+    :param claims
+    :type claims: dict
 
     :rtype: Success
     """
@@ -149,7 +153,6 @@ def tokens_revoke_post(body: Request):  # noqa: E501
         credmgr = OAuthCredMgr()
         credmgr.revoke_token(refresh_token=body.refresh_token)
         success_counter.labels(HTTP_METHOD_POST, TOKENS_REVOKE_URL).inc()
-        response = Status200OkNoContent()
         response_data = Status200OkNoContentData()
         response_data.details = f"Token '{body.refresh_token}' has been successfully revoked"
         response = Status200OkNoContent()
@@ -164,13 +167,16 @@ def tokens_revoke_post(body: Request):  # noqa: E501
         return cors_500(details=str(ex))
 
 
-def tokens_revokes_post(body: TokenPost):  # noqa: E501
+@login_required
+def tokens_revokes_post(body: TokenPost, claims: dict = None):  # noqa: E501
     """Revoke a refresh token for an user
 
     Request to revoke a refresh token for an user  # noqa: E501
 
     :param body:
     :type body: dict | bytes
+    :param claims
+    :type claims: dict
 
     :rtype: Success
     """
@@ -199,8 +205,9 @@ def tokens_revokes_post(body: TokenPost):  # noqa: E501
         return cors_500(details=str(ex))
 
 
+@login_or_token_required
 def tokens_get(token_hash=None, project_id=None, user_id=None, user_email=None, expires=None, states=None,
-               limit=None, offset=None):  # noqa: E501
+               limit=None, offset=None, claims: dict = None):  # noqa: E501
     """Get tokens
 
     :param token_hash: Token identified by SHA256 hash
@@ -219,6 +226,8 @@ def tokens_get(token_hash=None, project_id=None, user_id=None, user_email=None, 
     :type limit: int
     :param offset: number of items to skip before starting to collect the result set
     :type offset: int
+    :param claims
+    :type claims: dict
 
     :rtype: Tokens
     """
@@ -234,6 +243,8 @@ def tokens_get(token_hash=None, project_id=None, user_id=None, user_email=None, 
         ci_logon_id_token, refresh_token, cookie = authorize(connexion.request)
         if ci_logon_id_token is None:
             return cors_401(details="No CI Logon Id Token in the request")
+
+        LOG.debug(f"KOMAL --- {claims}")
 
         credmgr = OAuthCredMgr()
         token_list = credmgr.get_tokens(token_hash=token_hash, project_id=project_id, user_id=user_id,
@@ -255,7 +266,8 @@ def tokens_get(token_hash=None, project_id=None, user_id=None, user_email=None, 
         return cors_500(details=str(ex))
 
 
-def tokens_revoke_list_get(project_id, user_id):  # noqa: E501
+@login_or_token_required
+def tokens_revoke_list_get(project_id, user_id, claims: dict = None):  # noqa: E501
     """Get token revoke list i.e. list of revoked identity token hashes
 
     Get token revoke list i.e. list of revoked identity token hashes for a user in a project  # noqa: E501
@@ -264,8 +276,10 @@ def tokens_revoke_list_get(project_id, user_id):  # noqa: E501
     :type project_id: str
     :param user_id: User identified by universally unique identifier
     :type user_id: str
+    :param claims
+    :type claims: dict
 
-    :rtype: Trl
+    :rtype: RevokeList
     """
     received_counter.labels(HTTP_METHOD_GET, TOKENS_REVOKE_LIST_URL).inc()
     try:

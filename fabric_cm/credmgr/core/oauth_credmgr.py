@@ -104,6 +104,7 @@ class OAuthCredMgr(AbcCredMgr):
     TOKEN_URI = "token_uri"
     UTF_8 = "utf-8"
     TIME_FORMAT = "%Y-%m-%d %H:%M:%S %z"
+    COOKIE = "cookie"
 
     def __init__(self):
         self.log = LOG
