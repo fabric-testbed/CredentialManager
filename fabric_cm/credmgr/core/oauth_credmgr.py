@@ -378,9 +378,13 @@ class OAuthCredMgr(AbcCredMgr):
                                    token_hash=token_hash, expires=expires,
                                    states=TokenState.translate_list(states=states),
                                    offset=offset, limit=limit)
+        now = datetime.now(timezone.utc)
         # Change the state from integer value to string
         for t in tokens:
-            t[self.STATE] = str(TokenState(t[self.STATE]))
+            state = TokenState(t[self.STATE])
+            if t.get(self.EXPIRES_AT) < now:
+                state = TokenState.Expired
+            t[self.STATE] = str(state)
 
         return tokens
 
