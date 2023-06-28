@@ -24,7 +24,7 @@
 #
 # Author: Komal Thareja (kthare10@renci.org)
 
-from sqlalchemy import DATETIME
+from sqlalchemy import TIMESTAMP
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, String, Integer, Sequence
 
@@ -44,5 +44,5 @@ class Tokens(Base):
     state = Column(Integer, nullable=False, index=True)
     token_hash = Column(String, nullable=False, index=True)
     created_from = Column(String, nullable=False)
-    created_at = Column(DATETIME, nullable=True)
-    expires_at = Column(DATETIME, nullable=True)
+    created_at = Column(TIMESTAMP(timezone=True), nullable=True)
+    expires_at = Column(TIMESTAMP(timezone=True), nullable=True)
