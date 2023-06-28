@@ -327,7 +327,10 @@ class OAuthCredMgr(AbcCredMgr):
          @returns dictionary containing status of the operation
          @raises Exception in case of error
          """
-        tokens = DB_OBJ.get_tokens(token_hash=token_hash, user_email=user_email, user_id=user_id)
+        if user_id is None and user_email is None:
+            raise OAuthCredMgrError(f"User Id or Email required")
+
+        tokens = self.get_tokens(token_hash=token_hash, user_email=user_email, user_id=user_id)
         if tokens is None or len(tokens) == 0:
             raise OAuthCredMgrError(http_error_code=NOT_FOUND,
                                     message=f"Token# {token_hash} not found for user: {user_email}/{user_id}!")
@@ -347,10 +350,13 @@ class OAuthCredMgr(AbcCredMgr):
 
         @return list of sting
         """
+        if user_id is None and user_email is None:
+            raise OAuthCredMgrError(f"User Id or Email required")
+
         result = []
 
-        tokens = DB_OBJ.get_tokens(project_id=project_id, user_email=user_email, user_id=user_id,
-                                   states=[TokenState.Revoked.value])
+        tokens = self.get_tokens(project_id=project_id, user_email=user_email, user_id=user_id,
+                                 states=[str(TokenState.Revoked)])
         if tokens is None:
             return result
         for t in tokens:
@@ -364,6 +370,10 @@ class OAuthCredMgr(AbcCredMgr):
         Get Tokens
         @return list of tokens
         """
+        if user_id is None and user_email is None and token_hash is None:
+            raise OAuthCredMgrError(f"User Id/Email or Token Hash required")
+
+        self.delete_expired_tokens(user_email=user_email, user_id=user_id)
         tokens = DB_OBJ.get_tokens(user_id=user_id, user_email=user_email, project_id=project_id,
                                    token_hash=token_hash, expires=expires,
                                    states=TokenState.translate_list(states=states),
@@ -381,6 +391,8 @@ class OAuthCredMgr(AbcCredMgr):
             raise OAuthCredMgrError(f"Scope {scope} is not allowed! Allowed scope values: {allowed_scopes}")
 
     def delete_expired_tokens(self, user_email: str = None, user_id: str = None):
+        if user_id is None and user_email is None:
+            raise OAuthCredMgrError(f"User Id or Email required")
         tokens = DB_OBJ.get_tokens(user_email=user_email, user_id=user_id, expires=datetime.now(timezone.utc))
         if tokens is None:
             return
