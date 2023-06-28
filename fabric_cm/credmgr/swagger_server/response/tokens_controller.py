@@ -147,8 +147,6 @@ def tokens_revoke_post(body: Request, claims: dict = None):  # noqa: E501
     :rtype: Success
     """
     received_counter.labels(HTTP_METHOD_POST, TOKENS_REVOKE_URL).inc()
-    if connexion.request.is_json:
-        body = Request.from_dict(connexion.request.get_json())  # noqa: E501
     try:
         credmgr = OAuthCredMgr()
         credmgr.revoke_token(refresh_token=body.refresh_token)
@@ -181,8 +179,6 @@ def tokens_revokes_post(body: TokenPost, claims: dict = None):  # noqa: E501
     :rtype: Success
     """
     received_counter.labels(HTTP_METHOD_POST, TOKENS_REVOKES_URL).inc()
-    if connexion.request.is_json:
-        body = Request.from_dict(connexion.request.get_json())  # noqa: E501
     try:
         credmgr = OAuthCredMgr()
         if body.type == "identity":
