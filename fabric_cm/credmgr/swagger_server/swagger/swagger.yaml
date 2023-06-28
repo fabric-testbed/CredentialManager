@@ -708,6 +708,9 @@ components:
         created_from:
           type: string
           description: Remote IP from where the token create request was received
+        comment:
+          type: string
+          description: Token expiry time
         id_token:
           type: string
           description: Identity Token

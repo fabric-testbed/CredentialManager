@@ -14,7 +14,7 @@ class Token(Model):
 
     Do not edit the class manually.
     """
-    def __init__(self, token_hash: str=None, created_at: str=None, expires_at: str=None, state: str=None, created_from: str=None, id_token: str=None, refresh_token: str=None):  # noqa: E501
+    def __init__(self, token_hash: str=None, created_at: str=None, expires_at: str=None, state: str=None, created_from: str=None, comment: str=None, id_token: str=None, refresh_token: str=None):  # noqa: E501
         """Token - a model defined in Swagger
 
         :param token_hash: The token_hash of this Token.  # noqa: E501
@@ -27,6 +27,8 @@ class Token(Model):
         :type state: str
         :param created_from: The created_from of this Token.  # noqa: E501
         :type created_from: str
+        :param comment: The comment of this Token.  # noqa: E501
+        :type comment: str
         :param id_token: The id_token of this Token.  # noqa: E501
         :type id_token: str
         :param refresh_token: The refresh_token of this Token.  # noqa: E501
@@ -38,6 +40,7 @@ class Token(Model):
             'expires_at': str,
             'state': str,
             'created_from': str,
+            'comment': str,
             'id_token': str,
             'refresh_token': str
         }
@@ -48,6 +51,7 @@ class Token(Model):
             'expires_at': 'expires_at',
             'state': 'state',
             'created_from': 'created_from',
+            'comment': 'comment',
             'id_token': 'id_token',
             'refresh_token': 'refresh_token'
         }
@@ -56,6 +60,7 @@ class Token(Model):
         self._expires_at = expires_at
         self._state = state
         self._created_from = created_from
+        self._comment = comment
         self._id_token = id_token
         self._refresh_token = refresh_token
 
@@ -198,6 +203,29 @@ class Token(Model):
             raise ValueError("Invalid value for `created_from`, must not be `None`")  # noqa: E501
 
         self._created_from = created_from
+
+    @property
+    def comment(self) -> str:
+        """Gets the comment of this Token.
+
+        Token expiry time  # noqa: E501
+
+        :return: The comment of this Token.
+        :rtype: str
+        """
+        return self._comment
+
+    @comment.setter
+    def comment(self, comment: str):
+        """Sets the comment of this Token.
+
+        Token expiry time  # noqa: E501
+
+        :param comment: The comment of this Token.
+        :type comment: str
+        """
+
+        self._comment = comment
 
     @property
     def id_token(self) -> str:
