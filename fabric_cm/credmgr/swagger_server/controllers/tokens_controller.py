@@ -25,18 +25,13 @@ def tokens_create_post(project_id=None, scope=None, lifetime=None):  # noqa: E50
     return rc.tokens_create_post(project_id, scope, lifetime)
 
 
-def tokens_get(token_hash=None, project_id=None, user_id=None, user_email=None, expires=None, states=None,
-               limit=None, offset=None):  # noqa: E501
+def tokens_get(token_hash=None, project_id=None, expires=None, states=None, limit=None, offset=None):  # noqa: E501
     """Get tokens
 
     :param token_hash: Token identified by SHA256 hash
     :type token_hash: str
     :param project_id: Project identified by universally unique identifier
     :type project_id: str
-    :param user_id: User identified by universally unique identifier
-    :type user_id: str
-    :param user_email: User identified by email
-    :type user_email: str
     :param expires: Search for tokens with expiry time lesser than the specified expiration time
     :type expires: str
     :param states: Search for Tokens in the specified states
@@ -48,8 +43,8 @@ def tokens_get(token_hash=None, project_id=None, user_id=None, user_email=None, 
 
     :rtype: Tokens
     """
-    return rc.tokens_get(token_hash=token_hash, project_id=project_id, user_id=user_id, user_email=user_email,
-                         expires=expires, states=states, limit=limit, offset=offset)
+    return rc.tokens_get(token_hash=token_hash, project_id=project_id, expires=expires, states=states,
+                         limit=limit, offset=offset)
 
 
 def tokens_refresh_post(body, project_id=None, scope=None):  # noqa: E501

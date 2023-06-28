@@ -106,6 +106,25 @@ class DbApi:
             self.logger.error(f"Exception occurred: {e}", stack_info=True)
             raise e
 
+    def update_token(self, *, token_hash: str, state: int):
+        """
+        Update token
+        @param token_hash token_hash
+        @param state Token State
+        """
+        session = self.get_session()
+        try:
+            token = session.query(Tokens).filter_by(token_hash=token_hash).one_or_none()
+            if token is not None:
+                token.state = state
+            else:
+                raise Exception(f"Token #{token_hash} not found!")
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            self.logger.error(f"Exception occurred: {e}", stack_info=True)
+            raise e
+
     def remove_token(self, *, token_hash: str):
         """
         Remove a token

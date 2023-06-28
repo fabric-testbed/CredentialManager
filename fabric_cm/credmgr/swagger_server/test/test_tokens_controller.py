@@ -39,12 +39,10 @@ class TestTokensController(BaseTestCase):
     def test_tokens_get(self):
         """Test case for tokens_get
 
-        Get token revoke list i.e. list of revoked identity token hashes
+        Get tokens
         """
         query_string = [('token_hash', 'token_hash_example'),
                         ('project_id', 'project_id_example'),
-                        ('user_id', 'user_id_example'),
-                        ('user_email', 'user_email_example'),
                         ('expires', 'expires_example'),
                         ('states', 'states_example'),
                         ('limit', 200),

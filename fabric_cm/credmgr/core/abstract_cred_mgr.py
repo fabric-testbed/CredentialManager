@@ -75,22 +75,31 @@ class AbcCredMgr(ABC):
         """
 
     @abstractmethod
-    def revoke_identity_token(self, token_hash: str):
+    def revoke_identity_token(self, token_hash: str, user_email: str = None, user_id: str = None):
         """
         Revoke a fabric identity token
+
+        :param token_hash: Token's hash
+        :type token_hash: str
+        :param user_email: User's email
+        :type user_email: str
+        :param user_id: User identified by universally unique identifier
+        :type user_id: str
 
         @returns dictionary containing status of the operation
         @raises Exception in case of error
         """
 
     @abstractmethod
-    def get_token_revoke_list(self, project_id: str, user_id: str) -> List[str]:
+    def get_token_revoke_list(self, project_id: str, user_email: str = None, user_id: str = None) -> List[str]:
         """Get token revoke list i.e. list of revoked identity token hashes
 
         Get token revoke list i.e. list of revoked identity token hashes for a user in a project  # noqa: E501
 
         :param project_id: Project identified by universally unique identifier
         :type project_id: str
+        :param user_email: User's email
+        :type user_email: str
         :param user_id: User identified by universally unique identifier
         :type user_id: str
 

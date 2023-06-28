@@ -44,11 +44,19 @@ from fabric_cm.credmgr.token.token_encoder import TokenEncoder
 from fabric_cm.credmgr.swagger_server import jwt_validator
 from fss_utils.jwt_manager import ValidateCode
 
+from http.client import INTERNAL_SERVER_ERROR, NOT_FOUND
+
 
 class OAuthCredMgrError(Exception):
     """
     CredMgr Exception
     """
+    def __init__(self, message: str, http_error_code: int = INTERNAL_SERVER_ERROR):
+        super().__init__(message)
+        self.http_error_code = http_error_code
+
+    def get_http_error_code(self) -> int:
+        return self.http_error_code
 
 
 class TokenState(Enum):
@@ -305,16 +313,57 @@ class OAuthCredMgr(AbcCredMgr):
         if response.status_code != 200:
             raise OAuthCredMgrError("Refresh token could not be revoked!")
 
-    def revoke_identity_token(self, token_hash: str):
-        # TODO
-        pass
+    def revoke_identity_token(self, token_hash: str, user_email: str = None, user_id: str = None):
+        """
+         Revoke a fabric identity token
 
-    def get_token_revoke_list(self, project_id: str, user_id: str) -> List[str]:
-        # TODO
-        pass
+         :param token_hash: Token's hash
+         :type token_hash: str
+         :param user_email: User's email
+         :type user_email: str
+         :param user_id: User identified by universally unique identifier
+         :type user_id: str
 
-    def get_tokens(self, *, user_id: str, user_email: str, project_id: str, token_hash: str,
-                   expires: datetime, states: List[str], offset: int, limit: int) -> List[Dict[str, Any]]:
+         @returns dictionary containing status of the operation
+         @raises Exception in case of error
+         """
+        tokens = DB_OBJ.get_tokens(token_hash=token_hash, user_email=user_email, user_id=user_id)
+        if tokens is None or len(tokens) == 0:
+            raise OAuthCredMgrError(http_error_code=NOT_FOUND,
+                                    message=f"Token# {token_hash} not found for user: {user_email}/{user_id}!")
+        DB_OBJ.update_token(token_hash=token_hash, state=TokenState.Revoked.value)
+
+    def get_token_revoke_list(self, project_id: str, user_email: str = None, user_id: str = None) -> List[str]:
+        """Get token revoke list i.e. list of revoked identity token hashes
+
+        Get token revoke list i.e. list of revoked identity token hashes for a user in a project  # noqa: E501
+
+        :param project_id: Project identified by universally unique identifier
+        :type project_id: str
+        :param user_email: User's email
+        :type user_email: str
+        :param user_id: User identified by universally unique identifier
+        :type user_id: str
+
+        @return list of sting
+        """
+        result = []
+
+        tokens = DB_OBJ.get_tokens(project_id=project_id, user_email=user_email, user_id=user_id,
+                                   states=[TokenState.Revoked.value])
+        if tokens is None:
+            return result
+        for t in tokens:
+            result.append(t.get(self.TOKEN_HASH))
+        return result
+
+    def get_tokens(self, *, user_id: str = None, user_email: str = None, project_id: str = None, token_hash: str = None,
+                   expires: datetime = None, states: List[str] = None, offset: int = 0,
+                   limit: int = 5) -> List[Dict[str, Any]]:
+        """
+        Get Tokens
+        @return list of tokens
+        """
         tokens = DB_OBJ.get_tokens(user_id=user_id, user_email=user_email, project_id=project_id,
                                    token_hash=token_hash, expires=expires,
                                    states=TokenState.translate_list(states=states),
@@ -330,3 +379,12 @@ class OAuthCredMgr(AbcCredMgr):
         allowed_scopes = CONFIG_OBJ.get_allowed_scopes()
         if scope not in allowed_scopes:
             raise OAuthCredMgrError(f"Scope {scope} is not allowed! Allowed scope values: {allowed_scopes}")
+
+    def delete_expired_tokens(self, user_email: str = None, user_id: str = None):
+        tokens = DB_OBJ.get_tokens(user_email=user_email, user_id=user_id, expires=datetime.now(timezone.utc))
+        if tokens is None:
+            return
+
+        # Remove the expired tokens
+        for t in tokens:
+            DB_OBJ.remove_token(token_hash=t.get(self.TOKEN_HASH))
