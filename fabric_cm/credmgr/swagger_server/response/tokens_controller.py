@@ -260,15 +260,13 @@ def tokens_get(token_hash=None, project_id=None, expires=None, states=None, limi
 
 
 @login_or_token_required
-def tokens_revoke_list_get(project_id, user_id, claims: dict = None):  # noqa: E501
+def tokens_revoke_list_get(project_id: str = None, claims: dict = None):  # noqa: E501
     """Get token revoke list i.e. list of revoked identity token hashes
 
     Get token revoke list i.e. list of revoked identity token hashes for a user in a project  # noqa: E501
 
     :param project_id: Project identified by universally unique identifier
     :type project_id: str
-    :param user_id: User identified by universally unique identifier
-    :type user_id: str
     :param claims
     :type claims: dict
 
@@ -277,7 +275,8 @@ def tokens_revoke_list_get(project_id, user_id, claims: dict = None):  # noqa: E
     received_counter.labels(HTTP_METHOD_GET, TOKENS_REVOKE_LIST_URL).inc()
     try:
         credmgr = OAuthCredMgr()
-        token_list = credmgr.get_token_revoke_list(user_id=user_id, project_id=project_id)
+        token_list = credmgr.get_token_revoke_list(project_id=project_id, user_email=claims.get('email'),
+                                                   user_id=claims.get('uuid'))
         success_counter.labels(HTTP_METHOD_GET, TOKENS_REVOKE_LIST_URL).inc()
         response = RevokeList()
         response.data = token_list

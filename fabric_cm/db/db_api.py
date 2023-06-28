@@ -140,8 +140,9 @@ class DbApi:
             self.logger.error(f"Exception occurred: {e}", stack_info=True)
             raise e
 
-    def get_tokens(self, *, user_id: str, user_email: str, project_id: str, token_hash: str,
-                   expires: datetime, states: List[int], offset: int, limit: int) -> list:
+    def get_tokens(self, *, user_id: str = None, user_email: str = None, project_id: str = None,
+                   token_hash: str = None, expires: datetime = None, states: List[int] = None,
+                   offset: int = 0, limit: int = 5) -> list:
         """
         Get tokens
         @param user_id      User Id

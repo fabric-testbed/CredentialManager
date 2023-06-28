@@ -28,6 +28,8 @@ def tokens_create_post(project_id=None, scope=None, lifetime=None):  # noqa: E50
 def tokens_get(token_hash=None, project_id=None, expires=None, states=None, limit=None, offset=None):  # noqa: E501
     """Get tokens
 
+    Get tokens for a user in a project  # noqa: E501
+
     :param token_hash: Token identified by SHA256 hash
     :type token_hash: str
     :param project_id: Project identified by universally unique identifier
@@ -66,19 +68,17 @@ def tokens_refresh_post(body, project_id=None, scope=None):  # noqa: E501
     return rc.tokens_refresh_post(body, project_id, scope)
 
 
-def tokens_revoke_list_get(project_id, user_id):  # noqa: E501
+def tokens_revoke_list_get(project_id=None):  # noqa: E501
     """Get token revoke list i.e. list of revoked identity token hashes
 
     Get token revoke list i.e. list of revoked identity token hashes for a user in a project  # noqa: E501
 
     :param project_id: Project identified by universally unique identifier
     :type project_id: str
-    :param user_id: User identified by universally unique identifier
-    :type user_id: str
 
     :rtype: RevokeList
     """
-    return rc.tokens_revoke_list_get(project_id, user_id)
+    return rc.tokens_revoke_list_get(project_id)
 
 
 def tokens_revoke_post(body):  # noqa: E501
