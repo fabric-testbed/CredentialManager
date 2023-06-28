@@ -97,6 +97,17 @@ paths:
           maximum: 1512
           type: integer
           default: 1
+      - name: comment
+        in: query
+        description: Comment
+        required: false
+        style: form
+        explode: true
+        schema:
+          maxLength: 100
+          minLength: 10
+          type: string
+          default: Create Token via GUI
       responses:
         "200":
           description: OK

@@ -30,10 +30,6 @@ from sqlalchemy import Column, String, Integer, Sequence
 
 Base = declarative_base()
 
-FOREIGN_KEY_ACTOR_ID = 'Actors.act_id'
-FOREIGN_KEY_SLICE_ID = 'Slices.slc_id'
-FOREIGN_KEY_RESERVATION_ID = 'Reservations.rsv_id'
-
 
 class Tokens(Base):
     """
@@ -44,7 +40,7 @@ class Tokens(Base):
     user_id = Column(String, nullable=False, index=True)
     user_email = Column(String, nullable=False, index=True)
     project_id = Column(String, nullable=False, index=True)
-    project_name = Column(String, nullable=False, index=True)
+    comment = Column(String, nullable=False)
     state = Column(Integer, nullable=False, index=True)
     token_hash = Column(String, nullable=False, index=True)
     created_from = Column(String, nullable=False)

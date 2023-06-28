@@ -63,7 +63,8 @@ def authorize(request):
 
 
 @login_required
-def tokens_create_post(project_id: str, scope: str = None, lifetime: int = 1, claims: dict = None):  # noqa: E501
+def tokens_create_post(project_id: str, scope: str = None, lifetime: int = 1, comment: str = None,
+                       claims: dict = None):  # noqa: E501
     """Generate Fabric OAuth tokens for an user
 
     Request to generate Fabric OAuth tokens for an user  # noqa: E501
@@ -74,7 +75,10 @@ def tokens_create_post(project_id: str, scope: str = None, lifetime: int = 1, cl
     :type scope: str
     :param lifetime: Lifetime of the token requested in hours
     :type lifetime: int
+    :param comment: Comment
+    :type comment: str
     :param claims: claims
+    :type claims: dict
 
     :rtype: Success
     """
@@ -84,7 +88,8 @@ def tokens_create_post(project_id: str, scope: str = None, lifetime: int = 1, cl
         token_dict = credmgr.create_token(ci_logon_id_token=claims.get(OAuthCredMgr.ID_TOKEN),
                                           refresh_token=claims.get(OAuthCredMgr.REFRESH_TOKEN),
                                           cookie=claims.get(OAuthCredMgr.COOKIE),
-                                          project=project_id, scope=scope, lifetime=lifetime)
+                                          project=project_id, scope=scope, lifetime=lifetime,
+                                          comment=comment, remote_addr=connexion.request.remote_address)
         response = Tokens()
         token = Token().from_dict(token_dict)
         response.data = [token]
@@ -115,10 +120,9 @@ def tokens_refresh_post(body: Request, project_id=None, scope=None):  # noqa: E5
     """
     received_counter.labels(HTTP_METHOD_POST, TOKENS_REFRESH_URL).inc()
     try:
-        ci_logon_id_token, refresh_token, cookie = authorize(connexion.request)
         credmgr = OAuthCredMgr()
         token_dict = credmgr.refresh_token(refresh_token=body.refresh_token, project=project_id, scope=scope,
-                                           cookie=cookie)
+                                           remote_addr=connexion.request.remote_address)
         response = Tokens()
         token = Token().from_dict(token_dict)
         response.data = [token]
@@ -182,7 +186,8 @@ def tokens_revokes_post(body: TokenPost, claims: dict = None):  # noqa: E501
     try:
         credmgr = OAuthCredMgr()
         if body.type == "identity":
-            credmgr.revoke_identity_token(token_hash=body.token)
+            credmgr.revoke_identity_token(token_hash=body.token, user_email=claims.get(OAuthCredMgr.EMAIL),
+                                          user_id=claims.get(OAuthCredMgr.UUID))
         else:
             credmgr.revoke_token(refresh_token=body.token)
         success_counter.labels(HTTP_METHOD_POST, TOKENS_REVOKES_URL).inc()
@@ -232,12 +237,8 @@ def tokens_get(token_hash=None, project_id=None, expires=None, states=None, limi
             return cors_400(f"Expiry time is not in format {OAuthCredMgr.TIME_FORMAT}")
 
     try:
-        ci_logon_id_token, refresh_token, cookie = authorize(connexion.request)
-        if ci_logon_id_token is None:
-            return cors_401(details="No CI Logon Id Token in the request")
-
         credmgr = OAuthCredMgr()
-        token_list = credmgr.get_tokens(token_hash=token_hash, project_id=project_id, user_email=claims['email'],
+        token_list = credmgr.get_tokens(token_hash=token_hash, project_id=project_id, user_email=claims[OAuthCredMgr.EMAIL],
                                         expires=expires, states=states, limit=limit, offset=offset)
         success_counter.labels(HTTP_METHOD_GET, TOKENS_REVOKE_LIST_URL).inc()
         response = Tokens()
@@ -271,8 +272,8 @@ def tokens_revoke_list_get(project_id: str = None, claims: dict = None):  # noqa
     received_counter.labels(HTTP_METHOD_GET, TOKENS_REVOKE_LIST_URL).inc()
     try:
         credmgr = OAuthCredMgr()
-        token_list = credmgr.get_token_revoke_list(project_id=project_id, user_email=claims.get('email'),
-                                                   user_id=claims.get('uuid'))
+        token_list = credmgr.get_token_revoke_list(project_id=project_id, user_email=claims.get(OAuthCredMgr.EMAIL),
+                                                   user_id=claims.get(OAuthCredMgr.UUID))
         success_counter.labels(HTTP_METHOD_GET, TOKENS_REVOKE_LIST_URL).inc()
         response = RevokeList()
         response.data = token_list

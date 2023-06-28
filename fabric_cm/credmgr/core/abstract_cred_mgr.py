@@ -35,8 +35,8 @@ class AbcCredMgr(ABC):
     Abstract Credential Manager class
     """
     @abstractmethod
-    def create_token(self, project: str, scope: str, ci_logon_id_token: str,
-                     refresh_token: str, cookie: str = None, lifetime: int = 1) -> dict:
+    def create_token(self, project: str, scope: str, ci_logon_id_token: str, refresh_token: str, remote_addr: str,
+                     comment: str = None, cookie: str = None, lifetime: int = 1) -> dict:
         """
         Generates key file and return authorization url for user to authenticate itself and also returns user id
 
@@ -44,6 +44,8 @@ class AbcCredMgr(ABC):
         @param scope: Scope of the requested token, by default it is set to 'all'
         @param ci_logon_id_token: CI logon Identity Token
         @param refresh_token: Refresh Token
+        @param remote_addr: Remote IP
+        @param comment Comment
         @param cookie: Vouch Proxy Cookie
         @param lifetime: Token lifetime in hours default(1 hour)
 
@@ -52,13 +54,14 @@ class AbcCredMgr(ABC):
         """
 
     @abstractmethod
-    def refresh_token(self, refresh_token: str, project: str, scope: str, cookie: str = None) -> dict:
+    def refresh_token(self, refresh_token: str, project: str, scope: str, remote_addr: str, cookie: str = None) -> dict:
         """
         Refreshes a token from CILogon and generates Fabric token using project and scope saved in Database
 
         @param project: Project for which token is requested, by default it is set to 'all'
         @param scope: Scope of the requested token, by default it is set to 'all'
         @param refresh_token: Refresh Token
+        @param remote_addr: Remote IP
         @param cookie: Vouch Proxy Cookie
         @returns dict containing id_token and refresh_token
 

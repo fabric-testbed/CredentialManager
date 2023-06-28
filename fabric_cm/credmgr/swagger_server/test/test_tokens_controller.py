@@ -28,7 +28,8 @@ class TestTokensController(BaseTestCase):
         """
         query_string = [('project_id', 'project_id_example'),
                         ('scope', 'all'),
-                        ('lifetime', 1512)]
+                        ('lifetime', 1512),
+                        ('comment', 'Create Token via GUI')]
         response = self.client.open(
             '/credmgr//tokens/create',
             method='POST',
@@ -76,8 +77,7 @@ class TestTokensController(BaseTestCase):
 
         Get token revoke list i.e. list of revoked identity token hashes
         """
-        query_string = [('project_id', 'project_id_example'),
-                        ('user_id', 'user_id_example')]
+        query_string = [('project_id', 'project_id_example')]
         response = self.client.open(
             '/credmgr//tokens/revoke_list',
             method='GET',

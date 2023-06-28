@@ -79,26 +79,26 @@ class DbApi:
             self.logger.error(f"Exception occurred: {e}", stack_info=True)
             raise e
 
-    def add_token(self, *, user_id: str, user_email: str, project_id: str, project_name: str,
-                  created_from: str, state: int, token_hash: str, created_at: datetime, expires_at: datetime):
+    def add_token(self, *, user_id: str, user_email: str, project_id: str, created_from: str, state: int,
+                  token_hash: str, created_at: datetime, expires_at: datetime, comment: str):
         """
         Add a token
         @param user_id User ID
         @param user_email User Email
         @param project_id Project ID
-        @param project_name Project Name
         @param created_from Remote IP Address
         @param state Token State
         @param token_hash Token hash
         @param created_at creation time of the token
         @param expires_at expiration time of the token
+        @param comment comment describing when token was created
         """
         session = self.get_session()
         try:
             # Save the token in the database
-            token_obj = Tokens(user_id=user_id, user_email=user_email, project_id=project_id, project_name=project_name,
+            token_obj = Tokens(user_id=user_id, user_email=user_email, project_id=project_id,
                                created_from=created_from, state=state, token_hash=token_hash,
-                               expires_at=expires_at, created_at=created_at)
+                               expires_at=expires_at, created_at=created_at, comment=comment)
             session.add(token_obj)
             session.commit()
         except Exception as e:

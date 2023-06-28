@@ -103,6 +103,7 @@ class OAuthCredMgr(AbcCredMgr):
     CREATED_AT = "created_at"
     EXPIRES_AT = "expires_at"
     TOKEN_HASH = "token_hash"
+    COMMENT = "comment"
     STATE = "state"
     CREATED_FROM = "created_from"
     ERROR = "error"
@@ -113,6 +114,8 @@ class OAuthCredMgr(AbcCredMgr):
     UTF_8 = "utf-8"
     TIME_FORMAT = "%Y-%m-%d %H:%M:%S %z"
     COOKIE = "cookie"
+    UUID = "uuid"
+    EMAIL = "email"
 
     def __init__(self):
         self.log = LOG
@@ -134,13 +137,16 @@ class OAuthCredMgr(AbcCredMgr):
 
         return sha256_hex
 
-    def __generate_token_and_save_info(self, ci_logon_id_token: str, project: str, scope: str, cookie: str = None,
-                                       lifetime: int = 1, refresh: bool = False) -> Dict[str, str]:
+    def __generate_token_and_save_info(self, ci_logon_id_token: str, project: str, scope: str, remote_addr: str,
+                                       comment: str = None, cookie: str = None, lifetime: int = 1,
+                                       refresh: bool = False) -> Dict[str, str]:
         """
         Generate Fabric Token and save the corresponding meta information in the database
         @param ci_logon_id_token    CI logon Identity Token
         @param project              Project Id
         @param scope                Token scope; allowed values (cf, mf, all)
+        @param remote_addr          Remote Address
+        @param comment              Comment
         @param cookie               Vouch Cookie
         @param lifetime             Token lifetime in hours; default 1 hour; max is 9 weeks i.e. 1512 hours
         @param refresh              Flag indicating if token was refreshed (True) or created new (False)
@@ -179,26 +185,30 @@ class OAuthCredMgr(AbcCredMgr):
             state = TokenState.Active
             if refresh:
                 state = TokenState.Refreshed
+                comment = "Refreshed via API"
 
-            created_from = 'a.b.c.d'
+            if comment is None:
+                comment = "Created via GUI"
 
             # Add token meta info to the database
             # TODO project name and remote IP
             DB_OBJ.add_token(user_id=token_encoder.claims["uuid"], user_email=token_encoder.claims["email"],
                              project_id=project, token_hash=token_hash, created_at=created_at,
-                             expires_at=expires_at, state=state.value, project_name=project, created_from=created_from)
+                             expires_at=expires_at, state=state.value, created_from=remote_addr,
+                             comment=comment)
 
             return {self.TOKEN_HASH: token_hash,
                     self.CREATED_AT: created_at,
                     self.EXPIRES_AT: expires_at,
                     self.STATE: str(state),
-                    self.CREATED_FROM: created_from,
+                    self.COMMENT: comment,
+                    self.CREATED_FROM: remote_addr,
                     self.ID_TOKEN: token}
         else:
             LOG.warning("JWT Token validator not initialized, skipping validation")
 
-    def create_token(self, project: str, scope: str, ci_logon_id_token: str, refresh_token: str,
-                     cookie: str = None, lifetime: int = 1) -> dict:
+    def create_token(self, project: str, scope: str, ci_logon_id_token: str, refresh_token: str, remote_addr: str,
+                     comment: str = None, cookie: str = None, lifetime: int = 1) -> dict:
         """
         Generates key file and return authorization url for user to
         authenticate itself and also returns user id
@@ -207,6 +217,8 @@ class OAuthCredMgr(AbcCredMgr):
         @param scope: Scope of the requested token, by default it is set to 'all'
         @param ci_logon_id_token: CI logon Identity Token
         @param refresh_token: Refresh Token
+        @param remote_addr: Remote Address
+        @param comment: Comment
         @param cookie: Vouch Proxy Cookie
         @param lifetime: Token lifetime in hours default(1 hour)
 
@@ -222,20 +234,22 @@ class OAuthCredMgr(AbcCredMgr):
 
         # Generate the Token
         result = self.__generate_token_and_save_info(ci_logon_id_token=ci_logon_id_token, project=project, scope=scope,
-                                                     cookie=cookie, lifetime=lifetime)
+                                                     remote_addr=remote_addr, cookie=cookie, lifetime=lifetime,
+                                                     comment=comment)
 
         # Only include refresh token for short lived tokens
         if lifetime * 3600 == CONFIG_OBJ.get_token_life_time():
             result[self.REFRESH_TOKEN] = refresh_token
         return result
 
-    def refresh_token(self, refresh_token: str, project: str, scope: str, cookie: str = None) -> dict:
+    def refresh_token(self, refresh_token: str, project: str, scope: str, remote_addr: str, cookie: str = None) -> dict:
         """
         Refreshes a token from CILogon and generates Fabric token using project and scope saved in Database
 
         @param project: Project for which token is requested, by default it is set to 'all'
         @param scope: Scope of the requested token, by default it is set to 'all'
         @param refresh_token: Refresh Token
+        @param remote_addr: Remote IP
         @param cookie: Vouch Proxy Cookie
         @returns dict containing id_token and refresh_token
 
@@ -269,7 +283,7 @@ class OAuthCredMgr(AbcCredMgr):
 
         try:
             result = self.__generate_token_and_save_info(ci_logon_id_token=id_token, project=project, scope=scope,
-                                                         cookie=cookie, refresh=True)
+                                                         cookie=cookie, refresh=True, remote_addr=remote_addr)
             result[self.REFRESH_TOKEN] = new_refresh_token
             return result
         except Exception as e:
@@ -327,8 +341,8 @@ class OAuthCredMgr(AbcCredMgr):
          @returns dictionary containing status of the operation
          @raises Exception in case of error
          """
-        if user_id is None and user_email is None:
-            raise OAuthCredMgrError(f"User Id or Email required")
+        if user_id is None and user_email is None and token_hash is None:
+            raise OAuthCredMgrError(f"User Id/Email or Token Hash required")
 
         tokens = self.get_tokens(token_hash=token_hash, user_email=user_email, user_id=user_id)
         if tokens is None or len(tokens) == 0:
