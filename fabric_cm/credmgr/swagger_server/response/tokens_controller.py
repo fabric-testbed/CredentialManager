@@ -89,7 +89,7 @@ def tokens_create_post(project_id: str, scope: str = None, lifetime: int = 1, co
                                           refresh_token=claims.get(OAuthCredMgr.REFRESH_TOKEN),
                                           cookie=claims.get(OAuthCredMgr.COOKIE),
                                           project=project_id, scope=scope, lifetime=lifetime,
-                                          comment=comment, remote_addr=connexion.request.remote_address)
+                                          comment=comment, remote_addr=connexion.request.remote_addr)
         response = Tokens()
         token = Token().from_dict(token_dict)
         response.data = [token]
@@ -122,7 +122,7 @@ def tokens_refresh_post(body: Request, project_id=None, scope=None):  # noqa: E5
     try:
         credmgr = OAuthCredMgr()
         token_dict = credmgr.refresh_token(refresh_token=body.refresh_token, project=project_id, scope=scope,
-                                           remote_addr=connexion.request.remote_address)
+                                           remote_addr=connexion.request.remote_addr)
         response = Tokens()
         token = Token().from_dict(token_dict)
         response.data = [token]
