@@ -113,6 +113,20 @@ class TestTokensController(BaseTestCase):
         self.assert200(response,
                        'Response body is : ' + response.data.decode('utf-8'))
 
+    def test_tokens_validate_post(self):
+        """Test case for tokens_validate_post
+
+        Validate an identity token issued by Credential Manager
+        """
+        body = TokenPost()
+        response = self.client.open(
+            '/credmgr//tokens/validate',
+            method='POST',
+            data=json.dumps(body),
+            content_type='application/json')
+        self.assert200(response,
+                       'Response body is : ' + response.data.decode('utf-8'))
+
 
 if __name__ == '__main__':
     import unittest

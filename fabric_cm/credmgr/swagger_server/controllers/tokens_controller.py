@@ -111,3 +111,19 @@ def tokens_revokes_post(body):  # noqa: E501
     if connexion.request.is_json:
         body = TokenPost.from_dict(connexion.request.get_json())  # noqa: E501
     return rc.tokens_revokes_post(body)
+
+
+def tokens_validate_post(body):  # noqa: E501
+    """Validate an identity token issued by Credential Manager
+
+    Validate an identity token issued by Credential Manager  # noqa: E501
+
+    :param body: 
+    :type body: dict | bytes
+
+    :rtype: Status200OkNoContent
+    """
+    if connexion.request.is_json:
+        body = TokenPost.from_dict(connexion.request.get_json())  # noqa: E501
+    rc.tokens_validate_post(body)
+

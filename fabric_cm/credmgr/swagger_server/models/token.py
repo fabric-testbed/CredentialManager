@@ -208,7 +208,7 @@ class Token(Model):
     def comment(self) -> str:
         """Gets the comment of this Token.
 
-        Token expiry time  # noqa: E501
+        Comment provided at creation  # noqa: E501
 
         :return: The comment of this Token.
         :rtype: str
@@ -219,7 +219,7 @@ class Token(Model):
     def comment(self, comment: str):
         """Sets the comment of this Token.
 
-        Token expiry time  # noqa: E501
+        Comment provided at creation  # noqa: E501
 
         :param comment: The comment of this Token.
         :type comment: str

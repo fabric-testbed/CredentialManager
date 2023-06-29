@@ -464,6 +464,80 @@
         }
       }
     },
+    "/tokens/validate": {
+      "post": {
+        "tags": [
+          "tokens"
+        ],
+        "summary": "Validate an identity token issued by Credential Manager",
+        "description": "Validate an identity token issued by Credential Manager\n",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/payload_token"
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/status_200_ok_no_content"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/status_400_bad_request"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/status_401_unauthorized"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/status_403_forbidden"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/status_404_not_found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/status_500_internal_server_error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/tokens/revoke_list": {
       "get": {
         "tags": [
@@ -1035,7 +1109,7 @@
           },
           "comment": {
             "type": "string",
-            "description": "Token expiry time"
+            "description": "Comment provided at creation"
           },
           "id_token": {
             "type": "string",

@@ -34,11 +34,11 @@ from fabric_cm.credmgr.core.oauth_credmgr import OAuthCredMgr
 from fabric_cm.credmgr.swagger_server.models import Tokens, Token, Status200OkNoContent, Status200OkNoContentData, \
     RevokeList
 from fabric_cm.credmgr.swagger_server.models.request import Request  # noqa: E501
-from fabric_cm.credmgr.swagger_server import received_counter, success_counter, failure_counter
+from fabric_cm.credmgr.swagger_server import received_counter, success_counter, failure_counter, jwt_validator
 from fabric_cm.credmgr.swagger_server.models.token_post import TokenPost
 from fabric_cm.credmgr.swagger_server.response.constants import HTTP_METHOD_POST, TOKENS_REVOKE_URL, \
     TOKENS_REFRESH_URL, TOKENS_CREATE_URL, VOUCH_ID_TOKEN, VOUCH_REFRESH_TOKEN, TOKENS_REVOKES_URL, HTTP_METHOD_GET, \
-    TOKENS_REVOKE_LIST_URL
+    TOKENS_REVOKE_LIST_URL, TOKENS_VALIDATE_URL
 from fabric_cm.credmgr.config import CONFIG_OBJ
 from fabric_cm.credmgr.logging import LOG
 from fabric_cm.credmgr.swagger_server.response.cors_response import cors_401, cors_200, cors_500, cors_400
@@ -283,4 +283,32 @@ def tokens_revoke_list_get(project_id: str = None, claims: dict = None):  # noqa
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_GET, TOKENS_REVOKE_LIST_URL).inc()
+        return cors_500(details=str(ex))
+
+
+def tokens_validate_post(body: TokenPost):  # noqa: E501
+    """Validate an identity token issued by Credential Manager
+
+    Validate an identity token issued by Credential Manager  # noqa: E501
+
+    :param body:
+    :type body: dict | bytes
+
+    :rtype: Status200OkNoContent
+    """
+    received_counter.labels(HTTP_METHOD_POST, TOKENS_VALIDATE_URL).inc()
+    try:
+        if body.type == "identity":
+            code, claims_or_exception = jwt_validator.validate_jwt(token=body.token, verify_exp=True)
+            if code is not ValidateCode.VALID:
+                LOG.error(f"Unable to validate provided token: {code}/{claims_or_exception}")
+                raise claims_or_exception
+        success_counter.labels(HTTP_METHOD_POST, TOKENS_REVOKES_URL).inc()
+        response = Status200OkNoContent()
+        response.status = 200
+        response.type = 'no_content'
+        return cors_200(response_body=response)
+    except Exception as ex:
+        LOG.exception(ex)
+        failure_counter.labels(HTTP_METHOD_POST, TOKENS_VALIDATE_URL).inc()
         return cors_500(details=str(ex))

@@ -29,6 +29,7 @@ TOKENS_REFRESH_URL = '/tokens/refresh'
 TOKENS_REVOKE_URL = '/tokens/revoke'
 TOKENS_REVOKES_URL = '/tokens/revokes'
 TOKENS_REVOKE_LIST_URL = '/tokens/revoke_list'
+TOKENS_VALIDATE_URL = '/tokens/validate'
 
 HTTP_METHOD_GET = 'get'
 HTTP_METHOD_POST = 'post'
