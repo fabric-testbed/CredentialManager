@@ -49,6 +49,7 @@ class Config:
     PROJECT_NAMES_IGNORE_LIST = 'project-names-ignore-list'
     ROLES_LIST = 'roles-list'
     ALLOWED_SCOPES = 'allowed-scopes'
+    MAX_LLT_CNT_PER_PROJECT = 'max-llt-count-per-project'
 
     # Logging Parameters
     LOGGER = 'logger'
@@ -257,3 +258,6 @@ class Config:
 
     def get_database_host(self) -> str:
         return self._get_config_from_section(section_name=self.SECTION_DATABASE, parameter_name=self.DB_HOST)
+
+    def get_max_llt_per_project(self) -> int:
+        return int(self._get_config_from_section(self.SECTION_RUNTIME, self.MAX_LLT_CNT_PER_PROJECT))

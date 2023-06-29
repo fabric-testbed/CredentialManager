@@ -39,6 +39,7 @@ token-lifetime = 3600
 project-names-ignore-list = Jupyterhub, fabric-active-users
 roles-list = facility-operators, project-leads
 allowed-scopes = cf, mf, all
+max-llt-count-per-project = 5
 
 [logging]
 logger = credmgr
@@ -48,6 +49,7 @@ log-directory = /var/log/credmgr
 #
 ## The filename to be used for credmgr's log file.
 log-file = credmgr.log
+metrics-log-file = metrics.log
 #
 ## The default log level for credmgr.
 log-level = DEBUG

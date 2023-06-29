@@ -28,7 +28,6 @@ Module for handling /tokens APIs
 from datetime import datetime
 
 import connexion
-from fss_utils.jwt_manager import JWTManager, ValidateCode
 
 from fabric_cm.credmgr.core.oauth_credmgr import OAuthCredMgr, TokenState
 from fabric_cm.credmgr.swagger_server.models import Tokens, Token, Status200OkNoContent, Status200OkNoContentData, \
@@ -37,16 +36,15 @@ from fabric_cm.credmgr.swagger_server.models.request import Request  # noqa: E50
 from fabric_cm.credmgr.swagger_server import received_counter, success_counter, failure_counter
 from fabric_cm.credmgr.swagger_server.models.token_post import TokenPost
 from fabric_cm.credmgr.swagger_server.response.constants import HTTP_METHOD_POST, TOKENS_REVOKE_URL, \
-    TOKENS_REFRESH_URL, TOKENS_CREATE_URL, VOUCH_ID_TOKEN, VOUCH_REFRESH_TOKEN, TOKENS_REVOKES_URL, HTTP_METHOD_GET, \
-    TOKENS_REVOKE_LIST_URL, TOKENS_VALIDATE_URL
-from fabric_cm.credmgr.config import CONFIG_OBJ
+    TOKENS_REFRESH_URL, TOKENS_CREATE_URL, TOKENS_REVOKES_URL, HTTP_METHOD_GET, TOKENS_REVOKE_LIST_URL, \
+    TOKENS_VALIDATE_URL
 from fabric_cm.credmgr.logging import LOG
 from fabric_cm.credmgr.swagger_server.response.cors_response import cors_200, cors_500, cors_400
 from fabric_cm.credmgr.swagger_server.response.decorators import login_required, login_or_token_required
 
 
 @login_required
-def tokens_create_post(project_id: str, scope: str = None, lifetime: int = 1, comment: str = None,
+def tokens_create_post(project_id: str, scope: str = None, lifetime: int = 4, comment: str = None,
                        claims: dict = None):  # noqa: E501
     """Generate Fabric OAuth tokens for an user
 
@@ -72,7 +70,8 @@ def tokens_create_post(project_id: str, scope: str = None, lifetime: int = 1, co
                                           refresh_token=claims.get(OAuthCredMgr.REFRESH_TOKEN),
                                           cookie=claims.get(OAuthCredMgr.COOKIE),
                                           project=project_id, scope=scope, lifetime=lifetime,
-                                          comment=comment, remote_addr=connexion.request.remote_addr)
+                                          comment=comment, remote_addr=connexion.request.remote_addr,
+                                          user_email=claims.get(OAuthCredMgr.EMAIL))
         response = Tokens()
         token = Token().from_dict(token_dict)
         response.data = [token]
@@ -268,7 +267,8 @@ def tokens_revoke_list_get(project_id: str = None, claims: dict = None):  # noqa
         return cors_500(details=str(ex))
 
 
-def tokens_validate_post(body: TokenPost):  # noqa: E501
+@login_required
+def tokens_validate_post(body: TokenPost, claims: dict = None):  # noqa: E501
     """Validate an identity token issued by Credential Manager
 
     Validate an identity token issued by Credential Manager  # noqa: E501
@@ -280,10 +280,10 @@ def tokens_validate_post(body: TokenPost):  # noqa: E501
     """
     received_counter.labels(HTTP_METHOD_POST, TOKENS_VALIDATE_URL).inc()
     try:
-        state = TokenState.Active
+        state = TokenState.Valid
         if body.type == "identity":
             credmgr = OAuthCredMgr()
-            state = credmgr.validate_token(token=body.token)
+            state = credmgr.validate_token(token=body.token, user_email=claims.get(OAuthCredMgr.EMAIL))
 
         success_counter.labels(HTTP_METHOD_POST, TOKENS_VALIDATE_URL).inc()
         response_data = Status200OkNoContentData()

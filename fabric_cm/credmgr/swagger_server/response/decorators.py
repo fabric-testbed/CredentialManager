@@ -65,7 +65,6 @@ def vouch_authorize() -> Union[dict, None]:
     Decode vouch cookie and extract identity and refresh tokens
     @return tuple containing ci logon identity token, refresh token and cookie
     """
-    claims = None
     ci_logon_id_token = request.headers.get(VOUCH_ID_TOKEN, None)
     refresh_token = request.headers.get(VOUCH_REFRESH_TOKEN, None)
     cookie_name = CONFIG_OBJ.get_vouch_cookie_name()
@@ -80,7 +79,7 @@ def vouch_authorize() -> Union[dict, None]:
             refresh_token = decoded_cookie.get('PRefreshToken')
 
     if ci_logon_id_token is not None and refresh_token is not None and cookie is not None:
-        code, claims_or_exception = jwt_validator.validate_jwt(token=ci_logon_id_token, verify_exp=True)
+        code, claims_or_exception = jwt_validator.validate_jwt(token=ci_logon_id_token)
         if code is not ValidateCode.VALID:
             LOG.error(f"Unable to validate provided token: {code}/{claims_or_exception}")
             return None

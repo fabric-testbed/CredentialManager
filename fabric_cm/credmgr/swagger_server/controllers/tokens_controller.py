@@ -8,7 +8,7 @@ from fabric_cm.credmgr.swagger_server.models.revoke_list import RevokeList  # no
 from fabric_cm.credmgr.swagger_server.response import tokens_controller as rc
 
 
-def tokens_create_post(project_id=None, scope=None, lifetime=None, comment=None):  # noqa: E501
+def tokens_create_post(project_id=None, scope=None, lifetime=4, comment=None):  # noqa: E501
     """Generate tokens for an user
 
     Request to generate tokens for an user  # noqa: E501

@@ -63,7 +63,7 @@ class OAuthCredMgrError(Exception):
 
 class TokenState(Enum):
     Nascent = enum.auto()
-    Active = enum.auto()
+    Valid = enum.auto()
     Refreshed = enum.auto()
     Revoked = enum.auto()
     Expired = enum.auto()
@@ -184,7 +184,7 @@ class OAuthCredMgr(AbcCredMgr):
             # Generate SHA256 hash
             token_hash = self.__generate_sha256(token=token)
 
-            state = TokenState.Active
+            state = TokenState.Valid
             if refresh:
                 state = TokenState.Refreshed
                 comment = "Refreshed via API"
@@ -210,7 +210,7 @@ class OAuthCredMgr(AbcCredMgr):
             LOG.warning("JWT Token validator not initialized, skipping validation")
 
     def create_token(self, project: str, scope: str, ci_logon_id_token: str, refresh_token: str, remote_addr: str,
-                     comment: str = None, cookie: str = None, lifetime: int = 1) -> dict:
+                     user_email: str, comment: str = None, cookie: str = None, lifetime: int = 4) -> dict:
         """
         Generates key file and return authorization url for user to
         authenticate itself and also returns user id
@@ -220,6 +220,7 @@ class OAuthCredMgr(AbcCredMgr):
         @param ci_logon_id_token: CI logon Identity Token
         @param refresh_token: Refresh Token
         @param remote_addr: Remote Address
+        @param user_email: User's email
         @param comment: Comment
         @param cookie: Vouch Proxy Cookie
         @param lifetime: Token lifetime in hours default(1 hour)
@@ -234,13 +235,21 @@ class OAuthCredMgr(AbcCredMgr):
             raise OAuthCredMgrError("CredMgr: Cannot request to create a token, "
                                     "Missing required parameter 'project' or 'scope'!")
 
+        short = self.is_short_lived(lifetime_in_hours=lifetime)
+
+        if not short:
+            long_lived_tokens = self.get_tokens(project_id=project, user_email=user_email)
+            if long_lived_tokens is not None and len(long_lived_tokens) > CONFIG_OBJ.get_max_llt_per_project():
+                raise OAuthCredMgrError(f"User: {user_email} already has {CONFIG_OBJ.get_max_llt_per_project()} "
+                                        f"long lived tokens")
+
         # Generate the Token
         result = self.__generate_token_and_save_info(ci_logon_id_token=ci_logon_id_token, project=project, scope=scope,
                                                      remote_addr=remote_addr, cookie=cookie, lifetime=lifetime,
                                                      comment=comment)
 
         # Only include refresh token for short lived tokens
-        if lifetime * 3600 == CONFIG_OBJ.get_token_life_time():
+        if self.is_short_lived(lifetime_in_hours=lifetime):
             result[self.REFRESH_TOKEN] = refresh_token
         return result
 
@@ -421,8 +430,8 @@ class OAuthCredMgr(AbcCredMgr):
         for t in tokens:
             DB_OBJ.remove_token(token_hash=t.get(self.TOKEN_HASH))
 
-    def validate_token(self, *, token: str) -> str:
-        state = TokenState.Active
+    def validate_token(self, *, token: str, user_email: str) -> str:
+        state = TokenState.Valid
         # get kid from token
         try:
             kid = jwt.get_unverified_header(token).get('kid', None)
@@ -450,11 +459,12 @@ class OAuthCredMgr(AbcCredMgr):
 
             # Check if the Token is Revoked
             token_hash = self.__generate_sha256(token=token)
-            token_found_in_db = DB_OBJ.get_tokens(token_hash=token_hash)
+            token_found_in_db = self.get_tokens(token_hash=token_hash)
             if token_found_in_db is None or len(token_found_in_db) == 0:
                 raise OAuthCredMgrError(http_error_code=NOT_FOUND, message="Token not found!")
 
-            if TokenState(token_found_in_db[0]) == TokenState.Revoked:
+            token_state = TokenState(token_found_in_db[0].get(self.STATE))
+            if token_state == TokenState.Revoked:
                 state = TokenState.Revoked
 
         except ExpiredSignatureError:
@@ -463,3 +473,9 @@ class OAuthCredMgr(AbcCredMgr):
             raise Exception(ValidateCode.INVALID)
 
         return str(state)
+
+    @staticmethod
+    def is_short_lived(*, lifetime_in_hours: int):
+        if lifetime_in_hours * 3600 <= CONFIG_OBJ.get_token_life_time():
+            return True
+        return False

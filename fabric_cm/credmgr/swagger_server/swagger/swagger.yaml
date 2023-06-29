@@ -96,7 +96,7 @@ paths:
         schema:
           maximum: 1512
           type: integer
-          default: 1
+          default: 4
       - name: comment
         in: query
         description: Comment

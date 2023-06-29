@@ -36,16 +36,18 @@ class AbcCredMgr(ABC):
     """
     @abstractmethod
     def create_token(self, project: str, scope: str, ci_logon_id_token: str, refresh_token: str, remote_addr: str,
-                     comment: str = None, cookie: str = None, lifetime: int = 1) -> dict:
+                     user_email: str, comment: str = None, cookie: str = None, lifetime: int = 4) -> dict:
         """
-        Generates key file and return authorization url for user to authenticate itself and also returns user id
+        Generates key file and return authorization url for user to
+        authenticate itself and also returns user id
 
         @param project: Project for which token is requested, by default it is set to 'all'
         @param scope: Scope of the requested token, by default it is set to 'all'
         @param ci_logon_id_token: CI logon Identity Token
         @param refresh_token: Refresh Token
-        @param remote_addr: Remote IP
-        @param comment Comment
+        @param remote_addr: Remote Address
+        @param user_email: User's email
+        @param comment: Comment
         @param cookie: Vouch Proxy Cookie
         @param lifetime: Token lifetime in hours default(1 hour)
 
@@ -117,9 +119,10 @@ class AbcCredMgr(ABC):
         """
 
     @abstractmethod
-    def validate_token(self, *, token: str) -> str:
+    def validate_token(self, *, token: str, user_email: str) -> str:
         """
         Validate token
         @param token
+        @param user_email
         @return Return token state
         """
