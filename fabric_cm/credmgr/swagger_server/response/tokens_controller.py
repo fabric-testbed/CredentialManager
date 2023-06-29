@@ -28,13 +28,15 @@ Module for handling /tokens APIs
 from datetime import datetime
 
 import connexion
+import jwt
 from fss_utils.jwt_manager import JWTManager, ValidateCode
 
 from fabric_cm.credmgr.core.oauth_credmgr import OAuthCredMgr
 from fabric_cm.credmgr.swagger_server.models import Tokens, Token, Status200OkNoContent, Status200OkNoContentData, \
     RevokeList
 from fabric_cm.credmgr.swagger_server.models.request import Request  # noqa: E501
-from fabric_cm.credmgr.swagger_server import received_counter, success_counter, failure_counter, jwt_validator
+from fabric_cm.credmgr.swagger_server import received_counter, success_counter, failure_counter, jwt_validator, \
+    fabric_jwks
 from fabric_cm.credmgr.swagger_server.models.token_post import TokenPost
 from fabric_cm.credmgr.swagger_server.response.constants import HTTP_METHOD_POST, TOKENS_REVOKE_URL, \
     TOKENS_REFRESH_URL, TOKENS_CREATE_URL, VOUCH_ID_TOKEN, VOUCH_REFRESH_TOKEN, TOKENS_REVOKES_URL, HTTP_METHOD_GET, \
@@ -191,7 +193,6 @@ def tokens_revokes_post(body: TokenPost, claims: dict = None):  # noqa: E501
         else:
             credmgr.revoke_token(refresh_token=body.token)
         success_counter.labels(HTTP_METHOD_POST, TOKENS_REVOKES_URL).inc()
-        response = Status200OkNoContent()
         response_data = Status200OkNoContentData()
         response_data.details = f"Token '{body.token}' of type '{body.type}' has been successfully revoked"
         response = Status200OkNoContent()
@@ -299,12 +300,41 @@ def tokens_validate_post(body: TokenPost):  # noqa: E501
     received_counter.labels(HTTP_METHOD_POST, TOKENS_VALIDATE_URL).inc()
     try:
         if body.type == "identity":
-            code, claims_or_exception = jwt_validator.validate_jwt(token=body.token, verify_exp=True)
-            if code is not ValidateCode.VALID:
-                LOG.error(f"Unable to validate provided token: {code}/{claims_or_exception}")
-                raise claims_or_exception
+            # get kid from token
+            try:
+                kid = jwt.get_unverified_header(body.token).get('kid', None)
+                alg = jwt.get_unverified_header(body.token).get('alg', None)
+            except jwt.DecodeError as e:
+                raise Exception(ValidateCode.UNPARSABLE_TOKEN)
+
+            if kid is None:
+                raise Exception(ValidateCode.UNSPECIFIED_KEY)
+
+            if alg is None:
+                raise Exception(ValidateCode.UNSPECIFIED_ALG)
+
+            if kid not in fabric_jwks:
+                raise Exception(ValidateCode.UNKNOWN_KEY)
+
+            key = fabric_jwks[kid]
+
+            options = dict()
+            options["verify_exp"] = True
+            options["verify_aud"] = True
+
+            # options https://pyjwt.readthedocs.io/en/latest/api.html
+            try:
+                decoded_token = jwt.decode(body.token, key=key, algorithms=[alg], options=options,
+                                           audience=CONFIG_OBJ.get_oauth_client_id())
+            except Exception as e:
+                raise Exception(ValidateCode.INVALID)
+
         success_counter.labels(HTTP_METHOD_POST, TOKENS_REVOKES_URL).inc()
+        response_data = Status200OkNoContentData()
+        response_data.details = f"Token '{body.token}' of type '{body.type}' is valid"
         response = Status200OkNoContent()
+        response.data = [response_data]
+        response.size = len(response.data)
         response.status = 200
         response.type = 'no_content'
         return cors_200(response_body=response)
