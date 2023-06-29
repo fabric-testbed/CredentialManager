@@ -125,5 +125,5 @@ def tokens_validate_post(body):  # noqa: E501
     """
     if connexion.request.is_json:
         body = TokenPost.from_dict(connexion.request.get_json())  # noqa: E501
-    rc.tokens_validate_post(body)
+    return rc.tokens_validate_post(body)
 

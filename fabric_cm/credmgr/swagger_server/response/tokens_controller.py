@@ -313,14 +313,12 @@ def tokens_validate_post(body: TokenPost):  # noqa: E501
             if alg is None:
                 raise Exception(ValidateCode.UNSPECIFIED_ALG)
 
-            if kid not in jwk_public_key_rsa:
+            if kid != jwk_public_key_rsa['kid']:
                 raise Exception(ValidateCode.UNKNOWN_KEY)
 
-            key = jwk_public_key_rsa[kid]
+            key = jwt.algorithms.RSAAlgorithm.from_jwk(jwk_public_key_rsa)
 
-            options = dict()
-            options["verify_exp"] = True
-            options["verify_aud"] = True
+            options = {"verify_exp": True, "verify_aud": True}
 
             # options https://pyjwt.readthedocs.io/en/latest/api.html
             try:
@@ -329,7 +327,7 @@ def tokens_validate_post(body: TokenPost):  # noqa: E501
             except Exception as e:
                 raise Exception(ValidateCode.INVALID)
 
-        success_counter.labels(HTTP_METHOD_POST, TOKENS_REVOKES_URL).inc()
+        success_counter.labels(HTTP_METHOD_POST, TOKENS_VALIDATE_URL).inc()
         response_data = Status200OkNoContentData()
         response_data.details = f"Token '{body.token}' of type '{body.type}' is valid"
         response = Status200OkNoContent()
