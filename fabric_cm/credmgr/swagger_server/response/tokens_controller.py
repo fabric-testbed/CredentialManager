@@ -36,7 +36,7 @@ from fabric_cm.credmgr.swagger_server.models import Tokens, Token, Status200OkNo
     RevokeList
 from fabric_cm.credmgr.swagger_server.models.request import Request  # noqa: E501
 from fabric_cm.credmgr.swagger_server import received_counter, success_counter, failure_counter, jwt_validator, \
-    fabric_jwks
+    fabric_jwks, jwk_public_key_rsa
 from fabric_cm.credmgr.swagger_server.models.token_post import TokenPost
 from fabric_cm.credmgr.swagger_server.response.constants import HTTP_METHOD_POST, TOKENS_REVOKE_URL, \
     TOKENS_REFRESH_URL, TOKENS_CREATE_URL, VOUCH_ID_TOKEN, VOUCH_REFRESH_TOKEN, TOKENS_REVOKES_URL, HTTP_METHOD_GET, \
@@ -313,10 +313,10 @@ def tokens_validate_post(body: TokenPost):  # noqa: E501
             if alg is None:
                 raise Exception(ValidateCode.UNSPECIFIED_ALG)
 
-            if kid not in fabric_jwks:
+            if kid not in jwk_public_key_rsa:
                 raise Exception(ValidateCode.UNKNOWN_KEY)
 
-            key = fabric_jwks[kid]
+            key = jwk_public_key_rsa[kid]
 
             options = dict()
             options["verify_exp"] = True
