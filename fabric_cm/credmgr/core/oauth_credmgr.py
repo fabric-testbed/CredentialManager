@@ -33,7 +33,9 @@ from datetime import datetime, timezone, timedelta
 from enum import Enum
 from typing import List, Dict, Any, Tuple
 
+import jwt
 import requests
+from jwt import ExpiredSignatureError
 from requests_oauthlib import OAuth2Session
 
 from . import DB_OBJ
@@ -41,7 +43,7 @@ from .abstract_cred_mgr import AbcCredMgr
 from fabric_cm.credmgr.config import CONFIG_OBJ
 from fabric_cm.credmgr.logging import LOG
 from fabric_cm.credmgr.token.token_encoder import TokenEncoder
-from fabric_cm.credmgr.swagger_server import jwt_validator
+from fabric_cm.credmgr.swagger_server import jwt_validator, jwk_public_key_rsa
 from fss_utils.jwt_manager import ValidateCode
 
 from http.client import INTERNAL_SERVER_ERROR, NOT_FOUND
@@ -418,3 +420,46 @@ class OAuthCredMgr(AbcCredMgr):
         # Remove the expired tokens
         for t in tokens:
             DB_OBJ.remove_token(token_hash=t.get(self.TOKEN_HASH))
+
+    def validate_token(self, *, token: str) -> str:
+        state = TokenState.Active
+        # get kid from token
+        try:
+            kid = jwt.get_unverified_header(token).get('kid', None)
+            alg = jwt.get_unverified_header(token).get('alg', None)
+        except jwt.DecodeError as e:
+            raise Exception(ValidateCode.UNPARSABLE_TOKEN)
+
+        if kid is None:
+            raise Exception(ValidateCode.UNSPECIFIED_KEY)
+
+        if alg is None:
+            raise Exception(ValidateCode.UNSPECIFIED_ALG)
+
+        if kid != jwk_public_key_rsa['kid']:
+            raise Exception(ValidateCode.UNKNOWN_KEY)
+
+        key = jwt.algorithms.RSAAlgorithm.from_jwk(jwk_public_key_rsa)
+
+        options = {"verify_exp": True, "verify_aud": True}
+
+        # options https://pyjwt.readthedocs.io/en/latest/api.html
+        try:
+            decoded_token = jwt.decode(token, key=key, algorithms=[alg], options=options,
+                                       audience=CONFIG_OBJ.get_oauth_client_id())
+
+            # Check if the Token is Revoked
+            token_hash = self.__generate_sha256(token=token)
+            token_found_in_db = DB_OBJ.get_tokens(token_hash=token_hash)
+            if token_found_in_db is None or len(token_found_in_db) == 0:
+                raise OAuthCredMgrError(http_error_code=NOT_FOUND, message="Token not found!")
+
+            if TokenState(token_found_in_db[0]) == TokenState.Revoked:
+                state = TokenState.Revoked
+
+        except ExpiredSignatureError:
+            state = TokenState.Expired
+        except Exception:
+            raise Exception(ValidateCode.INVALID)
+
+        return str(state)

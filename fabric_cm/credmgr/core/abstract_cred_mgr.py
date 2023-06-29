@@ -115,3 +115,11 @@ class AbcCredMgr(ABC):
         Get Tokens
         @return list of tokens
         """
+
+    @abstractmethod
+    def validate_token(self, *, token: str) -> str:
+        """
+        Validate token
+        @param token
+        @return Return token state
+        """

@@ -28,40 +28,21 @@ Module for handling /tokens APIs
 from datetime import datetime
 
 import connexion
-import jwt
 from fss_utils.jwt_manager import JWTManager, ValidateCode
 
-from fabric_cm.credmgr.core.oauth_credmgr import OAuthCredMgr
+from fabric_cm.credmgr.core.oauth_credmgr import OAuthCredMgr, TokenState
 from fabric_cm.credmgr.swagger_server.models import Tokens, Token, Status200OkNoContent, Status200OkNoContentData, \
     RevokeList
 from fabric_cm.credmgr.swagger_server.models.request import Request  # noqa: E501
-from fabric_cm.credmgr.swagger_server import received_counter, success_counter, failure_counter, jwt_validator, \
-    fabric_jwks, jwk_public_key_rsa
+from fabric_cm.credmgr.swagger_server import received_counter, success_counter, failure_counter
 from fabric_cm.credmgr.swagger_server.models.token_post import TokenPost
 from fabric_cm.credmgr.swagger_server.response.constants import HTTP_METHOD_POST, TOKENS_REVOKE_URL, \
     TOKENS_REFRESH_URL, TOKENS_CREATE_URL, VOUCH_ID_TOKEN, VOUCH_REFRESH_TOKEN, TOKENS_REVOKES_URL, HTTP_METHOD_GET, \
     TOKENS_REVOKE_LIST_URL, TOKENS_VALIDATE_URL
 from fabric_cm.credmgr.config import CONFIG_OBJ
 from fabric_cm.credmgr.logging import LOG
-from fabric_cm.credmgr.swagger_server.response.cors_response import cors_401, cors_200, cors_500, cors_400
+from fabric_cm.credmgr.swagger_server.response.cors_response import cors_200, cors_500, cors_400
 from fabric_cm.credmgr.swagger_server.response.decorators import login_required, login_or_token_required
-
-
-def authorize(request):
-    ci_logon_id_token = request.headers.get(VOUCH_ID_TOKEN, None)
-    refresh_token = request.headers.get(VOUCH_REFRESH_TOKEN, None)
-    cookie_name = CONFIG_OBJ.get_vouch_cookie_name()
-    cookie = request.cookies.get(cookie_name)
-    if ci_logon_id_token is None and refresh_token is None and cookie is not None:
-        vouch_secret = CONFIG_OBJ.get_vouch_secret()
-        vouch_compression = CONFIG_OBJ.is_vouch_cookie_compressed()
-        status, decoded_cookie = JWTManager.decode(cookie=cookie,secret=vouch_secret,
-                                                   compression=vouch_compression, verify=False)
-        if status == ValidateCode.VALID:
-            ci_logon_id_token = decoded_cookie.get('PIdToken', None)
-            refresh_token = decoded_cookie.get('PRefreshToken', None)
-
-    return ci_logon_id_token, refresh_token, cookie
 
 
 @login_required
@@ -299,37 +280,14 @@ def tokens_validate_post(body: TokenPost):  # noqa: E501
     """
     received_counter.labels(HTTP_METHOD_POST, TOKENS_VALIDATE_URL).inc()
     try:
+        state = TokenState.Active
         if body.type == "identity":
-            # get kid from token
-            try:
-                kid = jwt.get_unverified_header(body.token).get('kid', None)
-                alg = jwt.get_unverified_header(body.token).get('alg', None)
-            except jwt.DecodeError as e:
-                raise Exception(ValidateCode.UNPARSABLE_TOKEN)
-
-            if kid is None:
-                raise Exception(ValidateCode.UNSPECIFIED_KEY)
-
-            if alg is None:
-                raise Exception(ValidateCode.UNSPECIFIED_ALG)
-
-            if kid != jwk_public_key_rsa['kid']:
-                raise Exception(ValidateCode.UNKNOWN_KEY)
-
-            key = jwt.algorithms.RSAAlgorithm.from_jwk(jwk_public_key_rsa)
-
-            options = {"verify_exp": True, "verify_aud": True}
-
-            # options https://pyjwt.readthedocs.io/en/latest/api.html
-            try:
-                decoded_token = jwt.decode(body.token, key=key, algorithms=[alg], options=options,
-                                           audience=CONFIG_OBJ.get_oauth_client_id())
-            except Exception as e:
-                raise Exception(ValidateCode.INVALID)
+            credmgr = OAuthCredMgr()
+            state = credmgr.validate_token(token=body.token)
 
         success_counter.labels(HTTP_METHOD_POST, TOKENS_VALIDATE_URL).inc()
         response_data = Status200OkNoContentData()
-        response_data.details = f"Token '{body.token}' of type '{body.type}' is valid"
+        response_data.details = f"Token is {state}!"
         response = Status200OkNoContent()
         response.data = [response_data]
         response.size = len(response.data)
