@@ -457,7 +457,7 @@ paths:
             type: string
             enum:
             - Nascent
-            - Active
+            - Valid
             - Refreshed
             - Revoked
             - Expired
@@ -749,7 +749,7 @@ components:
           description: Token state
           enum:
           - Nascent
-          - Active
+          - Valid
           - Refreshed
           - Revoked
           - Expired
