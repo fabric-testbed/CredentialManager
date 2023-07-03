@@ -475,9 +475,7 @@ class OAuthCredMgr(AbcCredMgr):
             if token_found_in_db is None or len(token_found_in_db) == 0:
                 raise OAuthCredMgrError(http_error_code=NOT_FOUND, message="Token not found!")
 
-            token_state = TokenState(token_found_in_db[0].get(self.STATE))
-            if token_state == TokenState.Revoked:
-                state = TokenState.Revoked
+            state = token_found_in_db[0].get(self.STATE)
 
         except ExpiredSignatureError:
             state = TokenState.Expired
