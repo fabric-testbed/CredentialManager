@@ -169,12 +169,12 @@ def tokens_revokes_post(body: TokenPost, claims: dict = None):  # noqa: E501
         credmgr = OAuthCredMgr()
         if body.type == "identity":
             credmgr.revoke_identity_token(token_hash=body.token, user_email=claims.get(OAuthCredMgr.EMAIL),
-                                          user_id=claims.get(OAuthCredMgr.UUID))
+                                          cookie=claims.get(OAuthCredMgr.COOKIE))
         else:
             credmgr.revoke_token(refresh_token=body.token)
         success_counter.labels(HTTP_METHOD_POST, TOKENS_REVOKES_URL).inc()
         response_data = Status200OkNoContentData()
-        response_data.details = f"Token '{body.token}' of type '{body.type}' has been successfully revoked"
+        response_data.details = f"Token of type '{body.type}' has been successfully revoked"
         response = Status200OkNoContent()
         response.data = [response_data]
         response.size = len(response.data)
@@ -275,6 +275,8 @@ def tokens_validate_post(body: TokenPost, claims: dict = None):  # noqa: E501
 
     :param body:
     :type body: dict | bytes
+    :param claims:
+    :type claims: dict | bytes
 
     :rtype: Status200OkNoContent
     """

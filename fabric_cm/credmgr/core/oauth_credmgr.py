@@ -35,6 +35,7 @@ from typing import List, Dict, Any, Tuple
 
 import jwt
 import requests
+from fabric_cm.credmgr.external_apis.core_api import CoreApi
 from jwt import ExpiredSignatureError
 from requests_oauthlib import OAuth2Session
 
@@ -47,6 +48,8 @@ from fabric_cm.credmgr.swagger_server import jwt_validator, jwk_public_key_rsa
 from fss_utils.jwt_manager import ValidateCode
 
 from http.client import INTERNAL_SERVER_ERROR, NOT_FOUND
+
+from ..common.utils import Utils
 
 
 class OAuthCredMgrError(Exception):
@@ -338,7 +341,7 @@ class OAuthCredMgr(AbcCredMgr):
         if response.status_code != 200:
             raise OAuthCredMgrError("Refresh token could not be revoked!")
 
-    def revoke_identity_token(self, token_hash: str, user_email: str = None, user_id: str = None):
+    def revoke_identity_token(self, token_hash: str, cookie: str, user_email: str = None):
         """
          Revoke a fabric identity token
 
@@ -346,19 +349,26 @@ class OAuthCredMgr(AbcCredMgr):
          :type token_hash: str
          :param user_email: User's email
          :type user_email: str
-         :param user_id: User identified by universally unique identifier
-         :type user_id: str
+         :param cookie: Cookie
+         :type cookie: str
 
          @returns dictionary containing status of the operation
          @raises Exception in case of error
          """
-        if user_id is None and user_email is None and token_hash is None:
+        if user_email is None and token_hash is None:
             raise OAuthCredMgrError(f"User Id/Email or Token Hash required")
 
-        tokens = self.get_tokens(token_hash=token_hash, user_email=user_email, user_id=user_id)
+        # Facility Operator query all tokens
+        if Utils.is_facility_operator(cookie=cookie):
+            tokens = self.get_tokens(token_hash=token_hash)
+        # Otherwise query only this user's tokens
+        else:
+            tokens = self.get_tokens(token_hash=token_hash, user_email=user_email)
+
+        tokens = self.get_tokens(token_hash=token_hash)
         if tokens is None or len(tokens) == 0:
             raise OAuthCredMgrError(http_error_code=NOT_FOUND,
-                                    message=f"Token# {token_hash} not found for user: {user_email}/{user_id}!")
+                                    message=f"Token# {token_hash} not found!")
         DB_OBJ.update_token(token_hash=token_hash, state=TokenState.Revoked.value)
 
     def get_token_revoke_list(self, project_id: str, user_email: str = None, user_id: str = None) -> List[str]:

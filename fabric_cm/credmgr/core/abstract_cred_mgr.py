@@ -80,7 +80,7 @@ class AbcCredMgr(ABC):
         """
 
     @abstractmethod
-    def revoke_identity_token(self, token_hash: str, user_email: str = None, user_id: str = None):
+    def revoke_identity_token(self, token_hash: str, cookie: str, user_email: str = None):
         """
         Revoke a fabric identity token
 
@@ -88,8 +88,8 @@ class AbcCredMgr(ABC):
         :type token_hash: str
         :param user_email: User's email
         :type user_email: str
-        :param user_id: User identified by universally unique identifier
-        :type user_id: str
+        :param cookie: Cookie
+        :type cookie: str
 
         @returns dictionary containing status of the operation
         @raises Exception in case of error

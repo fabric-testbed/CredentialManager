@@ -38,6 +38,7 @@ enable-vouch-cookie = True
 token-lifetime = 3600
 project-names-ignore-list = Jupyterhub, fabric-active-users
 roles-list = facility-operators, project-leads
+facility-operators-role = facility-operators
 allowed-scopes = cf, mf, all
 max-llt-count-per-project = 5
 
