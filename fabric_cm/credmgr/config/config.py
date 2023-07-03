@@ -263,5 +263,5 @@ class Config:
     def get_max_llt_per_project(self) -> int:
         return int(self._get_config_from_section(self.SECTION_RUNTIME, self.MAX_LLT_CNT_PER_PROJECT))
 
-    def get_facility_operator_role(self) -> int:
-        return int(self._get_config_from_section(self.SECTION_RUNTIME, self.FACILITY_OPERATOR_ROLE))
+    def get_facility_operator_role(self) -> str:
+        return self._get_config_from_section(self.SECTION_RUNTIME, self.FACILITY_OPERATOR_ROLE)
