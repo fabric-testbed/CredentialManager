@@ -31,11 +31,10 @@ import enum
 import hashlib
 from datetime import datetime, timezone, timedelta
 from enum import Enum
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any
 
 import jwt
 import requests
-from fabric_cm.credmgr.external_apis.core_api import CoreApi
 from jwt import ExpiredSignatureError
 from requests_oauthlib import OAuth2Session
 
@@ -196,8 +195,7 @@ class OAuthCredMgr(AbcCredMgr):
                 comment = "Created via GUI"
 
             # Add token meta info to the database
-            # TODO project name and remote IP
-            DB_OBJ.add_token(user_id=token_encoder.claims["uuid"], user_email=token_encoder.claims["email"],
+            DB_OBJ.add_token(user_id=token_encoder.claims[self.UUID], user_email=token_encoder.claims[self.EMAIL],
                              project_id=project, token_hash=token_hash, created_at=created_at,
                              expires_at=expires_at, state=state.value, created_from=remote_addr,
                              comment=comment)
@@ -238,7 +236,8 @@ class OAuthCredMgr(AbcCredMgr):
             raise OAuthCredMgrError("CredMgr: Cannot request to create a token, "
                                     "Missing required parameter 'project' or 'scope'!")
 
-        short = self.is_short_lived(lifetime_in_hours=lifetime)
+        short = Utils.is_short_lived(lifetime_in_hours=lifetime)
+        LOG.info(f"Token lifetime: {lifetime} short: {short}")
 
         if not short:
             long_lived_tokens = self.get_tokens(project_id=project, user_email=user_email)
@@ -252,7 +251,7 @@ class OAuthCredMgr(AbcCredMgr):
                                                      comment=comment)
 
         # Only include refresh token for short lived tokens
-        if self.is_short_lived(lifetime_in_hours=lifetime):
+        if short:
             result[self.REFRESH_TOKEN] = refresh_token
         return result
 
@@ -483,9 +482,3 @@ class OAuthCredMgr(AbcCredMgr):
             raise Exception(ValidateCode.INVALID)
 
         return str(state)
-
-    @staticmethod
-    def is_short_lived(*, lifetime_in_hours: int):
-        if lifetime_in_hours * 3600 <= CONFIG_OBJ.get_token_life_time():
-            return True
-        return False

@@ -94,3 +94,9 @@ class Utils:
         if CONFIG_OBJ.get_facility_operator_role() in roles:
             return True
         return False
+
+    @staticmethod
+    def is_short_lived(*, lifetime_in_hours: int):
+        if lifetime_in_hours * 3600 <= CONFIG_OBJ.get_token_life_time():
+            return True
+        return False
