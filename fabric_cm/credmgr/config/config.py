@@ -50,7 +50,7 @@ class Config:
     ROLES_LIST = 'roles-list'
     ALLOWED_SCOPES = 'allowed-scopes'
     MAX_LLT_CNT_PER_PROJECT = 'max-llt-count-per-project'
-    FACILITY_OPERATOR_ROLE = 'facility-operators'
+    FACILITY_OPERATOR_ROLE = 'facility-operators-role'
 
     # Logging Parameters
     LOGGER = 'logger'
