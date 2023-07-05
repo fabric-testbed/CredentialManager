@@ -194,6 +194,10 @@ class OAuthCredMgr(AbcCredMgr):
             if comment is None:
                 comment = "Created via GUI"
 
+            # Delete any expired tokens
+            self.delete_expired_tokens(user_email=token_encoder.claims[self.EMAIL],
+                                       user_id=token_encoder.claims[self.UUID])
+
             # Add token meta info to the database
             DB_OBJ.add_token(user_id=token_encoder.claims[self.UUID], user_email=token_encoder.claims[self.EMAIL],
                              project_id=project, token_hash=token_hash, created_at=created_at,
