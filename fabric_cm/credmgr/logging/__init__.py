@@ -33,11 +33,12 @@ LOG = LogHelper.make_logger(log_dir=CONFIG_OBJ.get_logger_dir(),
                             logger=CONFIG_OBJ.get_logger_name())
 
 METRICS_LOG = LogHelper.make_logger(log_dir=CONFIG_OBJ.get_logger_dir(),
-                                    log_file=CONFIG_OBJ.get_(),
+                                    log_file=CONFIG_OBJ.get_metrics_log_file(),
                                     log_level=CONFIG_OBJ.get_logger_level(),
                                     log_retain=CONFIG_OBJ.get_logger_retain(),
                                     log_size=CONFIG_OBJ.get_logger_size(),
-                                    logger=CONFIG_OBJ.get_logger_name())
+                                    logger=f"{CONFIG_OBJ.get_logger_name()}-metrics",
+                                    log_format='%(asctime)s - %(message)s')
 
 
 def log_event(*, token_hash: str, action: str, project_id: str, user_email: str, user_id: str):

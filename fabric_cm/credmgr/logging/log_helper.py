@@ -61,7 +61,7 @@ class LogHelper:
         log = logging.getLogger(logger)
         log.setLevel(log_level)
         default_log_format = \
-            '%(asctime)s - %(name)s - {%(filename)s:%(lineno)d} - [%(threadName)s-%(thread_id)s]- %(levelname)s - %(message)s'
+            '%(asctime)s - %(name)s - {%(filename)s:%(lineno)d} - [%(threadName)s]- %(levelname)s - %(message)s'
         if log_format is not None:
             default_log_format = log_format
 
