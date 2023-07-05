@@ -376,6 +376,11 @@ class OAuthCredMgr(AbcCredMgr):
         if tokens is None or len(tokens) == 0:
             raise OAuthCredMgrError(http_error_code=NOT_FOUND,
                                     message=f"Token# {token_hash} not found!")
+
+        if TokenState(tokens[0].get(self.STATE)) == TokenState.Revoked:
+            LOG.info(f"Token {token_hash} for user {tokens[0].get('user_email')}/{tokens[0].get('user_id')} "
+                     f"is already revoked!")
+            return
         DB_OBJ.update_token(token_hash=token_hash, state=TokenState.Revoked.value)
 
         log_event(token_hash=token_hash, action="revoke", project_id=tokens[0].get('project_id'),
