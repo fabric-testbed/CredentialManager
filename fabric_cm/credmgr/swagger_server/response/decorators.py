@@ -1,6 +1,5 @@
-import os
 from functools import wraps
-from typing import Union, Tuple
+from typing import Union
 
 from fabric_cm.credmgr.core.oauth_credmgr import OAuthCredMgr, TokenState
 from fabric_cm.credmgr.swagger_server import jwt_validator
@@ -104,7 +103,7 @@ def validate_authorization_token(token: str) -> Union[dict, None]:
             credmgr = OAuthCredMgr()
             state, claims = credmgr.validate_token(token=token)
 
-            if state != str(TokenState.Valid):
+            if state not in [str(TokenState.Valid), str(TokenState.Refreshed)]:
                 LOG.error(f"Unable to validate provided token: {state}/{claims}")
                 return None
             return claims
