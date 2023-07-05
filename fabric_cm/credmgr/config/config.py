@@ -56,6 +56,7 @@ class Config:
     LOGGER = 'logger'
     LOG_DIR = 'log-directory'
     LOG_FILE = 'log-file'
+    METRICS_LOG_FILE = 'metrics-log-file'
     LOG_RETAIN = 'log-retain'
     LOG_SIZE = 'log-size'
     LOG_LEVEL = 'log-level'
@@ -147,6 +148,9 @@ class Config:
 
     def get_logger_file(self) -> str:
         return self._get_config_from_section(self.SECTION_LOGGING, self.LOG_FILE)
+
+    def get_metrics_log_file(self) -> str:
+        return self._get_config_from_section(self.SECTION_LOGGING, self.METRICS_LOG_FILE)
 
     def get_logger_level(self) -> str:
         return self._get_config_from_section(self.SECTION_LOGGING, self.LOG_LEVEL)

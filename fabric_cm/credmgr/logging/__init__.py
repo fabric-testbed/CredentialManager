@@ -23,4 +23,4 @@
 #
 # Author Komal Thareja (kthare10@renci.org)
 from fabric_cm.credmgr.logging.log import get_logger
-LOG, FILE_HANDLER = get_logger()
+LOG = get_logger()

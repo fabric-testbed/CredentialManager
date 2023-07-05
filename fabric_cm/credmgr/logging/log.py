@@ -45,7 +45,7 @@ def get_logger():
     """
 
     # Get the log path
-    log_path = CONFIG_OBJ.get_logger_dir() + '/' + CONFIG_OBJ.get_logger_file()
+    log_path = f"{CONFIG_OBJ.get_logger_dir()}/{CONFIG_OBJ.get_logger_file()}"
     if log_path is None:
         raise RuntimeError('The log file path must be specified in CONFIG_OBJ or passed as an argument')
 
@@ -60,14 +60,18 @@ def get_logger():
     log = logging.getLogger(logger)
     log.setLevel(log_level)
     log_format = '%(asctime)s - %(name)s - {%(filename)s:%(lineno)d} - %(levelname)s - %(message)s'
-    os.makedirs(os.path.dirname(log_path), exist_ok=True)
+    os.makedirs(CONFIG_OBJ.get_logger_dir(), exist_ok=True)
 
-    file_handler = RotatingFileHandler(log_path,
-                                       backupCount=CONFIG_OBJ.get_logger_retain(),
+    file_handler = RotatingFileHandler(log_path, backupCount=CONFIG_OBJ.get_logger_retain(),
                                        maxBytes=CONFIG_OBJ.get_logger_size())
     file_handler.setFormatter(logging.Formatter(log_format))
     log.addHandler(file_handler)
 
-    #logging.basicConfig(handlers=[file_handler], format=log_format)
+    log_format = '%(asctime)s - %(message)s'
+    metrics_log_path = f"{CONFIG_OBJ.get_logger_dir()}/{CONFIG_OBJ.get_metrics_log_file()}"
+    metrics_file_handler = RotatingFileHandler(metrics_log_path, backupCount=CONFIG_OBJ.get_logger_retain(),
+                                               maxBytes=CONFIG_OBJ.get_logger_size())
 
-    return log, file_handler
+    log.addHandler(metrics_file_handler)
+
+    return log
