@@ -31,7 +31,7 @@ import enum
 import hashlib
 from datetime import datetime, timezone, timedelta
 from enum import Enum
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 
 import jwt
 import requests
@@ -446,8 +446,13 @@ class OAuthCredMgr(AbcCredMgr):
         for t in tokens:
             DB_OBJ.remove_token(token_hash=t.get(self.TOKEN_HASH))
 
-    def validate_token(self, *, token: str, user_email: str) -> str:
-        state = TokenState.Valid
+    def validate_token(self, *, token: str) -> Tuple[str, dict]:
+        """
+        Validate a token
+        @param token token
+        @return token state and claims
+        """
+        claims = {}
         # get kid from token
         try:
             kid = jwt.get_unverified_header(token).get('kid', None)
@@ -470,8 +475,8 @@ class OAuthCredMgr(AbcCredMgr):
 
         # options https://pyjwt.readthedocs.io/en/latest/api.html
         try:
-            decoded_token = jwt.decode(token, key=key, algorithms=[alg], options=options,
-                                       audience=CONFIG_OBJ.get_oauth_client_id())
+            claims = jwt.decode(token, key=key, algorithms=[alg], options=options,
+                                audience=CONFIG_OBJ.get_oauth_client_id())
 
             # Check if the Token is Revoked
             token_hash = self.__generate_sha256(token=token)
@@ -486,4 +491,4 @@ class OAuthCredMgr(AbcCredMgr):
         except Exception:
             raise Exception(ValidateCode.INVALID)
 
-        return str(state)
+        return str(state), claims

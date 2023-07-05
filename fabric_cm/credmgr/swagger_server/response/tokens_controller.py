@@ -285,7 +285,7 @@ def tokens_validate_post(body: TokenPost, claims: dict = None):  # noqa: E501
         state = TokenState.Valid
         if body.type == "identity":
             credmgr = OAuthCredMgr()
-            state = credmgr.validate_token(token=body.token, user_email=claims.get(OAuthCredMgr.EMAIL))
+            state, claims = credmgr.validate_token(token=body.token)
 
         success_counter.labels(HTTP_METHOD_POST, TOKENS_VALIDATE_URL).inc()
         response_data = Status200OkNoContentData()

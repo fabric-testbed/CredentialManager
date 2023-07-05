@@ -2,7 +2,7 @@ import os
 from functools import wraps
 from typing import Union, Tuple
 
-from fabric_cm.credmgr.core.oauth_credmgr import OAuthCredMgr
+from fabric_cm.credmgr.core.oauth_credmgr import OAuthCredMgr, TokenState
 from fabric_cm.credmgr.swagger_server import jwt_validator
 from fss_utils.jwt_manager import JWTManager, ValidateCode
 
@@ -98,12 +98,16 @@ def validate_authorization_token(token: str) -> Union[dict, None]:
     @return returns the decoded claims
     """
     if token is not None:
-        token = token.replace('Bearer ', '')
-        LOG.info("Validating Fabric token")
-        code, claims_or_exception = jwt_validator.validate_jwt(token=token, verify_exp=True)
-        if code is not ValidateCode.VALID:
-            LOG.error(f"Unable to validate provided token: {code}/{claims_or_exception}")
-            return None
+        try:
+            token = token.replace('Bearer ', '')
+            LOG.info("Validating Fabric token")
+            credmgr = OAuthCredMgr()
+            state, claims = credmgr.validate_token(token=token)
 
-        return claims_or_exception
+            if state != str(TokenState.Valid):
+                LOG.error(f"Unable to validate provided token: {state}/{claims}")
+                return None
+            return claims
+        except Exception:
+            LOG.error(f"Unable to validate provided token!", stack_info=True)
 

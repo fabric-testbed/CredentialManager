@@ -119,10 +119,9 @@ class AbcCredMgr(ABC):
         """
 
     @abstractmethod
-    def validate_token(self, *, token: str, user_email: str) -> str:
+    def validate_token(self, *, token: str) -> str:
         """
         Validate token
         @param token
-        @param user_email
         @return Return token state
         """
