@@ -25,8 +25,8 @@
 from datetime import datetime
 from dateutil import tz
 from fss_utils.jwt_manager import JWTManager, ValidateCode
-from fss_utils.vouch_encoder import VouchEncoder, CustomClaimsType, PTokens
 
+from fabric_cm.credmgr.common.utils import Utils
 from fabric_cm.credmgr.config import CONFIG_OBJ
 from fabric_cm.credmgr.external_apis.ldap import CmLdapMgrSingleton
 from fabric_cm.credmgr.logging import LOG
@@ -34,7 +34,7 @@ from fabric_cm.credmgr.common.exceptions import TokenError
 from fabric_cm.credmgr.external_apis.core_api import CoreApi
 
 
-class FabricTokenEncoder:
+class TokenEncoder:
     """
     Implements class to transform CILogon ID token to Fabric Id Token
     by adding the project, scope and membership information to the token
@@ -54,7 +54,6 @@ class FabricTokenEncoder:
         if id_token is None or project is None or scope is None:
             raise TokenError("Missing required parameters id_token or project or scope")
 
-        LOG.debug("id_token %s", id_token)
         self.id_token = id_token
         self.claims = idp_claims
         self.project = project
@@ -76,6 +75,8 @@ class FabricTokenEncoder:
         if self.encoded:
             return self.token
 
+        self._validate_lifetime(validity=validity_in_seconds)
+
         self._add_fabric_claims()
 
         code, token_or_exception = JWTManager.encode_and_sign_with_private_key(validity=validity_in_seconds,
@@ -91,52 +92,29 @@ class FabricTokenEncoder:
         self.encoded = True
         return self.token
 
-    def _get_vouch_cookie(self) -> str:
-        vouch_cookie_enabled = CONFIG_OBJ.is_vouch_cookie_enabled()
-        if not vouch_cookie_enabled or self.cookie is not None:
-            return self.cookie
+    def _validate_lifetime(self, *, validity: int):
+        """
+        Set the claims for the Token by adding membership, project and scope
+        """
+        if validity == CONFIG_OBJ.get_token_life_time():
+            return True
 
-        vouch_secret = CONFIG_OBJ.get_vouch_secret()
-        vouch_compression = CONFIG_OBJ.is_vouch_cookie_compressed()
-        vouch_claims = CONFIG_OBJ.get_vouch_custom_claims()
-        vouch_cookie_lifetime = CONFIG_OBJ.get_vouch_cookie_lifetime()
-        vouch_helper = VouchEncoder(secret=vouch_secret, compression=vouch_compression)
-
-        custom_claims = []
-        for c in vouch_claims:
-            c_type = c.strip().upper()
-
-            if c_type == CustomClaimsType.OPENID.name:
-                custom_claims.append(CustomClaimsType.OPENID)
-
-            if c_type == CustomClaimsType.EMAIL.name:
-                custom_claims.append(CustomClaimsType.EMAIL)
-
-            if c_type == CustomClaimsType.PROFILE.name:
-                custom_claims.append(CustomClaimsType.PROFILE)
-
-            if c_type == CustomClaimsType.CILOGON_USER_INFO.name:
-                custom_claims.append(CustomClaimsType.CILOGON_USER_INFO)
-
-        p_tokens = PTokens(id_token=self.id_token, idp_claims=self.claims)
-
-        code, cookie_or_exception = vouch_helper.encode(custom_claims_type=custom_claims, p_tokens=p_tokens,
-                                                        validity_in_seconds=vouch_cookie_lifetime)
-
-        if code != ValidateCode.VALID:
-            LOG.error(f"Failed to encode the Vouch Cookie: {cookie_or_exception}")
-            raise cookie_or_exception
-
-        return cookie_or_exception
+        core_api = CoreApi(api_server=CONFIG_OBJ.get_core_api_url(),
+                           cookie=Utils.get_vouch_cookie(cookie=self.cookie, id_token=self.id_token,
+                                                         claims=self.claims),
+                           cookie_name=CONFIG_OBJ.get_vouch_cookie_name(),
+                           cookie_domain=CONFIG_OBJ.get_vouch_cookie_domain_name())
+        # TODO validate if the user is allowed to request long lived tokens
+        return True
 
     def _add_fabric_claims(self):
         """
         Set the claims for the Token by adding membership, project and scope
         """
-        url = CONFIG_OBJ.get_core_api_url()
-
         if CONFIG_OBJ.is_core_api_enabled():
-            core_api = CoreApi(api_server=url, cookie=self._get_vouch_cookie(),
+            core_api = CoreApi(api_server=CONFIG_OBJ.get_core_api_url(),
+                               cookie=Utils.get_vouch_cookie(cookie=self.cookie, id_token=self.id_token,
+                                                             claims=self.claims),
                                cookie_name=CONFIG_OBJ.get_vouch_cookie_name(),
                                cookie_domain=CONFIG_OBJ.get_vouch_cookie_domain_name())
             uuid, roles, projects = core_api.get_user_and_project_info(project_id=self.project)

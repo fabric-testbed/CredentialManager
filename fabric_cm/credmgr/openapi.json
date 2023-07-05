@@ -124,6 +124,33 @@
               "type": "string",
               "default": "all"
             }
+          },
+          {
+            "name": "lifetime",
+            "in": "query",
+            "description": "Lifetime of the token requested in hours",
+            "required": false,
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "maximum": 1512,
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "comment",
+            "in": "query",
+            "description": "Comment",
+            "required": false,
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "maxLength": 100,
+              "minLength": 10,
+              "type": "string",
+              "default": "Create Token via GUI"
+            }
           }
         ],
         "responses": {
@@ -289,13 +316,87 @@
         }
       }
     },
+    "/tokens/revokes": {
+      "post": {
+        "tags": [
+          "tokens"
+        ],
+        "summary": "Revoke a token",
+        "description": "Request to revoke a token\n",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/payload_token"
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/status_200_ok_no_content"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/status_400_bad_request"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/status_401_unauthorized"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/status_403_forbidden"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/status_404_not_found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/status_500_internal_server_error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/tokens/revoke": {
       "post": {
         "tags": [
           "tokens"
         ],
-        "summary": "Revoke a refresh token for an user",
-        "description": "Request to revoke a refresh token for an user\n",
+        "summary": "Revoke a token for an user",
+        "description": "Request to revoke a token for an user\n",
         "requestBody": {
           "$ref": "#/components/requestBodies/payload_token_post"
         },
@@ -362,10 +463,345 @@
           }
         }
       }
+    },
+    "/tokens/validate": {
+      "post": {
+        "tags": [
+          "tokens"
+        ],
+        "summary": "Validate an identity token issued by Credential Manager",
+        "description": "Validate an identity token issued by Credential Manager\n",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/payload_token"
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/status_200_ok_no_content"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/status_400_bad_request"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/status_401_unauthorized"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/status_403_forbidden"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/status_404_not_found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/status_500_internal_server_error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tokens/revoke_list": {
+      "get": {
+        "tags": [
+          "tokens"
+        ],
+        "summary": "Get token revoke list i.e. list of revoked identity token hashes",
+        "description": "Get token revoke list i.e. list of revoked identity token hashes for a user in a project\n",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "query",
+            "description": "Project identified by universally unique identifier",
+            "required": false,
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/revoke_list"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/status_400_bad_request"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/status_401_unauthorized"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/status_403_forbidden"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/status_404_not_found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/status_500_internal_server_error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tokens": {
+      "get": {
+        "tags": [
+          "tokens"
+        ],
+        "summary": "Get tokens",
+        "description": "Get tokens for a user in a project\n",
+        "parameters": [
+          {
+            "name": "token_hash",
+            "in": "query",
+            "description": "Token identified by SHA256 hash",
+            "required": false,
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "project_id",
+            "in": "query",
+            "description": "Project identified by universally unique identifier",
+            "required": false,
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "expires",
+            "in": "query",
+            "description": "Search for tokens with expiry time lesser than the specified expiration time",
+            "required": false,
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "states",
+            "in": "query",
+            "description": "Search for Tokens in the specified states",
+            "required": false,
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "Nascent",
+                  "Valid",
+                  "Refreshed",
+                  "Revoked",
+                  "Expired"
+                ]
+              }
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "maximum number of results to return per page (1 or more)",
+            "required": false,
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer",
+              "format": "int32",
+              "default": 5
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "number of items to skip before starting to collect the result set",
+            "required": false,
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "minimum": 0,
+              "type": "integer",
+              "format": "int32",
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/tokens"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/status_400_bad_request"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/status_401_unauthorized"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/status_403_forbidden"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/status_404_not_found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/status_500_internal_server_error"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "status_200_ok_paginated": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer"
+          },
+          "offset": {
+            "type": "integer"
+          },
+          "size": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "integer",
+            "default": 200
+          },
+          "type": {
+            "type": "string"
+          }
+        }
+      },
       "status_200_ok_single": {
         "type": "object",
         "properties": {
@@ -596,11 +1032,30 @@
           }
         }
       },
-      "tokens": {
+      "revoke_list": {
         "type": "object",
         "allOf": [
           {
             "$ref": "#/components/schemas/status_200_ok_single"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "tokens": {
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/status_200_ok_paginated"
           },
           {
             "type": "object",
@@ -618,11 +1073,44 @@
       "token": {
         "required": [
           "created_at",
-          "id_token",
-          "refresh_token"
+          "created_from",
+          "expires_at",
+          "state",
+          "token_hash"
         ],
         "type": "object",
         "properties": {
+          "token_hash": {
+            "type": "string",
+            "description": "Identity Token SHA256 Hash"
+          },
+          "created_at": {
+            "type": "string",
+            "description": "Token creation time"
+          },
+          "expires_at": {
+            "type": "string",
+            "description": "Token expiry time"
+          },
+          "state": {
+            "type": "string",
+            "description": "Token state",
+            "enum": [
+              "Nascent",
+              "Valid",
+              "Refreshed",
+              "Revoked",
+              "Expired"
+            ]
+          },
+          "created_from": {
+            "type": "string",
+            "description": "Remote IP from where the token create request was received"
+          },
+          "comment": {
+            "type": "string",
+            "description": "Comment provided at creation"
+          },
           "id_token": {
             "type": "string",
             "description": "Identity Token"
@@ -630,9 +1118,6 @@
           "refresh_token": {
             "type": "string",
             "description": "Refresh Token"
-          },
-          "created_at": {
-            "type": "string"
           }
         }
       },
@@ -645,6 +1130,27 @@
           "refresh_token": {
             "type": "string",
             "description": "Refresh Token"
+          }
+        }
+      },
+      "token_post": {
+        "required": [
+          "token",
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Token Type",
+            "enum": [
+              "identity",
+              "refresh"
+            ]
+          },
+          "token": {
+            "type": "string",
+            "description": "Refresh Token or Token Hash"
           }
         }
       },
@@ -721,8 +1227,7 @@
             "type": "string",
             "description": "Key Id Header Parameter"
           }
-        },
-        "example": null
+        }
       }
     },
     "requestBodies": {
@@ -731,6 +1236,16 @@
           "application/json": {
             "schema": {
               "$ref": "#/components/schemas/request"
+            }
+          }
+        },
+        "required": true
+      },
+      "payload_token": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/token_post"
             }
           }
         },

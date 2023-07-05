@@ -21,21 +21,28 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-# Author Komal Thareja (kthare10@renci.org)
-VERSION_URL = '/version'
-CERTS_URL = '/certs'
-TOKENS_CREATE_URL = '/tokens/create'
-TOKENS_REFRESH_URL = '/tokens/refresh'
-TOKENS_REVOKE_URL = '/tokens/revoke'
-TOKENS_REVOKES_URL = '/tokens/revokes'
-TOKENS_REVOKE_LIST_URL = '/tokens/revoke_list'
-TOKENS_VALIDATE_URL = '/tokens/validate'
+#
+# Author: Komal Thareja (kthare10@renci.org)
 
-HTTP_METHOD_GET = 'get'
-HTTP_METHOD_POST = 'post'
+from sqlalchemy import TIMESTAMP
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import Column, String, Integer, Sequence
+
+Base = declarative_base()
 
 
-VOUCH_ID_TOKEN = 'X-Vouch-Idp-IdToken'
-VOUCH_REFRESH_TOKEN = 'X-Vouch-Idp-RefreshToken'
-
-AUTHORIZATION_ERR = 'Authorization information is missing or invalid: /tokens'
+class Tokens(Base):
+    """
+    Represents Tokens Database Table
+    """
+    __tablename__ = 'Tokens'
+    token_id = Column(Integer, Sequence('token_id', start=1, increment=1), autoincrement=True, primary_key=True)
+    user_id = Column(String, nullable=False, index=True)
+    user_email = Column(String, nullable=False, index=True)
+    project_id = Column(String, nullable=False, index=True)
+    comment = Column(String, nullable=False)
+    state = Column(Integer, nullable=False, index=True)
+    token_hash = Column(String, nullable=False, index=True)
+    created_from = Column(String, nullable=False)
+    created_at = Column(TIMESTAMP(timezone=True), nullable=True)
+    expires_at = Column(TIMESTAMP(timezone=True), nullable=True)

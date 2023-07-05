@@ -19,7 +19,7 @@ class TestVersionController(BaseTestCase):
         Version
         """
         response = self.client.open(
-            '//version',
+            '/credmgr//version',
             method='GET')
         self.assert200(response,
                        'Response body is : ' + response.data.decode('utf-8'))

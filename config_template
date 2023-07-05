@@ -38,7 +38,9 @@ enable-vouch-cookie = True
 token-lifetime = 3600
 project-names-ignore-list = Jupyterhub, fabric-active-users
 roles-list = facility-operators, project-leads
+facility-operators-role = facility-operators
 allowed-scopes = cf, mf, all
+max-llt-count-per-project = 5
 
 [logging]
 logger = credmgr
@@ -48,6 +50,7 @@ log-directory = /var/log/credmgr
 #
 ## The filename to be used for credmgr's log file.
 log-file = credmgr.log
+metrics-log-file = metrics.log
 #
 ## The default log level for credmgr.
 log-level = DEBUG
@@ -94,3 +97,9 @@ custom_claims = OPENID, EMAIL, PROFILE
 lifetime = 3600
 cookie-name = fabric-service
 cookie-domain-name = cookie_domain
+
+[database]
+db-user = fabric
+db-password = fabric
+db-name = credmgr
+db-host = credmgr-db:5432
