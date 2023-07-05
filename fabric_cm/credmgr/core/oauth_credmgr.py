@@ -41,7 +41,7 @@ from requests_oauthlib import OAuth2Session
 from . import DB_OBJ
 from .abstract_cred_mgr import AbcCredMgr
 from fabric_cm.credmgr.config import CONFIG_OBJ
-from fabric_cm.credmgr.logging import LOG
+from fabric_cm.credmgr.logging import LOG, log_event
 from fabric_cm.credmgr.token.token_encoder import TokenEncoder
 from fabric_cm.credmgr.swagger_server import jwt_validator, jwk_public_key_rsa
 from fss_utils.jwt_manager import ValidateCode
@@ -187,9 +187,11 @@ class OAuthCredMgr(AbcCredMgr):
             token_hash = self.__generate_sha256(token=token)
 
             state = TokenState.Valid
+            action = "create"
             if refresh:
                 state = TokenState.Refreshed
                 comment = "Refreshed via API"
+                action = "refresh"
 
             if comment is None:
                 comment = "Created via GUI"
@@ -203,6 +205,9 @@ class OAuthCredMgr(AbcCredMgr):
                              project_id=project, token_hash=token_hash, created_at=created_at,
                              expires_at=expires_at, state=state.value, created_from=remote_addr,
                              comment=comment)
+
+            log_event(token_hash=token_hash, action=action, project_id=project,
+                      user_id=token_encoder.claims[self.UUID], user_email=token_encoder.claims[self.EMAIL])
 
             return {self.TOKEN_HASH: token_hash,
                     self.CREATED_AT: created_at,
@@ -368,11 +373,13 @@ class OAuthCredMgr(AbcCredMgr):
         else:
             tokens = self.get_tokens(token_hash=token_hash, user_email=user_email)
 
-        tokens = self.get_tokens(token_hash=token_hash)
         if tokens is None or len(tokens) == 0:
             raise OAuthCredMgrError(http_error_code=NOT_FOUND,
                                     message=f"Token# {token_hash} not found!")
         DB_OBJ.update_token(token_hash=token_hash, state=TokenState.Revoked.value)
+
+        log_event(token_hash=token_hash, action="revoke", project_id=tokens[0].get('project_id'),
+                  user_id=tokens[0].get('user_id'), user_email=tokens[0].get('user_email'))
 
     def get_token_revoke_list(self, project_id: str, user_email: str = None, user_id: str = None) -> List[str]:
         """Get token revoke list i.e. list of revoked identity token hashes
@@ -445,6 +452,8 @@ class OAuthCredMgr(AbcCredMgr):
         # Remove the expired tokens
         for t in tokens:
             DB_OBJ.remove_token(token_hash=t.get(self.TOKEN_HASH))
+            log_event(token_hash=t.get(self.TOKEN_HASH), action="delete", project_id=tokens[0].get('project_id'),
+                      user_id=tokens[0].get('user_id'), user_email=tokens[0].get('user_email'))
 
     def validate_token(self, *, token: str) -> Tuple[str, dict]:
         """
