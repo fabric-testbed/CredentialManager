@@ -4,6 +4,9 @@ services:
   database:
     image: fabrictestbed/postgres:12.3
     container_name: credmgr-db
+    networks:
+      - frontend
+      - backend
     restart: always
     volumes:
       - ./pg_data/data:${PGDATA:-/var/lib/postgresql/data}
@@ -19,6 +22,9 @@ services:
   nginx:
     image: library/nginx:1
     container_name: cm-nginx
+    networks:
+      - frontend
+      - backend
     ports:
       - 8443:443
     volumes:
@@ -34,6 +40,9 @@ services:
       dockerfile: Dockerfile
     image: fabrictestbed/credmgr:latest
     container_name: credmgr
+    networks:
+      - frontend
+      - backend
     depends_on:
       - nginx
       - database
@@ -54,6 +63,9 @@ services:
       dockerfile: Dockerfile
     image: fabrictestbed/cm-app:latest
     container_name: cm-app
+    networks:
+      - frontend
+      - backend
     #ports:
     #  - 9000:3000
     # volume mount docker based files so that they don't rebuild on each deployment
@@ -65,6 +77,9 @@ services:
 
   vouch-proxy:
     container_name: cm-vouch-proxy
+    networks:
+      - frontend
+      - backend
     image: fabrictestbed/vouch-proxy:0.27.1
     #ports:
     #  - 9090:9090
@@ -72,3 +87,8 @@ services:
       - ./vouch:/config
       - ./data:/data
     restart: always
+
+networks:
+  frontend:
+  backend:
+    internal: true
