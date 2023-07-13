@@ -38,11 +38,11 @@ def login_or_token_required(f):
     def decorated_function(*args, **kwargs):
         if 'authorization' in [h.casefold() for h in request.headers.keys()]:
             claims = validate_authorization_token(request.headers.get('authorization'))
-            if claims is not None:
+            if isinstance(claims, dict):
                 return f(*args, claims=claims, **kwargs)
             else:
                 details = 'Login or Token required'
-                LOG.info(f"login_or_token_required(): {details}")
+                LOG.info(f"login_or_token_required(): {details} {claims}")
                 return cors_401(details=details)
         if CONFIG_OBJ.get_vouch_cookie_name() not in request.cookies:
             details = 'Login or Token required'
@@ -91,7 +91,7 @@ def vouch_authorize() -> Union[dict, None]:
         return result
 
 
-def validate_authorization_token(token: str) -> Union[dict, None]:
+def validate_authorization_token(token: str) -> Union[dict, str]:
     """
     Validate that the API has fabric token and the token is valid
     @return returns the decoded claims
@@ -104,9 +104,12 @@ def validate_authorization_token(token: str) -> Union[dict, None]:
             state, claims = credmgr.validate_token(token=token)
 
             if state not in [str(TokenState.Valid), str(TokenState.Refreshed)]:
-                LOG.error(f"Unable to validate provided token: {state}/{claims}")
-                return None
+                msg = f"Unable to validate provided token: {state} claims:{claims}"
+                LOG.error(msg)
+                return msg
             return claims
-        except Exception:
-            LOG.error(f"Unable to validate provided token!", stack_info=True)
+        except Exception as e:
+            msg = f"Unable to validate provided token e: {e}!"
+            LOG.error(msg, stack_info=True)
+            return msg
 

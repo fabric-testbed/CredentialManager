@@ -11,9 +11,9 @@ services:
     environment:
        - POSTGRES_HOST=${POSTGRES_HOST:-database}
        - POSTGRES_PORT=5432
-       - POSTGRES_MULTIPLE_DATABASES=${POSTGRES_DB:-postgres}
-       - POSTGRES_USER=${POSTGRES_USER:-postgres}
-       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-orchestrator}
+       - POSTGRES_MULTIPLE_DATABASES=${POSTGRES_DB:-credmgr}
+       - POSTGRES_USER=${POSTGRES_USER:-fabric}
+       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-fabric}
        - PGDATA=${PGDATA:-/var/lib/postgresql/data}
 
   nginx:
