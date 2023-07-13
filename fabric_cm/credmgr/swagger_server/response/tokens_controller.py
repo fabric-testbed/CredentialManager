@@ -253,6 +253,8 @@ def tokens_revoke_list_get(project_id: str = None, claims: dict = None):  # noqa
     received_counter.labels(HTTP_METHOD_GET, TOKENS_REVOKE_LIST_URL).inc()
     try:
         credmgr = OAuthCredMgr()
+        if project_id is None and claims.get(OAuthCredMgr.PROJECTS) is not None:
+            project_id = claims.get(OAuthCredMgr.PROJECTS)[0][OAuthCredMgr.UUID]
         token_list = credmgr.get_token_revoke_list(project_id=project_id, user_email=claims.get(OAuthCredMgr.EMAIL),
                                                    user_id=claims.get(OAuthCredMgr.UUID))
         success_counter.labels(HTTP_METHOD_GET, TOKENS_REVOKE_LIST_URL).inc()

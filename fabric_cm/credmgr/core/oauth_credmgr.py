@@ -120,6 +120,7 @@ class OAuthCredMgr(AbcCredMgr):
     COOKIE = "cookie"
     UUID = "uuid"
     EMAIL = "email"
+    PROJECTS = "projects"
 
     def __init__(self):
         self.log = LOG
