@@ -41,8 +41,8 @@ def login_or_token_required(f):
             if isinstance(claims, dict):
                 return f(*args, claims=claims, **kwargs)
             else:
-                details = 'Login or Token required'
-                LOG.info(f"login_or_token_required(): {details} {claims}")
+                details = f'Login or Token required : {claims}'
+                LOG.info(f"login_or_token_required(): {details}")
                 return cors_401(details=details)
         if CONFIG_OBJ.get_vouch_cookie_name() not in request.cookies:
             details = 'Login or Token required'
