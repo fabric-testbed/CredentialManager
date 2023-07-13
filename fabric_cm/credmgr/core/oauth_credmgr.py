@@ -211,8 +211,8 @@ class OAuthCredMgr(AbcCredMgr):
                       user_id=token_encoder.claims[self.UUID], user_email=token_encoder.claims[self.EMAIL])
 
             return {self.TOKEN_HASH: token_hash,
-                    self.CREATED_AT: created_at.strftime(fmt=OAuthCredMgr.TIME_FORMAT),
-                    self.EXPIRES_AT: expires_at.strftime(fmt=OAuthCredMgr.TIME_FORMAT),
+                    self.CREATED_AT: created_at.strftime(OAuthCredMgr.TIME_FORMAT),
+                    self.EXPIRES_AT: expires_at.strftime(OAuthCredMgr.TIME_FORMAT),
                     self.STATE: str(state),
                     self.COMMENT: comment,
                     self.CREATED_FROM: remote_addr,
