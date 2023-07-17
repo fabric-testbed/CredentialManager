@@ -121,7 +121,7 @@ def tokens_validate_post(body):  # noqa: E501
     :param body: 
     :type body: dict | bytes
 
-    :rtype: Status200OkNoContent
+    :rtype: DecodedToken
     """
     if connexion.request.is_json:
         body = TokenPost.from_dict(connexion.request.get_json())  # noqa: E501

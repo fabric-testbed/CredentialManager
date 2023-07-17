@@ -5,6 +5,7 @@ from __future__ import absolute_import
 from flask import json
 from six import BytesIO
 
+from fabric_cm.credmgr.swagger_server.models.decoded_token import DecodedToken  # noqa: E501
 from fabric_cm.credmgr.swagger_server.models.request import Request  # noqa: E501
 from fabric_cm.credmgr.swagger_server.models.revoke_list import RevokeList  # noqa: E501
 from fabric_cm.credmgr.swagger_server.models.status200_ok_no_content import Status200OkNoContent  # noqa: E501

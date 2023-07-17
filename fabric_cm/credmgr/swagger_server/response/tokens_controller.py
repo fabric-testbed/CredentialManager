@@ -28,10 +28,11 @@ Module for handling /tokens APIs
 from datetime import datetime
 
 import connexion
+from oauthlib.oauth2.rfc6749.errors import CustomOAuth2Error
 
 from fabric_cm.credmgr.core.oauth_credmgr import OAuthCredMgr, TokenState
 from fabric_cm.credmgr.swagger_server.models import Tokens, Token, Status200OkNoContent, Status200OkNoContentData, \
-    RevokeList
+    RevokeList, DecodedToken
 from fabric_cm.credmgr.swagger_server.models.request import Request  # noqa: E501
 from fabric_cm.credmgr.swagger_server import received_counter, success_counter, failure_counter
 from fabric_cm.credmgr.swagger_server.models.token_post import TokenPost
@@ -113,6 +114,12 @@ def tokens_refresh_post(body: Request, project_id=None, scope=None):  # noqa: E5
         LOG.debug(response)
         success_counter.labels(HTTP_METHOD_POST, TOKENS_REFRESH_URL).inc()
         return cors_200(response_body=response)
+    except CustomOAuth2Error as ex:
+        LOG.exception(ex)
+        LOG.exception(ex.error)
+        LOG.exception(ex.description)
+        failure_counter.labels(HTTP_METHOD_POST, TOKENS_REFRESH_URL).inc()
+        return cors_500(details=str(ex.description))
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_POST, TOKENS_REFRESH_URL).inc()
@@ -237,26 +244,20 @@ def tokens_get(token_hash=None, project_id=None, expires=None, states=None, limi
         return cors_500(details=str(ex))
 
 
-@login_or_token_required
-def tokens_revoke_list_get(project_id: str = None, claims: dict = None):  # noqa: E501
+def tokens_revoke_list_get(project_id: str):  # noqa: E501
     """Get token revoke list i.e. list of revoked identity token hashes
 
     Get token revoke list i.e. list of revoked identity token hashes for a user in a project  # noqa: E501
 
     :param project_id: Project identified by universally unique identifier
     :type project_id: str
-    :param claims
-    :type claims: dict
 
     :rtype: RevokeList
     """
     received_counter.labels(HTTP_METHOD_GET, TOKENS_REVOKE_LIST_URL).inc()
     try:
         credmgr = OAuthCredMgr()
-        if project_id is None and claims.get(OAuthCredMgr.PROJECTS) is not None:
-            project_id = claims.get(OAuthCredMgr.PROJECTS)[0][OAuthCredMgr.UUID]
-        token_list = credmgr.get_token_revoke_list(project_id=project_id, user_email=claims.get(OAuthCredMgr.EMAIL),
-                                                   user_id=claims.get(OAuthCredMgr.UUID))
+        token_list = credmgr.get_token_revoke_list(project_id=project_id)
         success_counter.labels(HTTP_METHOD_GET, TOKENS_REVOKE_LIST_URL).inc()
         response = RevokeList()
         response.data = token_list
@@ -269,16 +270,13 @@ def tokens_revoke_list_get(project_id: str = None, claims: dict = None):  # noqa
         return cors_500(details=str(ex))
 
 
-@login_required
-def tokens_validate_post(body: TokenPost, claims: dict = None):  # noqa: E501
+def tokens_validate_post(body: TokenPost):  # noqa: E501
     """Validate an identity token issued by Credential Manager
 
     Validate an identity token issued by Credential Manager  # noqa: E501
 
     :param body:
     :type body: dict | bytes
-    :param claims:
-    :type claims: dict | bytes
 
     :rtype: Status200OkNoContent
     """
@@ -292,11 +290,12 @@ def tokens_validate_post(body: TokenPost, claims: dict = None):  # noqa: E501
         success_counter.labels(HTTP_METHOD_POST, TOKENS_VALIDATE_URL).inc()
         response_data = Status200OkNoContentData()
         response_data.details = f"Token is {state}!"
-        response = Status200OkNoContent()
+        response = DecodedToken()
         response.data = [response_data]
         response.size = len(response.data)
         response.status = 200
         response.type = 'no_content'
+        response.token = claims
         return cors_200(response_body=response)
     except Exception as ex:
         LOG.exception(ex)

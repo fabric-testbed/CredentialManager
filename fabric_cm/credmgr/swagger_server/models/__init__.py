@@ -3,6 +3,7 @@
 # flake8: noqa
 from __future__ import absolute_import
 # import models into model package
+from fabric_cm.credmgr.swagger_server.models.decoded_token import DecodedToken
 from fabric_cm.credmgr.swagger_server.models.jwks import Jwks
 from fabric_cm.credmgr.swagger_server.models.jwks_keys import JwksKeys
 from fabric_cm.credmgr.swagger_server.models.request import Request

@@ -401,8 +401,8 @@ class OAuthCredMgr(AbcCredMgr):
 
         @return list of sting
         """
-        if user_id is None and user_email is None:
-            raise OAuthCredMgrError(f"User Id or Email required")
+        if project_id is None:
+            raise OAuthCredMgrError(f"Project Id is required")
 
         result = []
 

@@ -324,7 +324,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/status_200_ok_no_content'
+                $ref: '#/components/schemas/decoded_token'
         "400":
           description: Bad Request
           content:
@@ -716,6 +716,14 @@ components:
             type: array
             items:
               type: string
+    decoded_token:
+      type: object
+      allOf:
+      - $ref: '#/components/schemas/status_200_ok_no_content'
+      - type: object
+        properties:
+          token:
+            type: object
     tokens:
       type: object
       allOf:

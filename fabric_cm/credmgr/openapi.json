@@ -135,7 +135,7 @@
             "schema": {
               "maximum": 1512,
               "type": "integer",
-              "default": 1
+              "default": 4
             }
           },
           {
@@ -480,7 +480,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/status_200_ok_no_content"
+                  "$ref": "#/components/schemas/decoded_token"
                 }
               }
             }
@@ -1046,6 +1046,22 @@
                 "items": {
                   "type": "string"
                 }
+              }
+            }
+          }
+        ]
+      },
+      "decoded_token": {
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/status_200_ok_no_content"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "token": {
+                "type": "object"
               }
             }
           }
