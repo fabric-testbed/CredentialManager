@@ -51,6 +51,7 @@ class Config:
     ALLOWED_SCOPES = 'allowed-scopes'
     MAX_LLT_CNT_PER_PROJECT = 'max-llt-count-per-project'
     FACILITY_OPERATOR_ROLE = 'facility-operators-role'
+    LLT_ROLE_SUFFIX = 'llt-role-suffix'
 
     # Logging Parameters
     LOGGER = 'logger'
@@ -269,3 +270,6 @@ class Config:
 
     def get_facility_operator_role(self) -> str:
         return self._get_config_from_section(self.SECTION_RUNTIME, self.FACILITY_OPERATOR_ROLE)
+
+    def get_llt_role_suffix(self) -> str:
+        return self._get_config_from_section(self.SECTION_RUNTIME, self.LLT_ROLE_SUFFIX)

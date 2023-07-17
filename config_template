@@ -41,6 +41,7 @@ roles-list = facility-operators, project-leads
 facility-operators-role = facility-operators
 allowed-scopes = cf, mf, all
 max-llt-count-per-project = 5
+llt-role-suffix = tk
 
 [logging]
 logger = credmgr

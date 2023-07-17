@@ -40,6 +40,13 @@ class TokenEncoder:
     by adding the project, scope and membership information to the token
     and signing with Fabric Certificate
     """
+    PROJECTS = "projects"
+    ROLES = "roles"
+    UUID = "uuid"
+    SCOPE = "scope"
+    TAGS = "tags"
+    EMAIL = "email"
+
     def __init__(self, id_token, idp_claims: dict, project: str, scope: str = "all", cookie: str = None):
         """
         Constructor
@@ -75,9 +82,11 @@ class TokenEncoder:
         if self.encoded:
             return self.token
 
-        self._validate_lifetime(validity=validity_in_seconds)
-
         self._add_fabric_claims()
+
+        if not self._validate_lifetime(validity=validity_in_seconds, project_id=self.project,
+                                       roles=self.claims.get(self.ROLES)):
+            raise TokenError(f"User {self.claims[self.EMAIL]} is not authorized to create long lived tokens!")
 
         code, token_or_exception = JWTManager.encode_and_sign_with_private_key(validity=validity_in_seconds,
                                                                                claims=self.claims,
@@ -92,19 +101,19 @@ class TokenEncoder:
         self.encoded = True
         return self.token
 
-    def _validate_lifetime(self, *, validity: int):
+    def _validate_lifetime(self, *, validity: int, roles: dict, project_id: str):
         """
         Set the claims for the Token by adding membership, project and scope
         """
         if validity == CONFIG_OBJ.get_token_life_time():
             return True
 
-        core_api = CoreApi(api_server=CONFIG_OBJ.get_core_api_url(),
-                           cookie=Utils.get_vouch_cookie(cookie=self.cookie, id_token=self.id_token,
-                                                         claims=self.claims),
-                           cookie_name=CONFIG_OBJ.get_vouch_cookie_name(),
-                           cookie_domain=CONFIG_OBJ.get_vouch_cookie_domain_name())
-        # TODO validate if the user is allowed to request long lived tokens
+        llt_role = f"{project_id}-{CONFIG_OBJ.get_llt_role_suffix()}"
+
+        # User doesn't have the role to create Long lived tokens
+        if llt_role not in roles:
+            return False
+
         return True
 
     def _add_fabric_claims(self):
@@ -124,16 +133,16 @@ class TokenEncoder:
             roles, tags = CmLdapMgrSingleton.get().get_user_and_project_info(eppn=None, email=email,
                                                                              project_id=self.project)
             projects = [{
-                "uuid": self.project,
-                "tags": tags
+                self.UUID: self.project,
+                self.TAGS: tags
             }]
 
         LOG.debug(f"UUID: {uuid} Roles: {roles} Projects: {projects}")
-        self.claims["projects"] = projects
-        self.claims["roles"] = roles
-        self.claims["scope"] = self.scope
+        self.claims[self.PROJECTS] = projects
+        self.claims[self.ROLES] = roles
+        self.claims[self.SCOPE] = self.scope
         if uuid is not None:
-            self.claims["uuid"] = uuid
+            self.claims[self.UUID] = uuid
         LOG.debug("Claims %s", self.claims)
         self.unset = False
 
