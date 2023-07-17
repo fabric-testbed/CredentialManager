@@ -126,7 +126,7 @@ def tokens_refresh_post(body: Request, project_id=None, scope=None):  # noqa: E5
         return cors_500(details=str(ex))
 
 
-@login_required
+@login_or_token_required
 def tokens_revoke_post(body: Request, claims: dict = None):  # noqa: E501
     """Revoke a refresh token for an user
 
@@ -158,7 +158,7 @@ def tokens_revoke_post(body: Request, claims: dict = None):  # noqa: E501
         return cors_500(details=str(ex))
 
 
-@login_required
+@login_or_token_required
 def tokens_revokes_post(body: TokenPost, claims: dict = None):  # noqa: E501
     """Revoke a refresh token for an user
 
@@ -282,10 +282,11 @@ def tokens_validate_post(body: TokenPost):  # noqa: E501
     """
     received_counter.labels(HTTP_METHOD_POST, TOKENS_VALIDATE_URL).inc()
     try:
-        state = TokenState.Valid
         if body.type == "identity":
             credmgr = OAuthCredMgr()
             state, claims = credmgr.validate_token(token=body.token)
+        else:
+            raise Exception(f"Invalid token type: {body.type}")
 
         success_counter.labels(HTTP_METHOD_POST, TOKENS_VALIDATE_URL).inc()
         response_data = Status200OkNoContentData()
