@@ -258,6 +258,22 @@ class CredentialManagerPage extends React.Component {
               </Alert>
             )}
           </Form>
+          <h2 className="my-4">Tokens for Selected Project</h2>
+          </Form>
+          <div>
+            <h4>Project: {selectedRefreshProject}</h4>
+            <button onClick={this.listTokens} className="btn btn-primary">
+              List Tokens
+            </button>
+            {/* Add a section to display the tokens */}
+            {refreshSuccess && (
+              <div className="mt-4">
+                <h5>Tokens:</h5>
+                <pre>{JSON.stringify(refreshToken, undefined, 4)}</pre>
+              </div>
+            )}
+          </div>
+          </Form>
           <h2 className="my-4">Refresh Token</h2>
           <Form>
             <Row>
