@@ -161,7 +161,7 @@ class OAuthCredMgr(AbcCredMgr):
         # validate the token
         if jwt_validator is not None:
             LOG.info("Validating CI Logon token")
-            code, claims_or_exception = jwt_validator.validate_jwt(token=ci_logon_id_token, verify_exp=True)
+            code, claims_or_exception = jwt_validator.validate_jwt(token=ci_logon_id_token)
             if code is not ValidateCode.VALID:
                 LOG.error(f"Unable to validate provided token: {code}/{claims_or_exception}")
                 raise claims_or_exception

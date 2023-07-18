@@ -15,7 +15,7 @@ class CredentialManagerPage extends React.Component {
     projects: [],
     createToken: "",
     refreshToken: "",
-    tokens: "",
+    tokenList: [],
     createSuccess: false,
     createCopySuccess: false,
     listSuccess: false,
@@ -31,7 +31,7 @@ class CredentialManagerPage extends React.Component {
     selectedRefreshScope: "all",
     selectedCreateProject: "",
     selectedRefreshProject: "",
-    selectedProject: ""
+    selectedListProject: ""
   }
 
   portalLinkMap = {
@@ -40,17 +40,24 @@ class CredentialManagerPage extends React.Component {
     "production": externalLinks.portalLinkProduction,
   }
 
-  async componentDidMount(){
-    try {
-      const { data: res } = await getProjects(localStorage.getItem("cmUserID"));
-      const projects = res.results;
-      this.setState({ projects });
-      if (projects.length > 0) {
-        this.setState({ selectedCreateProject: projects[0].uuid, selectedRefreshProject: projects[0].uuid });
+  async componentDidMount() {
+      try {
+        const { data: res } = await getProjects(localStorage.getItem("cmUserID"));
+        const projects = res.results;
+        this.setState({ projects });
+        if (projects.length > 0) {
+          const defaultProject = projects[0].uuid;
+          this.setState({
+            selectedCreateProject: defaultProject,
+            selectedRefreshProject: defaultProject,
+            selectedListProject: defaultProject
+          }, () => {
+            this.listTokens();
+          });
+        }
+      } catch (ex) {
+        toast.error("Failed to load user's project information. Please reload this page.");
       }
-    } catch (ex) {
-      toast.error("Failed to load user's project information. Please reload this page.");
-    }
   }
 
   createToken = async (e) => {
@@ -60,6 +67,7 @@ class CredentialManagerPage extends React.Component {
       const project = this.state.selectedCreateProject;
       const scope = this.state.selectedCreateScope;
       const { data: res } = await createIdToken(project, scope);
+      console.log("Response received: " + res)
       this.setState({ createCopySuccess: false, createSuccess: true });
       this.setState({ createToken: JSON.stringify(res["data"][0], undefined, 4) });
     } catch (ex) {
@@ -74,6 +82,7 @@ class CredentialManagerPage extends React.Component {
       const project = this.state.selectedRefreshProject;
       const scope = this.state.selectedRefreshScope;
       const { data: res } = await refreshToken(project, scope, document.getElementById('refreshTokenTextArea').value);
+      console.log("Response received: " + res)
       this.setState({ refreshCopySuccess: false, refreshSuccess: true });
       this.setState({ refreshToken: JSON.stringify(res["data"][0], undefined, 4) });
     }
@@ -87,7 +96,7 @@ class CredentialManagerPage extends React.Component {
     e.preventDefault();
 
     try {
-      await revokeToken(document.getElementById('revokeTokenTextArea').value);
+      await revokeToken("refresh", document.getElementById('revokeTokenTextArea').value);
       this.setState({ revokeSuccess: true });
     }
     catch (ex) {
@@ -96,14 +105,24 @@ class CredentialManagerPage extends React.Component {
     }
   }
 
-  listTokens = async (e) => {
+  revokeIdentityToken = async (e, tokenHash) => {
     e.preventDefault();
 
     try {
-      const project = this.state.selectedProject;
-      const { data: res } = await getTokenByProjectId(project);
-      this.setState({ listSuccess: true });
-      this.setState({ tokens: JSON.stringify(res["data"], undefined, 4) });
+      await revokeToken("identity", tokenHash);
+      //this.setState({ revokeSuccess: true });
+    }
+    catch (ex) {
+      //this.setState({ revokeSuccess: false });
+      toast.error("Failed to revoke token.")
+    }
+  }
+
+  listTokens = async () => {
+    try {
+      const project = this.state.selectedListProject;
+      const res = await getTokenByProjectId(project); // Assuming getTokenByProjectId returns an array of tokens
+      this.setState({ listSuccess: true, tokenList: res.data.data });
     } catch (ex) {
       toast.error("Failed to get tokens.");
     }
@@ -140,6 +159,11 @@ class CredentialManagerPage extends React.Component {
     this.setState({ selectedRefreshProject: e.target.value });
   }
 
+  handleSelectListProject = (e) => {
+    this.setState({ selectedListProject: e.target.value }, () => {
+      this.listTokens();
+    });
+  }
 
   handleSelectCreateScope = (e) =>{
     this.setState({ selectedCreateScope: e.target.value });
@@ -150,32 +174,32 @@ class CredentialManagerPage extends React.Component {
   }
 
   render() {
-    const { projects, scopeOptions, createSuccess, createToken,
-      createCopySuccess, refreshToken, refreshSuccess, refreshCopySuccess, revokeSuccess  } = this.state;
-    
+    const { projects, scopeOptions, createSuccess, createToken, createCopySuccess, refreshToken,
+            refreshSuccess, refreshCopySuccess, revokeSuccess, listSuccess, tokenList } = this.state;
+
     const portalLink = this.portalLinkMap[checkCmAppType()];
 
     return (
       <div className="container">
-        { 
+        {
           projects.length === 0 &&
             <div className="alert alert-warning mt-4" role="alert">
               <p className="mt-2">To manage tokens, you have to be in a project first:</p>
               <p>
                 <ul>
                   <li>
-                    If you are a <a href={externalLinks.learnArticleStarterQuestions} target="_blank" rel="noreferrer">professor or research staff member at your institution</a>, 
+                    If you are a <a href={externalLinks.learnArticleStarterQuestions} target="_blank" rel="noreferrer">professor or research staff member at your institution</a>,
                     please <a href={portalLink} target="_blank" rel="noreferrer">request to be FABRIC Project Lead</a> from FABRIC Portal -&gt; User Profile -&gt; My Roles &amp; Projects page then you can create a project.
                   </li>
                   <li>
-                    If you are a <a href={externalLinks.learnArticleStarterQuestions} target="_blank" rel="noreferrer">student or other contributor</a>, 
+                    If you are a <a href={externalLinks.learnArticleStarterQuestions} target="_blank" rel="noreferrer">student or other contributor</a>,
                     please ask your project lead to add you to a project.
                   </li>
                 </ul>
               </p>
             </div>
         }
-        { 
+        {
           projects.length > 0 && <div>
             <div className="alert alert-primary mb-2" role="alert">
             Please consult &nbsp;
@@ -209,7 +233,7 @@ class CredentialManagerPage extends React.Component {
                 <Form.Group>
                   <Form.Label>Select Scope</Form.Label>
                   <Form.Control as="select" onChange={this.handleSelectCreateScope}>
-                    { 
+                    {
                       scopeOptions.map(option => {
                         return (
                           <option
@@ -274,21 +298,67 @@ class CredentialManagerPage extends React.Component {
               </Alert>
             )}
           </Form>
-          <h2 className="my-4">Tokens for Selected Project</h2>
-          </Form>
-          <div>
-            <h4>Project: {selectedProject}</h4>
-            <button onClick={this.listTokens} className="btn btn-primary">
-              List Tokens
-            </button>
-            {/* Add a section to display the tokens */}
-            {listSuccess && (
+          <h2 className="my-4">List Tokens</h2>
+          <Form>
+            <Row>
+              <Col>
+                <Form.Group>
+                  <Form.Label>Select Project</Form.Label>
+                  <Form.Control as="select" onChange={this.handleSelectListProject}>
+                    {
+                      projects.length > 0 && projects.map(project => {
+                        return (
+                          <option value={project.uuid}>{project.name}</option>
+                        )
+                      })
+                    }
+                  </Form.Control>
+                </Form.Group>
+              </Col>
+            </Row>
+            <Row>
               <div className="mt-4">
-                <h5>Tokens:</h5>
-                <pre>{JSON.stringify(tokens, undefined, 4)}</pre>
+                <table className="table">
+                  <thead>
+                    <tr>
+                    <th>Token Hash</th>
+                    <th>Comment</th>
+                    <th>Created At</th>
+                    <th>Expires At</th>
+                    <th>State</th>
+                    <th>Created From</th>
+                      <th>Actions</th> {/* Add a new column for actions */}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {listSuccess && tokenList.length > 0 ? (
+                      tokenList.map((token, index) => (
+                        <tr key={index}>
+                          <td>{token['token_hash']}</td>
+                          <td>{token['comment']}</td>
+                          <td>{token['created_at']}</td>
+                          <td>{token['expires_at']}</td>
+                          <td>{token['state']}</td>
+                          <td>{token['created_from']}</td>
+                          <td>
+                            <button
+                              className="btn btn-outline-danger"
+                              onClick={e => this.revokeIdentityToken(e, token['token_hash'])}
+                            >
+                              Revoke
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="4">No tokens available</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
-            )}
-          </div>
+            </Row>
           </Form>
           <h2 className="my-4">Refresh Token</h2>
           <Form>
@@ -311,7 +381,7 @@ class CredentialManagerPage extends React.Component {
                 <Form.Group>
                   <Form.Label>Select Scope</Form.Label>
                   <Form.Control as="select" onChange={this.handleSelectRefreshScope}>
-                  { 
+                  {
                       scopeOptions.map(option => {
                         return (
                           <option
@@ -389,7 +459,7 @@ class CredentialManagerPage extends React.Component {
               </button>
             )
           }
-          <h2 className="my-4">Revoke Token</h2>
+          <h2 className="my-4">Revoke Refresh Token</h2>
             <Card>
               <Card.Header className="d-flex bg-light">
                 Paste the refresh token to revoke:

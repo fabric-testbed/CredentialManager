@@ -28,11 +28,11 @@ export function tokenRevokeList(projectId) {
 }
 
 export function getTokenByHash(tokenHash) {
-  return http.get(apiEndpoint + "/token_hash=" + tokenHash + "?limit=200&offset=0");
+  return http.get(apiEndpoint + "?token_hash=" + tokenHash + "&limit=200&offset=0");
 }
 
 export function getTokenByProjectId(projectId) {
-  return http.get(apiEndpoint + "/project_id=" + projectId + "?limit=200&offset=0");
+  return http.get(apiEndpoint + "?project_id=" + projectId + "&limit=200&offset=0")
 }
 
 export function getTokens() {
