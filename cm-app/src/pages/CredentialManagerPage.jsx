@@ -4,7 +4,7 @@ import Card from 'react-bootstrap/Card';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Alert from 'react-bootstrap/Alert';
-import { createIdToken, refreshToken, revokeToken } from "../services/credentialManagerService.js";
+import { createIdToken, refreshToken, revokeToken, getTokenByProjectId } from "../services/credentialManagerService.js";
 import { getProjects } from "../services/coreApiService.js";
 import { default as externalLinks } from "../services/externalLinks.json";
 import checkCmAppType from "../utils/checkCmAppType";
@@ -15,8 +15,10 @@ class CredentialManagerPage extends React.Component {
     projects: [],
     createToken: "",
     refreshToken: "",
+    tokens: "",
     createSuccess: false,
     createCopySuccess: false,
+    listSuccess: false,
     refreshSuccess: false,
     refreshCopySuccess: false,
     revokeSuccess: false,
@@ -29,6 +31,7 @@ class CredentialManagerPage extends React.Component {
     selectedRefreshScope: "all",
     selectedCreateProject: "",
     selectedRefreshProject: "",
+    selectedProject: ""
   }
 
   portalLinkMap = {
@@ -90,6 +93,19 @@ class CredentialManagerPage extends React.Component {
     catch (ex) {
       this.setState({ revokeSuccess: false });
       toast.error("Failed to revoke token.")
+    }
+  }
+
+  listTokens = async (e) => {
+    e.preventDefault();
+
+    try {
+      const project = this.state.selectedProject;
+      const { data: res } = await getTokenByProjectId(project);
+      this.setState({ listSuccess: true });
+      this.setState({ tokens: JSON.stringify(res["data"], undefined, 4) });
+    } catch (ex) {
+      toast.error("Failed to get tokens.");
     }
   }
 
@@ -261,15 +277,15 @@ class CredentialManagerPage extends React.Component {
           <h2 className="my-4">Tokens for Selected Project</h2>
           </Form>
           <div>
-            <h4>Project: {selectedRefreshProject}</h4>
+            <h4>Project: {selectedProject}</h4>
             <button onClick={this.listTokens} className="btn btn-primary">
               List Tokens
             </button>
             {/* Add a section to display the tokens */}
-            {refreshSuccess && (
+            {listSuccess && (
               <div className="mt-4">
                 <h5>Tokens:</h5>
-                <pre>{JSON.stringify(refreshToken, undefined, 4)}</pre>
+                <pre>{JSON.stringify(tokens, undefined, 4)}</pre>
               </div>
             )}
           </div>
