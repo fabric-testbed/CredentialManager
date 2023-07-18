@@ -131,7 +131,6 @@ class CredentialManagerPage extends React.Component {
   }
 
   validateToken = async () => {
-    e.preventDefault();
 
     try {
       await validateToken(this.state.validateTokenValue);
