@@ -4,7 +4,7 @@ import Card from 'react-bootstrap/Card';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Alert from 'react-bootstrap/Alert';
-import { createIdToken, refreshToken, revokeToken, getTokenByProjectId } from "../services/credentialManagerService.js";
+import { createIdToken, refreshToken, revokeToken, getTokenByProjectId, validateToken } from "../services/credentialManagerService.js";
 import { getProjects } from "../services/coreApiService.js";
 import { default as externalLinks } from "../services/externalLinks.json";
 import checkCmAppType from "../utils/checkCmAppType";
@@ -376,6 +376,38 @@ class CredentialManagerPage extends React.Component {
               </div>
             </Row>
           </Form>
+          <h2 className="my-4">Validate Token</h2>
+          <Form>
+            <Row>
+              <Col>
+                <Form.Group>
+                  <Form.Label>Paste the token to validate:</Form.Label>
+                  <Form.Control
+                    as="textarea"
+                    rows={3}
+                    value={validateTokenValue}
+                    onChange={(e) => this.setState({ validateTokenValue: e.target.value, isTokenValid: false })}
+                  />
+                </Form.Group>
+              </Col>
+            </Row>
+            <button
+              className="btn btn-outline-primary mt-3"
+              onClick={this.validateToken}
+            >
+              Validate Token
+            </button>
+            {isTokenValid && (
+              <Alert variant="success">
+                Token is valid!
+              </Alert>
+            )}
+            {!isTokenValid && validateTokenValue !== '' && (
+              <Alert variant="danger">
+                Token is invalid!
+              </Alert>
+            )}
+          </Form>
           <h2 className="my-4">Refresh Token</h2>
           <Form>
             <Row>
@@ -503,38 +535,6 @@ class CredentialManagerPage extends React.Component {
             Revoke Token
           </button>
           </div>
-          <h2 className="my-4">Validate Token</h2>
-          <Form>
-            <Row>
-              <Col>
-                <Form.Group>
-                  <Form.Label>Paste the token to validate:</Form.Label>
-                  <Form.Control
-                    as="textarea"
-                    rows={3}
-                    value={validateTokenValue}
-                    onChange={(e) => this.setState({ validateTokenValue: e.target.value, isTokenValid: false })}
-                  />
-                </Form.Group>
-              </Col>
-            </Row>
-            <button
-              className="btn btn-outline-primary mt-3"
-              onClick={this.validateToken}
-            >
-              Validate Token
-            </button>
-            {isTokenValid && (
-              <Alert variant="success">
-                Token is valid!
-              </Alert>
-            )}
-            {!isTokenValid && validateTokenValue !== '' && (
-              <Alert variant="danger">
-                Token is invalid!
-              </Alert>
-            )}
-          </Form>
         }
       </div>
     )
