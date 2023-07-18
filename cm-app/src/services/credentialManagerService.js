@@ -39,10 +39,10 @@ export function getTokens() {
   return http.get(apiEndpoint + "?limit=200&offset=0");
 }
 
-export function validateToken(token_type, token) {
+export function validateToken(token) {
   const data = {
     "token": token,
-    "type": token_type
+    "type": "identity"
   }
   return http.post(apiEndpoint + "/validate", data);
 }

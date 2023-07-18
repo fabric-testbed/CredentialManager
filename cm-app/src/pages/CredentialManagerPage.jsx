@@ -31,7 +31,9 @@ class CredentialManagerPage extends React.Component {
     selectedRefreshScope: "all",
     selectedCreateProject: "",
     selectedRefreshProject: "",
-    selectedListProject: ""
+    selectedListProject: "",
+    validateTokenValue: "",
+    isTokenValid: false
   }
 
   portalLinkMap = {
@@ -128,6 +130,19 @@ class CredentialManagerPage extends React.Component {
     }
   }
 
+  validateToken = async () => {
+    e.preventDefault();
+
+    try {
+      await validateToken(this.state.validateTokenValue);
+      this.setState({ isTokenValid: true });
+    }
+    catch (ex) {
+      this.setState({ isTokenValid: false });
+      toast.error("Failed to validate token.")
+    }
+  }
+
   copyToken = (e, option) => {
     e.preventDefault();
     document.getElementById(`${option}TokenTextArea`).select();
@@ -175,7 +190,8 @@ class CredentialManagerPage extends React.Component {
 
   render() {
     const { projects, scopeOptions, createSuccess, createToken, createCopySuccess, refreshToken,
-            refreshSuccess, refreshCopySuccess, revokeSuccess, listSuccess, tokenList } = this.state;
+            refreshSuccess, refreshCopySuccess, revokeSuccess, listSuccess, tokenList,
+            validateTokenValue, isTokenValid } = this.state;
 
     const portalLink = this.portalLinkMap[checkCmAppType()];
 
@@ -487,6 +503,38 @@ class CredentialManagerPage extends React.Component {
             Revoke Token
           </button>
           </div>
+          <h2 className="my-4">Validate Token</h2>
+          <Form>
+            <Row>
+              <Col>
+                <Form.Group>
+                  <Form.Label>Paste the token to validate:</Form.Label>
+                  <Form.Control
+                    as="textarea"
+                    rows={3}
+                    value={validateTokenValue}
+                    onChange={(e) => this.setState({ validateTokenValue: e.target.value, isTokenValid: false })}
+                  />
+                </Form.Group>
+              </Col>
+            </Row>
+            <button
+              className="btn btn-outline-primary mt-3"
+              onClick={this.validateToken}
+            >
+              Validate Token
+            </button>
+            {isTokenValid && (
+              <Alert variant="success">
+                Token is valid!
+              </Alert>
+            )}
+            {!isTokenValid && validateTokenValue !== '' && (
+              <Alert variant="danger">
+                Token is invalid!
+              </Alert>
+            )}
+          </Form>
         }
       </div>
     )
