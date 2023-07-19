@@ -117,7 +117,7 @@ class CredentialManagerPage extends React.Component {
 
     try {
       const { data: res } = await revokeToken("identity", tokenHash);
-      this.setState({ revokeIdentitySuccess: true, revokedTokenHash: tokenHash, tokenMsg: res.data[0].details });
+      this.setState({ revokeIdentitySuccess: true, revokedTokenHash: tokenHash });
     }
     catch (ex) {
       this.setState({ revokeIdentitySuccess: false, revokedTokenHash: "" });
@@ -140,7 +140,7 @@ class CredentialManagerPage extends React.Component {
 
     try {
       const { data: res } = await validateToken(this.state.validateTokenValue);
-      this.setState({ validateSuccess: true, isTokenValid: true, decodedToken: res.token });
+      this.setState({ validateSuccess: true, isTokenValid: true, decodedToken: res.token, tokenMsg: res.data[0].details });
     }
     catch (ex) {
       this.setState({ validateSuccess: true, isTokenValid: false, decodedToken: "" });
