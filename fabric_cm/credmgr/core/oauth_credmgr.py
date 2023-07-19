@@ -143,7 +143,7 @@ class OAuthCredMgr(AbcCredMgr):
         return sha256_hex
 
     def __generate_token_and_save_info(self, ci_logon_id_token: str, project: str, scope: str, remote_addr: str,
-                                       comment: str = None, cookie: str = None, lifetime: int = 1,
+                                       comment: str = None, cookie: str = None, lifetime: int = 4,
                                        refresh: bool = False) -> Dict[str, str]:
         """
         Generate Fabric Token and save the corresponding meta information in the database

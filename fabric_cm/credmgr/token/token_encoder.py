@@ -84,8 +84,9 @@ class TokenEncoder:
 
         self._add_fabric_claims()
 
-        if not self._validate_lifetime(validity=validity_in_seconds, project_id=self.project,
-                                       roles=self.claims.get(self.ROLES)):
+        if not Utils.is_short_lived(lifetime_in_hours=int(validity_in_seconds/3600)) and \
+                not self._validate_lifetime(validity=validity_in_seconds, project_id=self.project,
+                                            roles=self.claims.get(self.ROLES)):
             raise TokenError(f"User {self.claims[self.EMAIL]} is not authorized to create long lived tokens!")
 
         code, token_or_exception = JWTManager.encode_and_sign_with_private_key(validity=validity_in_seconds,
