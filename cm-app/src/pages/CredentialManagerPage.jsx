@@ -37,7 +37,8 @@ class CredentialManagerPage extends React.Component {
     validateSuccess: false,
     revokeIdentitySuccess: false,
     revokedTokenHash: "",
-    decodedToken: ""
+    decodedToken: "",
+    tokenMsg: ""
   }
 
   portalLinkMap = {
@@ -115,8 +116,8 @@ class CredentialManagerPage extends React.Component {
     e.preventDefault();
 
     try {
-      await revokeToken("identity", tokenHash);
-      this.setState({ revokeIdentitySuccess: true, revokedTokenHash: tokenHash });
+      const { data: res } = await revokeToken("identity", tokenHash);
+      this.setState({ revokeIdentitySuccess: true, revokedTokenHash: tokenHash, tokenMsg: res.data[0].details });
     }
     catch (ex) {
       this.setState({ revokeIdentitySuccess: false, revokedTokenHash: "" });
@@ -194,7 +195,7 @@ class CredentialManagerPage extends React.Component {
 
   render() {
     const { projects, scopeOptions, createSuccess, createToken, createCopySuccess, refreshToken,
-            refreshSuccess, refreshCopySuccess, revokeSuccess, listSuccess, tokenList, decodedToken,
+            refreshSuccess, refreshCopySuccess, revokeSuccess, listSuccess, tokenList, decodedToken, tokenMsg,
             validateTokenValue, isTokenValid, validateSuccess, revokeIdentitySuccess, revokedTokenHash } = this.state;
 
     const portalLink = this.portalLinkMap[checkCmAppType()];
@@ -531,7 +532,7 @@ class CredentialManagerPage extends React.Component {
                 {validateSuccess && isTokenValid && (
                     <>
                       <Alert variant="success">
-                        Token is valid!
+                        {tokenMsg}
                       </Alert>
                       <Form.Group>
                         <Form.Label>Decoded Token:</Form.Label>
