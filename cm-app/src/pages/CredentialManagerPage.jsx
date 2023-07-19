@@ -33,7 +33,11 @@ class CredentialManagerPage extends React.Component {
     selectedRefreshProject: "",
     selectedListProject: "",
     validateTokenValue: "",
-    isTokenValid: false
+    isTokenValid: false,
+    validateSuccess: false,
+    revokeIdentitySuccess: false,
+    revokedTokenHash: "",
+    decodedToken: ""
   }
 
   portalLinkMap = {
@@ -112,10 +116,10 @@ class CredentialManagerPage extends React.Component {
 
     try {
       await revokeToken("identity", tokenHash);
-      //this.setState({ revokeSuccess: true });
+      this.setState({ revokeIdentitySuccess: true, revokedTokenHash: tokenHash });
     }
     catch (ex) {
-      //this.setState({ revokeSuccess: false });
+      this.setState({ revokeIdentitySuccess: false, revokedTokenHash: "" });
       toast.error("Failed to revoke token.")
     }
   }
@@ -124,20 +128,21 @@ class CredentialManagerPage extends React.Component {
     try {
       const project = this.state.selectedListProject;
       const res = await getTokenByProjectId(project); // Assuming getTokenByProjectId returns an array of tokens
-      this.setState({ listSuccess: true, tokenList: res.data.data });
+      this.setState({ listSuccess: true, tokenList: res.data.data, revokeIdentitySuccess: false, revokedTokenHash: "" });
     } catch (ex) {
       toast.error("Failed to get tokens.");
     }
   }
 
-  validateToken = async () => {
+  validateToken = async (e) => {
+    e.preventDefault();
 
     try {
-      await validateToken(this.state.validateTokenValue);
-      this.setState({ isTokenValid: true });
+      const { data: res } = await validateToken(this.state.validateTokenValue);
+      this.setState({ validateSuccess: true, isTokenValid: true, decodedToken: res.token });
     }
     catch (ex) {
-      this.setState({ isTokenValid: false });
+      this.setState({ validateSuccess: true, isTokenValid: false, decodedToken: "" });
       toast.error("Failed to validate token.")
     }
   }
@@ -189,8 +194,8 @@ class CredentialManagerPage extends React.Component {
 
   render() {
     const { projects, scopeOptions, createSuccess, createToken, createCopySuccess, refreshToken,
-            refreshSuccess, refreshCopySuccess, revokeSuccess, listSuccess, tokenList,
-            validateTokenValue, isTokenValid } = this.state;
+            refreshSuccess, refreshCopySuccess, revokeSuccess, listSuccess, tokenList, decodedToken,
+            validateTokenValue, isTokenValid, validateSuccess, revokeIdentitySuccess, revokedTokenHash } = this.state;
 
     const portalLink = this.portalLinkMap[checkCmAppType()];
 
@@ -332,7 +337,7 @@ class CredentialManagerPage extends React.Component {
               </Col>
             </Row>
             <Row>
-              <div className="mt-4">
+              <div className="mt-4 table-container">
                 <table className="table">
                   <thead>
                     <tr>
@@ -374,38 +379,6 @@ class CredentialManagerPage extends React.Component {
                 </table>
               </div>
             </Row>
-          </Form>
-          <h2 className="my-4">Validate Token</h2>
-          <Form>
-            <Row>
-              <Col>
-                <Form.Group>
-                  <Form.Label>Paste the token to validate:</Form.Label>
-                  <Form.Control
-                    as="textarea"
-                    rows={3}
-                    value={validateTokenValue}
-                    onChange={(e) => this.setState({ validateTokenValue: e.target.value, isTokenValid: false })}
-                  />
-                </Form.Group>
-              </Col>
-            </Row>
-            <button
-              className="btn btn-outline-primary mt-3"
-              onClick={this.validateToken}
-            >
-              Validate Token
-            </button>
-            {isTokenValid && (
-              <Alert variant="success">
-                Token is valid!
-              </Alert>
-            )}
-            {!isTokenValid && validateTokenValue !== '' && (
-              <Alert variant="danger">
-                Token is invalid!
-              </Alert>
-            )}
           </Form>
           <h2 className="my-4">Refresh Token</h2>
           <Form>
@@ -533,6 +506,50 @@ class CredentialManagerPage extends React.Component {
           >
             Revoke Token
           </button>
+          <h2 className="my-4">Validate Identity Token</h2>
+            <Form>
+              <Row>
+                <Col>
+                  <Form.Group>
+                    <Form.Label>Paste the token to validate:</Form.Label>
+                    <Form.Control
+                      as="textarea"
+                      rows={3}
+                      id="validateTokenTextArea"
+                      value={validateTokenValue}
+                      onChange={(e) => this.setState({ validateTokenValue: e.target.value, isTokenValid: false })}
+                    />
+                </Form.Group>
+                </Col>
+              </Row>
+              <button
+                className="btn btn-outline-primary mt-3"
+                onClick={e => this.validateToken(e)}
+              >
+                Validate Token
+              </button>
+                {validateSuccess && isTokenValid && (
+                    <>
+                      <Alert variant="success">
+                        Token is valid!
+                      </Alert>
+                      <Form.Group>
+                        <Form.Label>Decoded Token:</Form.Label>
+                        <Form.Control
+                          as="textarea"
+                          rows={6}
+                          value={JSON.stringify(decodedToken, undefined, 4) }
+                          readOnly
+                        />
+                      </Form.Group>
+                    </>
+                )}
+                {validateSuccess && !isTokenValid && validateTokenValue !== '' && (
+                  <Alert variant="danger">
+                    Token is invalid!
+                  </Alert>
+                )}
+          </Form>
           </div>
         }
       </div>
