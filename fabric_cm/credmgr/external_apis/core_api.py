@@ -118,7 +118,7 @@ class CoreApi:
 
         while True:
             if project_name is not None:
-                url = f"{self.api_server}/projects?search={project_name}offset={offset}&limit={limit}" \
+                url = f"{self.api_server}/projects?search={project_name}&offset={offset}&limit={limit}" \
                       f"&person_uuid={uuid}&sort_by=name&order_by=asc"
             else:
                 url = f"{self.api_server}/projects?offset={offset}&limit={limit}&person_uuid={uuid}" \
