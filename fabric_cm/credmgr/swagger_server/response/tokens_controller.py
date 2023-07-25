@@ -45,7 +45,7 @@ from fabric_cm.credmgr.swagger_server.response.decorators import login_required,
 
 
 @login_required
-def tokens_create_post(project_id: str, scope: str = None, lifetime: int = 4, comment: str = None,
+def tokens_create_post(project_id: str, project_name: str, scope: str = None, lifetime: int = 4, comment: str = None,
                        claims: dict = None):  # noqa: E501
     """Generate Fabric OAuth tokens for an user
 
@@ -53,6 +53,8 @@ def tokens_create_post(project_id: str, scope: str = None, lifetime: int = 4, co
 
     :param project_id: Project Id
     :type project_id: str
+    :param project_name: Project identified by name
+    :type project_name: str
     :param scope: Scope for which token is requested
     :type scope: str
     :param lifetime: Lifetime of the token requested in hours
@@ -70,7 +72,8 @@ def tokens_create_post(project_id: str, scope: str = None, lifetime: int = 4, co
         token_dict = credmgr.create_token(ci_logon_id_token=claims.get(OAuthCredMgr.ID_TOKEN),
                                           refresh_token=claims.get(OAuthCredMgr.REFRESH_TOKEN),
                                           cookie=claims.get(OAuthCredMgr.COOKIE),
-                                          project=project_id, scope=scope, lifetime=lifetime,
+                                          project_id=project_id, project_name=project_name,
+                                          scope=scope, lifetime=lifetime,
                                           comment=comment, remote_addr=connexion.request.remote_addr,
                                           user_email=claims.get(OAuthCredMgr.EMAIL))
         response = Tokens()

@@ -100,3 +100,28 @@ class Utils:
         if lifetime_in_hours * 3600 <= CONFIG_OBJ.get_token_life_time():
             return True
         return False
+
+    @staticmethod
+    def get_project_id(*, project_name: str, cookie: str):
+        """
+        Get the project Id for the given project name via Core API
+        @param project_name project name
+        @param cookie cookie
+        @return True if user is FP; False otherwise
+        """
+        core_api = CoreApi(api_server=CONFIG_OBJ.get_core_api_url(), cookie=cookie,
+                           cookie_name=CONFIG_OBJ.get_vouch_cookie_name(),
+                           cookie_domain=CONFIG_OBJ.get_vouch_cookie_domain_name())
+
+        projects = core_api.get_user_projects(project_name=project_name)
+
+        if len(projects) == 0:
+            raise Exception(f"Project '{project_name}' not found!")
+
+        if len(projects) > 1:
+            raise Exception(f"More than one project found with name '{project_name}'!")
+
+        if projects[0].get("uuid") is None:
+            raise Exception(f"Project Id for project '{project_name}' could not be found!")
+
+        return projects[0].get("uuid")

@@ -28,6 +28,7 @@ class TestTokensController(BaseTestCase):
         Generate tokens for an user
         """
         query_string = [('project_id', 'project_id_example'),
+                        ('project_name', 'project_name_example'),
                         ('scope', 'all'),
                         ('lifetime', 1512),
                         ('comment', 'Create Token via GUI')]

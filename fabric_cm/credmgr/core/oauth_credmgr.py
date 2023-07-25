@@ -39,7 +39,6 @@ from jwt import ExpiredSignatureError
 from requests_oauthlib import OAuth2Session
 
 from . import DB_OBJ
-from .abstract_cred_mgr import AbcCredMgr
 from fabric_cm.credmgr.config import CONFIG_OBJ
 from fabric_cm.credmgr.logging import LOG, log_event
 from fabric_cm.credmgr.token.token_encoder import TokenEncoder
@@ -97,7 +96,7 @@ class TokenState(Enum):
         return result
 
 
-class OAuthCredMgr(AbcCredMgr):
+class OAuthCredMgr:
     """
     Credential Manager class responsible for handling various operations supported by REST APIs
     It also provides support for scanning and cleaning up of expired tokens and key files.
@@ -220,13 +219,14 @@ class OAuthCredMgr(AbcCredMgr):
         else:
             LOG.warning("JWT Token validator not initialized, skipping validation")
 
-    def create_token(self, project: str, scope: str, ci_logon_id_token: str, refresh_token: str, remote_addr: str,
-                     user_email: str, comment: str = None, cookie: str = None, lifetime: int = 4) -> dict:
+    def create_token(self, project_id: str, project_name: str, scope: str, ci_logon_id_token: str, refresh_token: str,
+                     remote_addr: str, user_email: str, comment: str = None, cookie: str = None, lifetime: int = 4) -> dict:
         """
         Generates key file and return authorization url for user to
         authenticate itself and also returns user id
 
-        @param project: Project for which token is requested, by default it is set to 'all'
+        @param project_id: Project Id of the project for which token is requested, by default it is set to 'all'
+        @param project_name: Project Name
         @param scope: Scope of the requested token, by default it is set to 'all'
         @param ci_logon_id_token: CI logon Identity Token
         @param refresh_token: Refresh Token
@@ -242,23 +242,29 @@ class OAuthCredMgr(AbcCredMgr):
 
         self.validate_scope(scope=scope)
 
-        if project is None or scope is None:
-            raise OAuthCredMgrError("CredMgr: Cannot request to create a token, "
-                                    "Missing required parameter 'project' or 'scope'!")
+        if project_name is None and project_id is None:
+            raise OAuthCredMgrError(f"CredMgr: Either Project ID: '{project_id}' or Project Name'{project_name}' "
+                                    f"must be specified")
+
+        if scope is None:
+            raise OAuthCredMgrError("CredMgr: Missing required parameter 'scope'!")
+
+        if project_id is None:
+            project_id = Utils.get_project_id(project_name=project_name, cookie=cookie)
 
         short = Utils.is_short_lived(lifetime_in_hours=lifetime)
         LOG.info(f"Token lifetime: {lifetime} short: {short}")
 
         if not short:
-            long_lived_tokens = self.get_tokens(project_id=project, user_email=user_email)
+            long_lived_tokens = self.get_tokens(project_id=project_id, user_email=user_email)
             if long_lived_tokens is not None and len(long_lived_tokens) > CONFIG_OBJ.get_max_llt_per_project():
                 raise OAuthCredMgrError(f"User: {user_email} already has {CONFIG_OBJ.get_max_llt_per_project()} "
                                         f"long lived tokens")
 
         # Generate the Token
-        result = self.__generate_token_and_save_info(ci_logon_id_token=ci_logon_id_token, project=project, scope=scope,
-                                                     remote_addr=remote_addr, cookie=cookie, lifetime=lifetime,
-                                                     comment=comment)
+        result = self.__generate_token_and_save_info(ci_logon_id_token=ci_logon_id_token, project=project_id,
+                                                     scope=scope, remote_addr=remote_addr, cookie=cookie,
+                                                     lifetime=lifetime, comment=comment)
 
         # Only include refresh token for short lived tokens
         if short:

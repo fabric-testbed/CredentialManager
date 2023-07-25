@@ -23,7 +23,7 @@
 #
 # Author Komal Thareja (kthare10@renci.org)
 import datetime
-from typing import Tuple
+from typing import Tuple, List
 
 import requests
 
@@ -97,6 +97,65 @@ class CoreApi:
         roles = response.json().get("results")[0]["roles"]
         return roles
 
+    def __get_user_project_by_id(self, *, project_id: str):
+        url = f"{self.api_server}/projects/{project_id}"
+        response = self.session.get(url, verify=CONFIG_OBJ.is_core_api_ssl_verify())
+
+        if response.status_code != 200:
+            raise CoreApiError(f"Core API error occurred status_code: {response.status_code} "
+                               f"message: {response.content}")
+
+        LOG.debug(f"GET Project Response : {response.json()}")
+
+        return response.json().get("results")
+
+    def __get_user_projects(self, *, project_name: str = None):
+        offset = 0
+        limit = 50
+        uuid = self.get_user_id()
+        result = []
+        total_fetched = 0
+
+        while True:
+            if project_name is not None:
+                url = f"{self.api_server}/projects?search={project_name}offset={offset}&limit={limit}" \
+                      f"&person_uuid={uuid}&sort_by=name&order_by=asc"
+            else:
+                url = f"{self.api_server}/projects?offset={offset}&limit={limit}&person_uuid={uuid}" \
+                      f"&sort_by=name&order_by=asc"
+
+            response = self.session.get(url, verify=CONFIG_OBJ.is_core_api_ssl_verify())
+
+            if response.status_code != 200:
+                raise CoreApiError(f"Core API error occurred status_code: {response.status_code} "
+                                   f"message: {response.content}")
+
+            LOG.debug(f"GET Project Response : {response.json()}")
+
+            size = response.json().get("size")
+            total = response.json().get("total")
+            projects = response.json().get("results")
+
+            total_fetched += size
+
+            for x in projects:
+                result.append(x)
+
+            if total_fetched == total:
+                break
+            offset = size
+            limit += limit
+
+        return result
+
+    def get_user_projects(self, project_name: str = None, project_id: str = None) -> List[dict]:
+        if project_id is not None and project_id != "all":
+            return self.__get_user_project_by_id(project_id=project_id)
+        elif project_name is not None and project_name != "all":
+            return self.__get_user_projects(project_name=project_name)
+        else:
+            return self.__get_user_projects()
+
     def get_user_and_project_info(self, project_id: str) -> Tuple[str, list, list]:
         """
         Determine User's info using CORE API
@@ -107,20 +166,7 @@ class CoreApi:
         """
         uuid = self.get_user_id()
 
-        # Get Project
-        if project_id.lower() == "all":
-            # Get All projects
-            url = f"{self.api_server}/projects?offset=0&limit=50&person_uuid={uuid}&sort_by=name&order_by=asc"
-        else:
-            url = f"{self.api_server}/projects/{project_id}"
-        response = self.session.get(url, verify=CONFIG_OBJ.is_core_api_ssl_verify())
-
-        if response.status_code != 200:
-            raise CoreApiError(f"Core API error occurred status_code: {response.status_code} "
-                               f"message: {response.content}")
-
-        LOG.debug(f"GET Project Response : {response.json()}")
-        projects_res = response.json().get("results")
+        projects_res = self.get_user_projects(project_id=project_id)
 
         projects = []
         for p in projects_res:
