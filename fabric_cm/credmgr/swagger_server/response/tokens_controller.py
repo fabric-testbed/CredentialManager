@@ -90,24 +90,27 @@ def tokens_create_post(project_id: str, project_name: str, scope: str = None, li
         return cors_500(details=str(ex))
 
 
-def tokens_refresh_post(body: Request, project_id=None, scope=None):  # noqa: E501
-    """Refresh FABRIC OAuth tokens for an user
+def tokens_refresh_post(body: Request, project_id=None, project_name=None, scope=None):  # noqa: E501
+    """Refresh tokens for an user
 
     Request to refresh OAuth tokens for an user  # noqa: E501
 
     :param body:
     :type body: dict | bytes
-    :param project_id: Project Id
+    :param project_id: Project identified by universally unique identifier
     :type project_id: str
+    :param project_name: Project identified by name
+    :type project_name: str
     :param scope: Scope for which token is requested
     :type scope: str
 
-    :rtype: Success
+    :rtype: Tokens
     """
     received_counter.labels(HTTP_METHOD_POST, TOKENS_REFRESH_URL).inc()
     try:
         credmgr = OAuthCredMgr()
-        token_dict = credmgr.refresh_token(refresh_token=body.refresh_token, project=project_id, scope=scope,
+        token_dict = credmgr.refresh_token(refresh_token=body.refresh_token, project_id=project_id,
+                                           project_name=project_name, scope=scope,
                                            remote_addr=connexion.request.remote_addr)
         response = Tokens()
         token = Token().from_dict(token_dict)

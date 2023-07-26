@@ -141,13 +141,15 @@ class OAuthCredMgr:
 
         return sha256_hex
 
-    def __generate_token_and_save_info(self, ci_logon_id_token: str, project: str, scope: str, remote_addr: str,
+    def __generate_token_and_save_info(self, ci_logon_id_token: str, scope: str, remote_addr: str,
                                        comment: str = None, cookie: str = None, lifetime: int = 4,
-                                       refresh: bool = False) -> Dict[str, str]:
+                                       refresh: bool = False, project_id: str = None,
+                                       project_name: str = None) -> Dict[str, str]:
         """
         Generate Fabric Token and save the corresponding meta information in the database
         @param ci_logon_id_token    CI logon Identity Token
-        @param project              Project Id
+        @param project_id           Project Id
+        @param project_name         Project Name
         @param scope                Token scope; allowed values (cf, mf, all)
         @param remote_addr          Remote Address
         @param comment              Comment
@@ -155,6 +157,10 @@ class OAuthCredMgr:
         @param lifetime             Token lifetime in hours; default 1 hour; max is 9 weeks i.e. 1512 hours
         @param refresh              Flag indicating if token was refreshed (True) or created new (False)
         """
+        if project_name is None and project_id is None:
+            raise OAuthCredMgrError(f"CredMgr: Either Project ID: '{project_id}' or Project Name'{project_name}' "
+                                    f"must be specified")
+
         self.log.debug("CILogon Token: %s", ci_logon_id_token)
 
         # validate the token
@@ -166,7 +172,8 @@ class OAuthCredMgr:
                 raise claims_or_exception
 
             # Create an encoder
-            token_encoder = TokenEncoder(id_token=ci_logon_id_token, idp_claims=claims_or_exception, project=project,
+            token_encoder = TokenEncoder(id_token=ci_logon_id_token, idp_claims=claims_or_exception,
+                                         project_id=project_id, project_name=project_name,
                                          scope=scope, cookie=cookie)
 
             # convert lifetime to seconds
@@ -202,11 +209,11 @@ class OAuthCredMgr:
 
             # Add token meta info to the database
             DB_OBJ.add_token(user_id=token_encoder.claims[self.UUID], user_email=token_encoder.claims[self.EMAIL],
-                             project_id=project, token_hash=token_hash, created_at=created_at,
+                             project_id=token_encoder.project_id, token_hash=token_hash, created_at=created_at,
                              expires_at=expires_at, state=state.value, created_from=remote_addr,
                              comment=comment)
 
-            log_event(token_hash=token_hash, action=action, project_id=project,
+            log_event(token_hash=token_hash, action=action, project_id=token_encoder.project_id,
                       user_id=token_encoder.claims[self.UUID], user_email=token_encoder.claims[self.EMAIL])
 
             return {self.TOKEN_HASH: token_hash,
@@ -262,20 +269,22 @@ class OAuthCredMgr:
                                         f"long lived tokens")
 
         # Generate the Token
-        result = self.__generate_token_and_save_info(ci_logon_id_token=ci_logon_id_token, project=project_id,
+        result = self.__generate_token_and_save_info(ci_logon_id_token=ci_logon_id_token, project_id=project_id,
                                                      scope=scope, remote_addr=remote_addr, cookie=cookie,
-                                                     lifetime=lifetime, comment=comment)
+                                                     lifetime=lifetime, comment=comment, project_name=project_name)
 
         # Only include refresh token for short lived tokens
         if short:
             result[self.REFRESH_TOKEN] = refresh_token
         return result
 
-    def refresh_token(self, refresh_token: str, project: str, scope: str, remote_addr: str, cookie: str = None) -> dict:
+    def refresh_token(self, refresh_token: str, project_id: str, project_name: str, scope: str,
+                      remote_addr: str, cookie: str = None) -> dict:
         """
         Refreshes a token from CILogon and generates Fabric token using project and scope saved in Database
 
-        @param project: Project for which token is requested, by default it is set to 'all'
+        @param project_id: Project Id of the project for which token is requested, by default it is set to 'all'
+        @param project_name: Project Name
         @param scope: Scope of the requested token, by default it is set to 'all'
         @param refresh_token: Refresh Token
         @param remote_addr: Remote IP
@@ -284,6 +293,9 @@ class OAuthCredMgr:
 
         @raises Exception in case of error
         """
+        if project_name is None and project_id is None:
+            raise OAuthCredMgrError(f"CredMgr: Either Project ID: '{project_id}' or Project Name'{project_name}' "
+                                    f"must be specified")
 
         self.validate_scope(scope=scope)
 
@@ -311,7 +323,8 @@ class OAuthCredMgr:
         self.log.debug(f"new_refresh_token: {new_refresh_token}")
 
         try:
-            result = self.__generate_token_and_save_info(ci_logon_id_token=id_token, project=project, scope=scope,
+            result = self.__generate_token_and_save_info(ci_logon_id_token=id_token, project_id=project_id,
+                                                         project_name=project_name, scope=scope,
                                                          cookie=cookie, refresh=True, remote_addr=remote_addr)
             result[self.REFRESH_TOKEN] = new_refresh_token
             return result
@@ -356,7 +369,7 @@ class OAuthCredMgr:
         if response.status_code != 200:
             raise OAuthCredMgrError("Refresh token could not be revoked!")
 
-    def revoke_identity_token(self, token_hash: str, cookie: str, user_email: str = None):
+    def revoke_identity_token(self, token_hash: str, cookie: str, user_email: str = None, project_id: str = None):
         """
          Revoke a fabric identity token
 
@@ -378,7 +391,7 @@ class OAuthCredMgr:
             tokens = self.get_tokens(token_hash=token_hash)
         # Otherwise query only this user's tokens
         else:
-            tokens = self.get_tokens(token_hash=token_hash, user_email=user_email)
+            tokens = self.get_tokens(token_hash=token_hash, user_email=user_email, project_id=project_id)
 
         if tokens is None or len(tokens) == 0:
             raise OAuthCredMgrError(http_error_code=NOT_FOUND,

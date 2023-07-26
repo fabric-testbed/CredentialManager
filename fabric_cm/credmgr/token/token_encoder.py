@@ -47,23 +47,26 @@ class TokenEncoder:
     TAGS = "tags"
     EMAIL = "email"
 
-    def __init__(self, id_token, idp_claims: dict, project: str, scope: str = "all", cookie: str = None):
+    def __init__(self, id_token, idp_claims: dict, project_id: str = None, project_name: str = None,
+                 scope: str = "all", cookie: str = None):
         """
         Constructor
         :param id_token: CI Logon Identity Token
         :param idp_claims: CI Logon Identity Claims
-        :param project: Project for which token is requested
+        :param project_id: Project Id of the project for which token is requested
+        :param project_name: Project Name of the project for which token is requested
         :param scope: Scope for which token is requested
         :param cookie: Vouch Proxy Cookie
 
         :raises Exception in case of error
         """
-        if id_token is None or project is None or scope is None:
+        if id_token is None or (project_id is None and project_name is None) or scope is None:
             raise TokenError("Missing required parameters id_token or project or scope")
 
         self.id_token = id_token
         self.claims = idp_claims
-        self.project = project
+        self.project_id = project_id
+        self.project_name = project_name
         self.scope = scope
         self.cookie = cookie
         self.encoded = False
@@ -85,7 +88,7 @@ class TokenEncoder:
         self._add_fabric_claims()
 
         if not Utils.is_short_lived(lifetime_in_hours=int(validity_in_seconds/3600)) and \
-                not self._validate_lifetime(validity=validity_in_seconds, project_id=self.project,
+                not self._validate_lifetime(validity=validity_in_seconds, project_id=self.project_id,
                                             roles=self.claims.get(self.ROLES)):
             raise TokenError(f"User {self.claims[self.EMAIL]} is not authorized to create long lived tokens!")
 
@@ -122,19 +125,24 @@ class TokenEncoder:
         Set the claims for the Token by adding membership, project and scope
         """
         if CONFIG_OBJ.is_core_api_enabled():
+            cookie = Utils.get_vouch_cookie(cookie=self.cookie, id_token=self.id_token,
+                                            claims=self.claims)
+
+            if self.project_id is None:
+                self.project_id = Utils.get_project_id(project_name=self.project_name, cookie=cookie)
+
             core_api = CoreApi(api_server=CONFIG_OBJ.get_core_api_url(),
-                               cookie=Utils.get_vouch_cookie(cookie=self.cookie, id_token=self.id_token,
-                                                             claims=self.claims),
+                               cookie=cookie,
                                cookie_name=CONFIG_OBJ.get_vouch_cookie_name(),
                                cookie_domain=CONFIG_OBJ.get_vouch_cookie_domain_name())
-            uuid, roles, projects = core_api.get_user_and_project_info(project_id=self.project)
+            uuid, roles, projects = core_api.get_user_and_project_info(project_id=self.project_id)
         else:
             uuid = None
             email = self.claims.get("email")
             roles, tags = CmLdapMgrSingleton.get().get_user_and_project_info(eppn=None, email=email,
-                                                                             project_id=self.project)
+                                                                             project_id=self.project_id)
             projects = [{
-                self.UUID: self.project,
+                self.UUID: self.project_id,
                 self.TAGS: tags
             }]
 

@@ -64,6 +64,7 @@ class TestTokensController(BaseTestCase):
         """
         body = Request()
         query_string = [('project_id', 'project_id_example'),
+                        ('project_name', 'project_name_example'),
                         ('scope', 'all')]
         response = self.client.open(
             '/credmgr//tokens/refresh',

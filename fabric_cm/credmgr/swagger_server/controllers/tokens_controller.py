@@ -53,7 +53,7 @@ def tokens_get(token_hash=None, project_id=None, expires=None, states=None, limi
                          limit=limit, offset=offset)
 
 
-def tokens_refresh_post(body, project_id=None, scope=None):  # noqa: E501
+def tokens_refresh_post(body, project_id=None, project_name=None, scope=None):  # noqa: E501
     """Refresh tokens for an user
 
     Request to refresh OAuth tokens for an user  # noqa: E501
@@ -62,6 +62,8 @@ def tokens_refresh_post(body, project_id=None, scope=None):  # noqa: E501
     :type body: dict | bytes
     :param project_id: Project identified by universally unique identifier
     :type project_id: str
+    :param project_name: Project identified by name
+    :type project_name: str
     :param scope: Scope for which token is requested
     :type scope: str
 
@@ -69,7 +71,7 @@ def tokens_refresh_post(body, project_id=None, scope=None):  # noqa: E501
     """
     if connexion.request.is_json:
         body = Request.from_dict(connexion.request.get_json())  # noqa: E501
-    return rc.tokens_refresh_post(body, project_id, scope)
+    return rc.tokens_refresh_post(body, project_id, project_name, scope)
 
 
 def tokens_revoke_list_get(project_id=None):  # noqa: E501

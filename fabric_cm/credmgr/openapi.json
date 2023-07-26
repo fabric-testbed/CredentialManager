@@ -248,6 +248,17 @@
             }
           },
           {
+            "name": "project_name",
+            "in": "query",
+            "description": "Project identified by name",
+            "required": false,
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "scope",
             "in": "query",
             "description": "Scope for which token is requested",
