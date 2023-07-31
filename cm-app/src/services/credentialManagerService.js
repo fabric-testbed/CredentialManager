@@ -4,8 +4,8 @@ import checkCmAppType from "../utils/checkCmAppType";
 
 const apiEndpoint = config.credentialManagerApiUrl[checkCmAppType()];
 
-export function createIdToken(projectId, scope) {
-  return http.post(apiEndpoint + "/create?project_id=" + projectId + "&scope=" + scope);
+export function createIdToken(projectId, scope, lifetime, comment) {
+  return http.post(apiEndpoint + "/create?project_id=" + projectId + "&scope=" + scope + "&lifetime=" + lifetime + "&comment=" + comment)
 }
 
 export function refreshToken(projectId, scope, refresh_token) {

@@ -38,7 +38,9 @@ class CredentialManagerPage extends React.Component {
     revokeIdentitySuccess: false,
     revokedTokenHash: "",
     decodedToken: "",
-    tokenMsg: ""
+    tokenMsg: "",
+    selectedCreateLifetime: 4, // Default lifetime in seconds (4 hours)
+    createTokenComment: "Created via GUI", // Added comment for creating tokens
   }
 
   portalLinkMap = {
@@ -73,7 +75,9 @@ class CredentialManagerPage extends React.Component {
     try {
       const project = this.state.selectedCreateProject;
       const scope = this.state.selectedCreateScope;
-      const { data: res } = await createIdToken(project, scope);
+      const lifetime = this.state.selectedCreateLifetime; // Added lifetime parameter
+      const comment = this.state.createTokenComment; // Added comment for the token
+      const { data: res } = await createIdToken(project, scope, lifetime, comment);
       console.log("Response received: " + res)
       this.setState({ createCopySuccess: false, createSuccess: true });
       this.setState({ createToken: JSON.stringify(res["data"][0], undefined, 4) });
@@ -193,10 +197,19 @@ class CredentialManagerPage extends React.Component {
     this.setState({ selectedRefreshScope: e.target.value });
   }
 
+  handleSelectCreateLifetime = (e) => {
+    this.setState({ selectedCreateLifetime: parseInt(e.target.value) });
+  };
+
+  handleCreateTokenComment = (e) => {
+    this.setState({ createTokenComment: e.target.value });
+  };
+
   render() {
-    const { projects, scopeOptions, createSuccess, createToken, createCopySuccess, refreshToken,
+    const { projects, scopeOptions, createSuccess, createToken, createCopySuccess, refreshToken, selectedCreateLifetime,
             refreshSuccess, refreshCopySuccess, revokeSuccess, listSuccess, tokenList, decodedToken, tokenMsg,
-            validateTokenValue, isTokenValid, validateSuccess, revokeIdentitySuccess, revokedTokenHash } = this.state;
+            validateTokenValue, isTokenValid, validateSuccess, revokeIdentitySuccess, revokedTokenHash,
+            createTokenComment } = this.state;
 
     const portalLink = this.portalLinkMap[checkCmAppType()];
 
@@ -249,6 +262,16 @@ class CredentialManagerPage extends React.Component {
                     }
                   </Form.Control>
                 </Form.Group>
+              </Col>
+              <Col>
+                <Form.Group>
+                  <Form.Label>Select Lifetime (in hours)</Form.Label>
+                  <Form.Control as="input" type="number" min="1" value={selectedCreateLifetime} onChange={this.handleSelectCreateLifetime} />
+                </Form.Group>
+                <Form.Group>
+                <Form.Label>Comment (optional)</Form.Label>
+                <Form.Control as="input" type="text" value={createTokenComment} onChange={this.handleCreateTokenComment} />
+              </Form.Group>
               </Col>
               <Col>
                 <Form.Group>
