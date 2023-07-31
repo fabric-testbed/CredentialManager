@@ -268,7 +268,7 @@ def tokens_revoke_list_get(project_id: str):  # noqa: E501
         response = RevokeList()
         response.data = token_list
         response.size = len(response.data)
-        response.type = "tokens"
+        response.type = "revoked token hashes"
         return cors_200(response_body=response)
     except Exception as ex:
         LOG.exception(ex)
