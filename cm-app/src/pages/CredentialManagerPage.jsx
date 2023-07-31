@@ -268,6 +268,8 @@ class CredentialManagerPage extends React.Component {
                   <Form.Label>Select Lifetime (in hours)</Form.Label>
                   <Form.Control as="input" type="number" min="1" value={selectedCreateLifetime} onChange={this.handleSelectCreateLifetime} />
                 </Form.Group>
+              </Col>
+              <Col>
                 <Form.Group>
                 <Form.Label>Comment (optional)</Form.Label>
                 <Form.Control as="input" type="text" value={createTokenComment} onChange={this.handleCreateTokenComment} />
