@@ -115,10 +115,11 @@ class TokenEncoder:
         llt_role = f"{project_id}-{CONFIG_OBJ.get_llt_role_suffix()}"
 
         # User doesn't have the role to create Long lived tokens
-        if llt_role not in roles:
-            return False
+        for role in roles:
+            if llt_role in role.values():
+                return True
 
-        return True
+        return False
 
     def _add_fabric_claims(self):
         """
