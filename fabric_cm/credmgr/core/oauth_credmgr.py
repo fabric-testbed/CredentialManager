@@ -420,9 +420,6 @@ class OAuthCredMgr:
 
         @return list of sting
         """
-        if project_id is None:
-            raise OAuthCredMgrError(f"Project Id is required")
-
         result = []
 
         tokens = self.get_tokens(project_id=project_id, user_email=user_email, user_id=user_id,
@@ -440,8 +437,8 @@ class OAuthCredMgr:
         Get Tokens
         @return list of tokens
         """
-        if project_id is None and user_id is None and user_email is None and token_hash is None:
-            raise OAuthCredMgrError(f"User Id/Email/Token Hash or Project Id required")
+        if user_id is None and user_email is None and token_hash is None:
+            raise OAuthCredMgrError(f"User Id/Email/Token Hash required")
 
         self.delete_expired_tokens(user_email=user_email, user_id=user_id)
         tokens = DB_OBJ.get_tokens(user_id=user_id, user_email=user_email, project_id=project_id,
