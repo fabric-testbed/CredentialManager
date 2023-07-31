@@ -423,7 +423,7 @@ class OAuthCredMgr:
         result = []
 
         tokens = self.get_tokens(project_id=project_id, user_email=user_email, user_id=user_id,
-                                 states=[str(TokenState.Revoked)])
+                                 states=[str(TokenState.Revoked)], query_all=True)
         if tokens is None:
             return result
         for t in tokens:
@@ -432,13 +432,13 @@ class OAuthCredMgr:
 
     def get_tokens(self, *, user_id: str = None, user_email: str = None, project_id: str = None, token_hash: str = None,
                    expires: datetime = None, states: List[str] = None, offset: int = 0,
-                   limit: int = 5) -> List[Dict[str, Any]]:
+                   limit: int = 5, query_all: bool = False) -> List[Dict[str, Any]]:
         """
         Get Tokens
         @return list of tokens
         """
-        if user_id is None and user_email is None and token_hash is None:
-            raise OAuthCredMgrError(f"User Id/Email/Token Hash required")
+        if not query_all and project_id is None and user_id is None and user_email is None and token_hash is None:
+            raise OAuthCredMgrError(f"User Id/Email/Token Hash or Project Id required")
 
         self.delete_expired_tokens(user_email=user_email, user_id=user_id)
         tokens = DB_OBJ.get_tokens(user_id=user_id, user_email=user_email, project_id=project_id,
