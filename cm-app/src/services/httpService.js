@@ -5,17 +5,6 @@ axios.defaults.withCredentials = true;
 
 axios.interceptors.response.use(null, (error) => {
     if (error.response && error.response.status === 401) {
-      const errors = error.response.data.errors;
-
-      if (errors && errors[0].details.includes("Login required")) {
-        localStorage.setItem("cmUserStatus", "unauthorized");
-        localStorage.removeItem("cmUserID");
-      }
-
-      if (errors && errors[0].details.includes("Enrollment required")) {
-        localStorage.setItem("cmUserStatus", "inactive");
-      }
-
       // no auth cookie or cookie is expired.
       window.location.href = "/logout";
 
