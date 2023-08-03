@@ -48,7 +48,16 @@ class App extends React.Component {
           toast.error("Please enroll to FABRIC in the Portal first.");
         }
       } catch (err) {
+          //localStorage.setItem("cmUserStatus", "unauthorized");
+        const errors = err.response.data.errors;
+        if (errors && errors[0].details.includes("Login required")) {
           localStorage.setItem("cmUserStatus", "unauthorized");
+          localStorage.removeItem("cmUserID");
+        }
+
+        if (errors && errors[0].details.includes("Enrollment required")) {
+          localStorage.setItem("cmUserStatus", "inactive");
+        }
       }
     }
 
