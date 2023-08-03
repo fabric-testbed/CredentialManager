@@ -8,6 +8,7 @@ import "./styles/App.scss";
 import { getWhoAmI } from "./services/coreApiService.js";
 import { toast } from "react-toastify";
 import SessionTimeoutModal from "./components/Modals/SessionTimeoutModal";
+import { default as cmData } from "./services/cmData.json";
 
 class App extends React.Component {
   state = {
@@ -28,7 +29,7 @@ class App extends React.Component {
             // after user logs in for 3hr55min, pop up first session time-out modal
             const sessionTimeoutInterval1 = setInterval(() =>
               this.setState({showSessionTimeoutModal1: true})
-            , portalData["5minBeforeCookieExpires"]);
+            , cmData["5minBeforeCookieExpires"]);
 
             // after user logs in for 3hr59min, pop up second session time-out modal
             const sessionTimeoutInterval2 = setInterval(() => {
@@ -36,7 +37,7 @@ class App extends React.Component {
                 showSessionTimeoutModal1: false,
                 showSessionTimeoutModal2: true,
               })
-            }, portalData["1minBeforeCookieExpires"]);
+            }, cmData["1minBeforeCookieExpires"]);
 
             localStorage.setItem("sessionTimeoutInterval1", sessionTimeoutInterval1);
             localStorage.setItem("sessionTimeoutInterval2", sessionTimeoutInterval2);
