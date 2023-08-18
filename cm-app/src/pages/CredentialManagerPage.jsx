@@ -6,6 +6,7 @@ import Col from 'react-bootstrap/Col';
 import Alert from 'react-bootstrap/Alert';
 import SpinnerWithText from "../components/SpinnerWithText.jsx";
 import SpinnerFullPage from "../components/SpinnerFullPage.jsx";
+import toLocaleTime from "../utils/toLocaleTime";
 import { createIdToken, refreshToken, revokeToken, getTokenByProjectId, validateToken } from "../services/credentialManagerService.js";
 import { getProjects } from "../services/coreApiService.js";
 import { default as externalLinks } from "../services/externalLinks.json";
@@ -41,7 +42,8 @@ class CredentialManagerPage extends React.Component {
     revokedTokenHash: "",
     decodedToken: "",
     tokenMsg: "",
-    selectedCreateLifetime: 4, // Default lifetime in seconds (4 hours)
+    inputLifetime: 4, // Default lifetime in seconds (4 hours)
+    selectLifetimeUnit: "hour",
     createTokenComment: "Created via GUI", // Added comment for creating tokens,
     showFullPageSpinner: false,
     spinnerMessage: ""
@@ -79,7 +81,7 @@ class CredentialManagerPage extends React.Component {
     try {
       const project = this.state.selectedCreateProject;
       const scope = this.state.selectedCreateScope;
-      const lifetime = this.state.selectedCreateLifetime; // Added lifetime parameter
+      const lifetime = this.state.inputLifetime; // Added lifetime parameter
       const comment = this.state.createTokenComment; // Added comment for the token
       const { data: res } = await createIdToken(project, scope, lifetime, comment);
       console.log("Response received: " + res)
@@ -90,7 +92,7 @@ class CredentialManagerPage extends React.Component {
         showFullPageSpinner: false,
         spinnerMessage: ""
       });
-      window.location.reload();
+      toast.success("Token created successfully.");
     } catch (ex) {
       toast.error("Failed to create token.");
     }
@@ -106,6 +108,7 @@ class CredentialManagerPage extends React.Component {
       console.log("Response received: " + res)
       this.setState({ refreshCopySuccess: false, refreshSuccess: true });
       this.setState({ refreshToken: JSON.stringify(res["data"][0], undefined, 4) });
+      toast.success("Token refreshed successfully.");
     }
     catch (ex) {
       this.setState({ refreshSuccess: false });
@@ -208,7 +211,7 @@ class CredentialManagerPage extends React.Component {
   }
 
   handleSelectCreateLifetime = (e) => {
-    this.setState({ selectedCreateLifetime: parseInt(e.target.value) });
+    this.setState({ inputLifetime: parseInt(e.target.value) });
   };
 
   handleCreateTokenComment = (e) => {
@@ -216,10 +219,10 @@ class CredentialManagerPage extends React.Component {
   };
 
   render() {
-    const { projects, scopeOptions, createSuccess, createToken, createCopySuccess, refreshToken, selectedCreateLifetime,
+    const { projects, scopeOptions, createSuccess, createToken, createCopySuccess, refreshToken, inputLifetime,
             refreshSuccess, refreshCopySuccess, revokeSuccess, listSuccess, tokenList, decodedToken, tokenMsg,
             validateTokenValue, isTokenValid, validateSuccess, revokeIdentitySuccess, revokedTokenHash,
-            createTokenComment, showFullPageSpinner, showSpinner, spinnerMessage } = this.state;
+            createTokenComment, showFullPageSpinner, showSpinner, spinnerMessage, selectLifetimeUnit } = this.state;
 
     const portalLink = this.portalLinkMap[checkCmAppType()];
 
@@ -227,7 +230,7 @@ class CredentialManagerPage extends React.Component {
       return (
         <div className="container">
           <SpinnerFullPage
-            showSpinner={showSpinner}
+            showSpinner={showFullPageSpinner}
             text={spinnerMessage}
           />
         </div>
@@ -273,7 +276,7 @@ class CredentialManagerPage extends React.Component {
               <Col>
                 <Form.Group>
                   <Form.Label>Select Project</Form.Label>
-                  <Form.Control as="select" onChange={this.handleSelectCreateProject}>
+                  <Form.Select onChange={this.handleSelectCreateProject}>
                     {
                       projects.length > 0 && projects.map(project => {
                         return (
@@ -281,13 +284,26 @@ class CredentialManagerPage extends React.Component {
                         )
                       })
                     }
-                  </Form.Control>
+                  </Form.Select>
                 </Form.Group>
               </Col>
               <Col>
                 <Form.Group>
-                  <Form.Label>Select Lifetime (in hours)</Form.Label>
-                  <Form.Control as="input" type="number" min="1" value={selectedCreateLifetime} onChange={this.handleSelectCreateLifetime} />
+                  <Form.Label>Lifetime</Form.Label>
+                  <Form.Control as="input" type="number" min="1" value={inputLifetime} onChange={this.handleSelectCreateLifetime} />
+                </Form.Group>
+              </Col>
+              <Col>
+                <Form.Group>
+                  <Form.Label>Lifetime Unit</Form.Label>
+                  <Form.Select
+                    value={selectLifetimeUnit}
+                    onChange={this.handleLifetimeUnitChange}
+                  >
+                    <option value={"hours"}>Hours</option>
+                    <option value={"days"}>Days</option>
+                    <option value={"weeks"}>Weeks</option>
+                  </Form.Select>
                 </Form.Group>
               </Col>
               <Col>
@@ -383,50 +399,54 @@ class CredentialManagerPage extends React.Component {
                 </Form.Group>
               </Col>
             </Row>
-            <Row>
-              <div className="mt-4 table-container">
-                <table className="table">
+          </Form>
+          <div className="mt-4">
+              {
+                listSuccess && tokenList.length > 0 ?
+                <table className="table w-auto">
                   <thead>
                     <tr>
-                    <th>Token Hash</th>
-                    <th>Comment</th>
-                    <th>Created At</th>
-                    <th>Expires At</th>
-                    <th>State</th>
-                    <th>Created From</th>
-                      <th>Actions</th> {/* Add a new column for actions */}
+                      <th>Token Hash</th>
+                      <th>Comment</th>
+                      <th>Created At</th>
+                      <th>Expires At</th>
+                      <th>State</th>
+                      <th>Created From</th>
+                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {listSuccess && tokenList.length > 0 ? (
+                    {
                       tokenList.map((token, index) => (
                         <tr key={index}>
-                          <td>{token['token_hash']}</td>
-                          <td>{token['comment']}</td>
-                          <td>{token['created_at']}</td>
-                          <td>{token['expires_at']}</td>
-                          <td>{token['state']}</td>
-                          <td>{token['created_from']}</td>
-                          <td>
-                            <button
-                              className="btn btn-outline-danger"
-                              onClick={e => this.revokeIdentityToken(e, token['token_hash'])}
-                            >
-                              Revoke
-                            </button>
+                          <td className="col-md-3">{token['token_hash']}</td>
+                          <td className="col-md-2">{token['comment']}</td>
+                          <td className="col-md-2">{toLocaleTime(token['created_at'])}</td>
+                          <td className="col-md-2">{toLocaleTime(token['expires_at'])}</td>
+                          <td className="col-md-1">{token['state']}</td>
+                          <td className="col-md-1">{token['created_from']}</td>
+                          <td className="col-md-1">
+                            {
+                              token['state'] !== "Revoked" &&
+                              <button
+                                className="btn btn-sm btn-outline-danger"
+                                onClick={e => this.revokeIdentityToken(e, token['token_hash'])}
+                              >
+                                Revoke
+                              </button>
+                            }
                           </td>
                         </tr>
                       ))
-                    ) : (
-                      <tr>
-                        <td colSpan="4">No tokens available</td>
-                      </tr>
-                    )}
+                    }
                   </tbody>
-                </table>
+                </table> 
+                :
+                <div className="alert alert-primary my-2">
+                  No tokens available for the selected project.
+                </div>
+              }
               </div>
-            </Row>
-          </Form>
           <h2 className="my-4">Refresh Token</h2>
           <Form>
             <Row>
