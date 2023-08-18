@@ -4,6 +4,8 @@ import Card from 'react-bootstrap/Card';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Alert from 'react-bootstrap/Alert';
+import SpinnerWithText from "../components/SpinnerWithText.jsx";
+import SpinnerFullPage from "../components/SpinnerFullPage.jsx";
 import { createIdToken, refreshToken, revokeToken, getTokenByProjectId, validateToken } from "../services/credentialManagerService.js";
 import { getProjects } from "../services/coreApiService.js";
 import { default as externalLinks } from "../services/externalLinks.json";
@@ -40,7 +42,9 @@ class CredentialManagerPage extends React.Component {
     decodedToken: "",
     tokenMsg: "",
     selectedCreateLifetime: 4, // Default lifetime in seconds (4 hours)
-    createTokenComment: "Created via GUI", // Added comment for creating tokens
+    createTokenComment: "Created via GUI", // Added comment for creating tokens,
+    showFullPageSpinner: false,
+    spinnerMessage: ""
   }
 
   portalLinkMap = {
@@ -71,7 +75,7 @@ class CredentialManagerPage extends React.Component {
 
   createToken = async (e) => {
     e.preventDefault();
-
+    this.setState({ showFullPageSpinner: true, spinnerMessage: "Creating Token..."});
     try {
       const project = this.state.selectedCreateProject;
       const scope = this.state.selectedCreateScope;
@@ -79,8 +83,14 @@ class CredentialManagerPage extends React.Component {
       const comment = this.state.createTokenComment; // Added comment for the token
       const { data: res } = await createIdToken(project, scope, lifetime, comment);
       console.log("Response received: " + res)
-      this.setState({ createCopySuccess: false, createSuccess: true });
-      this.setState({ createToken: JSON.stringify(res["data"][0], undefined, 4) });
+      this.setState({
+        createCopySuccess: false,
+        createSuccess: true.valueOf,
+        createToken: JSON.stringify(res["data"][0], undefined, 4),
+        showFullPageSpinner: false,
+        spinnerMessage: ""
+      });
+      window.location.reload();
     } catch (ex) {
       toast.error("Failed to create token.");
     }
@@ -209,9 +219,20 @@ class CredentialManagerPage extends React.Component {
     const { projects, scopeOptions, createSuccess, createToken, createCopySuccess, refreshToken, selectedCreateLifetime,
             refreshSuccess, refreshCopySuccess, revokeSuccess, listSuccess, tokenList, decodedToken, tokenMsg,
             validateTokenValue, isTokenValid, validateSuccess, revokeIdentitySuccess, revokedTokenHash,
-            createTokenComment } = this.state;
+            createTokenComment, showFullPageSpinner, showSpinner, spinnerMessage } = this.state;
 
     const portalLink = this.portalLinkMap[checkCmAppType()];
+
+    if (showFullPageSpinner) {
+      return (
+        <div className="container">
+          <SpinnerFullPage
+            showSpinner={showSpinner}
+            text={spinnerMessage}
+          />
+        </div>
+      )
+    }
 
     return (
       <div className="container">
