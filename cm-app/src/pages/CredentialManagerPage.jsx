@@ -42,8 +42,8 @@ class CredentialManagerPage extends React.Component {
     revokedTokenHash: "",
     decodedToken: "",
     tokenMsg: "",
-    inputLifetime: 4, // Default lifetime in seconds (4 hours)
-    selectLifetimeUnit: "hour",
+    inputLifetime: 4, // Default lifetime is 4 hours
+    selectLifetimeUnit: "hours",
     createTokenComment: "Created via GUI", // Added comment for creating tokens,
     showFullPageSpinner: false,
     spinnerMessage: ""
@@ -75,13 +75,20 @@ class CredentialManagerPage extends React.Component {
       }
   }
 
+  parseTokenLifetime = ()=> {
+    const { inputLifetime: time, selectLifetimeUnit: unit } = this.state;
+    if (unit === "hours") { return time; }
+    if (unit === "days") { return time * 24; }
+    if (unit === "weeks") { return time * 24 * 7; }
+  }
+
   createToken = async (e) => {
     e.preventDefault();
     this.setState({ showFullPageSpinner: true, spinnerMessage: "Creating Token..."});
     try {
       const project = this.state.selectedCreateProject;
       const scope = this.state.selectedCreateScope;
-      const lifetime = this.state.inputLifetime; // Added lifetime parameter
+      const lifetime = this.parseTokenLifetime(); // Added lifetime parameter
       const comment = this.state.createTokenComment; // Added comment for the token
       const { data: res } = await createIdToken(project, scope, lifetime, comment);
       console.log("Response received: " + res)
@@ -214,6 +221,10 @@ class CredentialManagerPage extends React.Component {
     this.setState({ inputLifetime: parseInt(e.target.value) });
   };
 
+  handleLifetimeUnitChange = (e) => {
+    this.setState({ selectLifetimeUnit: parseInt(e.target.value) });
+  }
+
   handleCreateTokenComment = (e) => {
     this.setState({ createTokenComment: e.target.value });
   };
@@ -273,7 +284,7 @@ class CredentialManagerPage extends React.Component {
           <h2 className="mb-4">Create Token</h2>
           <Form>
             <Row>
-              <Col>
+              <Col xs={3}>
                 <Form.Group>
                   <Form.Label>Select Project</Form.Label>
                   <Form.Select onChange={this.handleSelectCreateProject}>
@@ -287,13 +298,13 @@ class CredentialManagerPage extends React.Component {
                   </Form.Select>
                 </Form.Group>
               </Col>
-              <Col>
+              <Col xs={2}>
                 <Form.Group>
                   <Form.Label>Lifetime</Form.Label>
                   <Form.Control as="input" type="number" min="1" value={inputLifetime} onChange={this.handleSelectCreateLifetime} />
                 </Form.Group>
               </Col>
-              <Col>
+              <Col xs={1}>
                 <Form.Group>
                   <Form.Label>Lifetime Unit</Form.Label>
                   <Form.Select
@@ -306,13 +317,13 @@ class CredentialManagerPage extends React.Component {
                   </Form.Select>
                 </Form.Group>
               </Col>
-              <Col>
+              <Col xs={2}>
                 <Form.Group>
                 <Form.Label>Comment (optional)</Form.Label>
                 <Form.Control as="input" type="text" value={createTokenComment} onChange={this.handleCreateTokenComment} />
               </Form.Group>
               </Col>
-              <Col>
+              <Col xs={2}>
                 <Form.Group>
                   <Form.Label>Select Scope</Form.Label>
                   <Form.Control as="select" onChange={this.handleSelectCreateScope}>
@@ -400,53 +411,53 @@ class CredentialManagerPage extends React.Component {
               </Col>
             </Row>
           </Form>
-          <div className="mt-4">
-              {
-                listSuccess && tokenList.length > 0 ?
-                <table className="table w-auto">
-                  <thead>
-                    <tr>
-                      <th>Token Hash</th>
-                      <th>Comment</th>
-                      <th>Created At</th>
-                      <th>Expires At</th>
-                      <th>State</th>
-                      <th>Created From</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {
-                      tokenList.map((token, index) => (
-                        <tr key={index}>
-                          <td className="col-md-3">{token['token_hash']}</td>
-                          <td className="col-md-2">{token['comment']}</td>
-                          <td className="col-md-2">{toLocaleTime(token['created_at'])}</td>
-                          <td className="col-md-2">{toLocaleTime(token['expires_at'])}</td>
-                          <td className="col-md-1">{token['state']}</td>
-                          <td className="col-md-1">{token['created_from']}</td>
-                          <td className="col-md-1">
-                            {
-                              token['state'] !== "Revoked" &&
-                              <button
-                                className="btn btn-sm btn-outline-danger"
-                                onClick={e => this.revokeIdentityToken(e, token['token_hash'])}
-                              >
-                                Revoke
-                              </button>
-                            }
-                          </td>
-                        </tr>
-                      ))
-                    }
-                  </tbody>
-                </table> 
-                :
-                <div className="alert alert-primary my-2">
-                  No tokens available for the selected project.
-                </div>
-              }
+          <div className="mt-1">
+            {
+              listSuccess && tokenList.length > 0 ?
+              <table className="table table-striped w-auto">
+                <thead>
+                  <tr>
+                    <th>Token Hash</th>
+                    <th>Comment</th>
+                    <th>Created At</th>
+                    <th>Expires At</th>
+                    <th>State</th>
+                    <th>Created From</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {
+                    tokenList.map((token, index) => (
+                      <tr key={index}>
+                        <td className="col-md-3">{token['token_hash']}</td>
+                        <td className="col-md-2">{token['comment']}</td>
+                        <td className="col-md-2">{toLocaleTime(token['created_at'])}</td>
+                        <td className="col-md-2">{toLocaleTime(token['expires_at'])}</td>
+                        <td className="col-md-1">{token['state']}</td>
+                        <td className="col-md-1">{token['created_from']}</td>
+                        <td className="col-md-1">
+                          {
+                            token['state'] !== "Revoked" &&
+                            <button
+                              className="btn btn-sm btn-outline-danger"
+                              onClick={e => this.revokeIdentityToken(e, token['token_hash'])}
+                            >
+                              Revoke
+                            </button>
+                          }
+                        </td>
+                      </tr>
+                    ))
+                  }
+                </tbody>
+              </table> 
+              :
+              <div className="alert alert-primary my-2">
+                No tokens available for the selected project.
               </div>
+            }
+          </div>
           <h2 className="my-4">Refresh Token</h2>
           <Form>
             <Row>
