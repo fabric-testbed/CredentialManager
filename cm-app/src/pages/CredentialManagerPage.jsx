@@ -4,9 +4,9 @@ import Card from 'react-bootstrap/Card';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Alert from 'react-bootstrap/Alert';
-import SpinnerWithText from "../components/SpinnerWithText.jsx";
 import SpinnerFullPage from "../components/SpinnerFullPage.jsx";
 import toLocaleTime from "../utils/toLocaleTime";
+import sleep from "../utils/sleep";
 import { createIdToken, refreshToken, revokeToken, getTokenByProjectId, validateToken } from "../services/credentialManagerService.js";
 import { getProjects } from "../services/coreApiService.js";
 import { default as externalLinks } from "../services/externalLinks.json";
@@ -78,9 +78,12 @@ class CredentialManagerPage extends React.Component {
 
   parseTokenLifetime = ()=> {
     const { inputLifetime: time, selectLifetimeUnit: unit } = this.state;
-    if (unit === "hours") { return time; }
-    if (unit === "days") { return time * 24; }
-    if (unit === "weeks") { return time * 24 * 7; }
+    console.log("parsed token life time")
+    console.log(time)
+    console.log(unit)
+    if (unit === "hours") { return parseInt(time); }
+    if (unit === "days") { return parseInt(time) * 24; }
+    if (unit === "weeks") { return parseInt(time) * 24 * 7; }
   }
 
   createToken = async (e) => {
@@ -89,7 +92,7 @@ class CredentialManagerPage extends React.Component {
     try {
       const project = this.state.selectedCreateProject;
       const scope = this.state.selectedCreateScope;
-      const lifetime = this.parseTokenLifetime(); // Added lifetime parameter
+      const lifetime = this.parseTokenLifetime; // Added lifetime parameter
       const comment = this.state.createTokenComment; // Added comment for the token
       const { data: res } = await createIdToken(project, scope, lifetime, comment);
       console.log("Response received: " + res)
@@ -130,6 +133,9 @@ class CredentialManagerPage extends React.Component {
     try {
       await revokeToken("refresh", document.getElementById('revokeTokenTextArea').value);
       this.setState({ revokeSuccess: true });
+      toast.success("Token revoked successfully.");
+      await sleep(1000);
+      window.location.reload();
     }
     catch (ex) {
       this.setState({ revokeSuccess: false });
@@ -143,6 +149,7 @@ class CredentialManagerPage extends React.Component {
     try {
       const { data: res } = await revokeToken("identity", tokenHash);
       this.setState({ revokeIdentitySuccess: true, revokedTokenHash: tokenHash });
+      toast.success("Token revoked successfully.");
     }
     catch (ex) {
       this.setState({ revokeIdentitySuccess: false, revokedTokenHash: "" });
@@ -234,7 +241,7 @@ class CredentialManagerPage extends React.Component {
     const { projects, scopeOptions, createSuccess, createToken, createCopySuccess, refreshToken, inputLifetime,
             refreshSuccess, refreshCopySuccess, revokeSuccess, listSuccess, tokenList, decodedToken, tokenMsg,
             validateTokenValue, isTokenValid, validateSuccess, revokeIdentitySuccess, revokedTokenHash,
-            createTokenComment, showFullPageSpinner, showSpinner, spinnerMessage, selectLifetimeUnit } = this.state;
+            createTokenComment, showFullPageSpinner, spinnerMessage, selectLifetimeUnit } = this.state;
 
     const portalLink = this.portalLinkMap[checkCmAppType()];
 
@@ -321,9 +328,9 @@ class CredentialManagerPage extends React.Component {
                   <Form.Control as="input" type="number" min="1" value={inputLifetime} onChange={this.handleSelectCreateLifetime} />
                 </Form.Group>
               </Col>
-              <Col xs={1}>
+              <Col xs={2}>
                 <Form.Group>
-                  <Form.Label></Form.Label>
+                  <Form.Label>Unit</Form.Label>
                   <Form.Select onChange={this.handleLifetimeUnitChange}>
                     <option value={"hours"}>Hours</option>
                     <option value={"days"}>Days</option>
@@ -356,9 +363,9 @@ class CredentialManagerPage extends React.Component {
                   </Form.Select>
                 </Form.Group>
               </Col>
-              <Col xs={2} className="d-flex flex-row align-items-center justify-content-end">
+              <Col xs={1} className="d-flex flex-row align-items-center justify-content-end">
                 <button
-                  className="btn btn-outline-success mt-3"
+                  className="btn btn-outline-success mt-4"
                   disabled={createSuccess}
                   onClick={e => this.createToken(e)}
                 >
@@ -492,7 +499,7 @@ class CredentialManagerPage extends React.Component {
               <Col>
                 <Form.Group>
                   <Form.Label>Select Scope</Form.Label>
-                  <Form.Control as="select" onChange={this.handleSelectRefreshScope}>
+                  <Form.Select onChange={this.handleSelectRefreshScope}>
                   {
                       scopeOptions.map(option => {
                         return (
@@ -505,7 +512,7 @@ class CredentialManagerPage extends React.Component {
                         )
                       })
                     }
-                  </Form.Control>
+                  </Form.Select>
                 </Form.Group>
               </Col>
             </Row>
@@ -604,15 +611,14 @@ class CredentialManagerPage extends React.Component {
             Paste the token to validate:
             </Card.Header>
             <Card.Body>
-            <Form.Group>
-                  <Form.Label>Paste the token to validate:</Form.Label>
-                  <Form.Control
-                    as="textarea"
-                    rows={3}
-                    id="validateTokenTextArea"
-                    value={validateTokenValue}
-                    onChange={(e) => this.setState({ validateTokenValue: e.target.value, isTokenValid: false })}
-                  />
+              <Form.Group>
+                <Form.Control
+                  as="textarea"
+                  rows={3}
+                  id="validateTokenTextArea"
+                  value={validateTokenValue}
+                  onChange={(e) => this.setState({ validateTokenValue: e.target.value, isTokenValid: false })}
+                />
               </Form.Group>
             </Card.Body>
           </Card>
