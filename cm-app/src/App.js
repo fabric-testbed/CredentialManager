@@ -6,7 +6,7 @@ import CredentialManagerPage from './pages/CredentialManagerPage';
 import Footer from "./components/Footer";
 import "./styles/App.scss";
 import { getWhoAmI } from "./services/coreApiService.js";
-import { toast } from "react-toastify";
+import { toast, ToastContainer } from "react-toastify";
 import SessionTimeoutModal from "./components/Modals/SessionTimeoutModal";
 import { default as cmData } from "./services/cmData.json";
 
@@ -83,6 +83,7 @@ class App extends React.Component {
               <Route path="/cm" element={<CredentialManagerPage cmUserStatus={cmUserStatus}/>} />
             </Routes>
             <Footer />
+            <ToastContainer />
           </Router>
         </div>
       );
