@@ -77,9 +77,6 @@ class CredentialManagerPage extends React.Component {
 
   parseTokenLifetime = ()=> {
     const { inputLifetime: time, selectLifetimeUnit: unit } = this.state;
-    console.log("parsed token life time")
-    console.log(time)
-    console.log(unit)
     if (unit === "hours") { return parseInt(time); }
     if (unit === "days") { return parseInt(time) * 24; }
     if (unit === "weeks") { return parseInt(time) * 24 * 7; }
@@ -300,7 +297,7 @@ class CredentialManagerPage extends React.Component {
               <b>this guide</b>
             </a>&nbsp;
             for obtaining and using FABRIC API tokens. The default token lifetime is 4 hours. If you have access to create long-lived tokens, the lifetime limit is 9 weeks. For 
-            more information, Please consult &nbsp;
+            more information about long-lived tokens, Please consult &nbsp;
             <a
               href={externalLinks.learnArticleLonglivedTokens}
               target="_blank"
@@ -374,7 +371,7 @@ class CredentialManagerPage extends React.Component {
                   disabled={createSuccess}
                   onClick={e => this.createToken(e)}
                 >
-                  Create Token
+                  Create
                 </button>
               </Col>
             </Row>
