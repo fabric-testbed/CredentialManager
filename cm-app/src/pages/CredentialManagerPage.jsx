@@ -12,7 +12,6 @@ import { getProjects } from "../services/coreApiService.js";
 import { default as externalLinks } from "../services/externalLinks.json";
 import checkCmAppType from "../utils/checkCmAppType";
 import { toast } from "react-toastify";
-import { OverlayTrigger, Tooltip } from 'react-bootstrap';
 
 class CredentialManagerPage extends React.Component {
   state = {
@@ -92,7 +91,7 @@ class CredentialManagerPage extends React.Component {
     try {
       const project = this.state.selectedCreateProject;
       const scope = this.state.selectedCreateScope;
-      const lifetime = this.parseTokenLifetime; // Added lifetime parameter
+      const lifetime = this.parseTokenLifetime(); // Added lifetime parameter
       const comment = this.state.createTokenComment; // Added comment for the token
       const { data: res } = await createIdToken(project, scope, lifetime, comment);
       console.log("Response received: " + res)
@@ -103,6 +102,12 @@ class CredentialManagerPage extends React.Component {
         showFullPageSpinner: false,
         spinnerMessage: ""
       });
+
+      // auto refresh token list
+      this.setState({ selectedListProject: project }, () => {
+        this.listTokens();
+      });
+
       toast.success("Token created successfully.");
     } catch (ex) {
       toast.error("Failed to create token.");
@@ -148,7 +153,13 @@ class CredentialManagerPage extends React.Component {
 
     try {
       const { data: res } = await revokeToken("identity", tokenHash);
-      this.setState({ revokeIdentitySuccess: true, revokedTokenHash: tokenHash });
+      this.setState({
+        revokeIdentitySuccess: true,
+        revokedTokenHash: tokenHash
+      }, () => {
+        this.listTokens();
+      });
+
       toast.success("Token revoked successfully.");
     }
     catch (ex) {
@@ -225,12 +236,12 @@ class CredentialManagerPage extends React.Component {
     this.setState({ selectedRefreshScope: e.target.value });
   }
 
-  handleSelectCreateLifetime = (e) => {
+  handleInputCreateLifetime = (e) => {
     this.setState({ inputLifetime: parseInt(e.target.value) });
   };
 
   handleLifetimeUnitChange = (e) => {
-    this.setState({ selectLifetimeUnit: parseInt(e.target.value) });
+    this.setState({ selectLifetimeUnit: e.target.value });
   }
 
   handleCreateTokenComment = (e) => {
@@ -244,12 +255,6 @@ class CredentialManagerPage extends React.Component {
             createTokenComment, showFullPageSpinner, spinnerMessage, selectLifetimeUnit } = this.state;
 
     const portalLink = this.portalLinkMap[checkCmAppType()];
-
-    const renderTooltip = (id, content) => (
-      <Tooltip id={id}>
-        {content}
-      </Tooltip>
-    );
 
     if (showFullPageSpinner) {
       return (
@@ -284,7 +289,8 @@ class CredentialManagerPage extends React.Component {
         }
         {
           projects.length > 0 && <div>
-            <div className="alert alert-primary mb-2" role="alert">
+          <h2 className="mb-4">Create Token</h2>
+          <div className="alert alert-primary mb-2" role="alert">
             Please consult &nbsp;
             <a
               href={externalLinks.learnArticleFabricTokens}
@@ -293,9 +299,16 @@ class CredentialManagerPage extends React.Component {
             >
               <b>this guide</b>
             </a>&nbsp;
-            for obtaining and using FABRIC API tokens.
+            for obtaining and using FABRIC API tokens. The default token lifetime is 4 hours. If you have access to create long-lived tokens, the lifetime limit is 9 weeks. For 
+            more information, Please consult &nbsp;
+            <a
+              href={externalLinks.learnArticleLonglivedTokens}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <b>this guide</b>
+            </a>.
           </div>
-          <h2 className="mb-4">Create Token</h2>
           <Form>
             <Row>
               <Col xs={3}>
@@ -316,16 +329,8 @@ class CredentialManagerPage extends React.Component {
                 <Form.Group>
                   <Form.Label>
                     Lifetime
-                    <OverlayTrigger
-                      placement="right"
-                      delay={{ show: 100, hide: 300 }}
-                      overlay={renderTooltip("token-lifetime-tooltip", 
-                      "The default token lifetime is 4 hours. If you have access to long-lived tokens, the lifetime limit is 9 weeks.")}
-                    >
-                      <i className="fa fa-question-circle text-secondary ml-2"></i>
-                    </OverlayTrigger>
                   </Form.Label>
-                  <Form.Control as="input" type="number" min="1" value={inputLifetime} onChange={this.handleSelectCreateLifetime} />
+                  <Form.Control as="input" type="number" min="1" value={inputLifetime} onChange={this.handleInputCreateLifetime} />
                 </Form.Group>
               </Col>
               <Col xs={2}>
