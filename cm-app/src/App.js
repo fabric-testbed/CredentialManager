@@ -6,9 +6,10 @@ import CredentialManagerPage from './pages/CredentialManagerPage';
 import Footer from "./components/Footer";
 import "./styles/App.scss";
 import { getWhoAmI } from "./services/coreApiService.js";
-import { toast } from "react-toastify";
+import { toast, ToastContainer } from "react-toastify";
 import SessionTimeoutModal from "./components/Modals/SessionTimeoutModal";
 import { default as cmData } from "./services/cmData.json";
+import 'react-toastify/dist/ReactToastify.css';
 
 class App extends React.Component {
   state = {
@@ -83,6 +84,18 @@ class App extends React.Component {
               <Route path="/cm" element={<CredentialManagerPage cmUserStatus={cmUserStatus}/>} />
             </Routes>
             <Footer />
+            <ToastContainer 
+              position="top-right"
+              autoClose={5000}
+              hideProgressBar={false}
+              newestOnTop={false}
+              closeOnClick
+              rtl={false}
+              pauseOnFocusLoss
+              draggable
+              pauseOnHover
+              theme="colored"
+            />
           </Router>
         </div>
       );
