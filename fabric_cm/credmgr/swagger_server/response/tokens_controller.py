@@ -69,12 +69,15 @@ def tokens_create_post(project_id: str, project_name: str, scope: str = None, li
     received_counter.labels(HTTP_METHOD_POST, TOKENS_CREATE_URL).inc()
     try:
         credmgr = OAuthCredMgr()
+        remote_addr = connexion.request.remote_addr
+        if connexion.request.headers.get('X-Real-IP') is not None:
+            remote_addr = connexion.request.headers.get('X-Real-IP')
         token_dict = credmgr.create_token(ci_logon_id_token=claims.get(OAuthCredMgr.ID_TOKEN),
                                           refresh_token=claims.get(OAuthCredMgr.REFRESH_TOKEN),
                                           cookie=claims.get(OAuthCredMgr.COOKIE),
                                           project_id=project_id, project_name=project_name,
                                           scope=scope, lifetime=lifetime,
-                                          comment=comment, remote_addr=connexion.request.remote_addr,
+                                          comment=comment, remote_addr=remote_addr,
                                           user_email=claims.get(OAuthCredMgr.EMAIL))
         response = Tokens()
         token = Token().from_dict(token_dict)
@@ -109,9 +112,12 @@ def tokens_refresh_post(body: Request, project_id=None, project_name=None, scope
     received_counter.labels(HTTP_METHOD_POST, TOKENS_REFRESH_URL).inc()
     try:
         credmgr = OAuthCredMgr()
+        remote_addr = connexion.request.remote_addr
+        if connexion.request.headers.get('X-Real-IP') is not None:
+            remote_addr = connexion.request.headers.get('X-Real-IP')
         token_dict = credmgr.refresh_token(refresh_token=body.refresh_token, project_id=project_id,
                                            project_name=project_name, scope=scope,
-                                           remote_addr=connexion.request.remote_addr)
+                                           remote_addr=remote_addr)
         response = Tokens()
         token = Token().from_dict(token_dict)
         response.data = [token]
