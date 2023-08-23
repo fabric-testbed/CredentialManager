@@ -6,8 +6,7 @@ import Col from 'react-bootstrap/Col';
 import Alert from 'react-bootstrap/Alert';
 import SpinnerFullPage from "../components/SpinnerFullPage.jsx";
 import toLocaleTime from "../utils/toLocaleTime";
-import sleep from "../utils/sleep";
-import { createIdToken, refreshToken, revokeToken, getTokenByProjectId, validateToken } from "../services/credentialManagerService.js";
+import { createIdToken, revokeToken, getTokenByProjectId, validateToken } from "../services/credentialManagerService.js";
 import { getProjects } from "../services/coreApiService.js";
 import { default as externalLinks } from "../services/externalLinks.json";
 import checkCmAppType from "../utils/checkCmAppType";
@@ -17,29 +16,22 @@ class CredentialManagerPage extends React.Component {
   state = {
     projects: [],
     createToken: "",
-    refreshToken: "",
     tokenList: [],
     createSuccess: false,
     createCopySuccess: false,
     listSuccess: false,
-    refreshSuccess: false,
-    refreshCopySuccess: false,
-    revokeSuccess: false,
     scopeOptions: [
       { id: 1, value: "all", display: "All"},
       { id: 2, value: "cf", display: "Control Framework"},
       { id: 3, value: "mf", display: "Measurement Framework"},
     ],
     selectedCreateScope: "all",
-    selectedRefreshScope: "all",
     selectedCreateProject: "",
-    selectedRefreshProject: "",
     selectedListProject: "",
     validateTokenValue: "",
     isTokenValid: false,
     validateSuccess: false,
     revokeIdentitySuccess: false,
-    revokedTokenHash: "",
     decodedToken: "",
     tokenMsg: "",
     inputLifetime: 4, // Default lifetime is 4 hours
@@ -108,40 +100,6 @@ class CredentialManagerPage extends React.Component {
       toast.success("Token created successfully.");
     } catch (ex) {
       toast.error("Failed to create token.");
-    }
-  }
-
-  refreshToken = async (e) => {
-    e.preventDefault();
-
-    try {
-      const project = this.state.selectedRefreshProject;
-      const scope = this.state.selectedRefreshScope;
-      const { data: res } = await refreshToken(project, scope, document.getElementById('refreshTokenTextArea').value);
-      console.log("Response received: " + res)
-      this.setState({ refreshCopySuccess: false, refreshSuccess: true });
-      this.setState({ refreshToken: JSON.stringify(res["data"][0], undefined, 4) });
-      toast.success("Token refreshed successfully.");
-    }
-    catch (ex) {
-      this.setState({ refreshSuccess: false });
-      toast.error("Failed to refresh token.")
-    }
-  }
-
-  revokeToken = async (e) => {
-    e.preventDefault();
-
-    try {
-      await revokeToken("refresh", document.getElementById('revokeTokenTextArea').value);
-      this.setState({ revokeSuccess: true });
-      toast.success("Token revoked successfully.");
-      await sleep(1000);
-      window.location.reload();
-    }
-    catch (ex) {
-      this.setState({ revokeSuccess: false });
-      toast.error("Failed to revoke token.")
     }
   }
 
@@ -215,10 +173,6 @@ class CredentialManagerPage extends React.Component {
     this.setState({ selectedCreateProject: e.target.value });
   }
 
-  handleSelectRefreshProject = (e) =>{
-    this.setState({ selectedRefreshProject: e.target.value });
-  }
-
   handleSelectListProject = (e) => {
     this.setState({ selectedListProject: e.target.value }, () => {
       this.listTokens();
@@ -227,10 +181,6 @@ class CredentialManagerPage extends React.Component {
 
   handleSelectCreateScope = (e) =>{
     this.setState({ selectedCreateScope: e.target.value });
-  }
-
-  handleSelectRefreshScope = (e) =>{
-    this.setState({ selectedRefreshScope: e.target.value });
   }
 
   handleInputCreateLifetime = (e) => {
@@ -246,10 +196,9 @@ class CredentialManagerPage extends React.Component {
   };
 
   render() {
-    const { projects, scopeOptions, createSuccess, createToken, createCopySuccess, refreshToken, inputLifetime,
-            refreshSuccess, refreshCopySuccess, revokeSuccess, listSuccess, tokenList, decodedToken, tokenMsg,
-            validateTokenValue, isTokenValid, validateSuccess, revokeIdentitySuccess, revokedTokenHash,
-            createTokenComment, showFullPageSpinner, spinnerMessage, selectLifetimeUnit } = this.state;
+    const { projects, scopeOptions, createSuccess, createToken, createCopySuccess, inputLifetime,
+           listSuccess, tokenList, decodedToken, tokenMsg, validateTokenValue, isTokenValid, validateSuccess,
+            createTokenComment, showFullPageSpinner, spinnerMessage } = this.state;
 
     const portalLink = this.portalLinkMap[checkCmAppType()];
 
@@ -481,132 +430,6 @@ class CredentialManagerPage extends React.Component {
               </div>
             }
           </div>
-          <h2 className="my-4">Refresh Token</h2>
-          <Form>
-            <Row>
-              <Col>
-                <Form.Group>
-                  <Form.Label>Select Project</Form.Label>
-                  <Form.Select onChange={this.handleSelectRefreshProject}>
-                    {
-                      projects.map(project => {
-                        return (
-                          <option value={project.uuid}>{project.name}</option>
-                        )
-                      })
-                    }
-                  </Form.Select>
-                </Form.Group>
-              </Col>
-              <Col>
-                <Form.Group>
-                  <Form.Label>Select Scope</Form.Label>
-                  <Form.Select onChange={this.handleSelectRefreshScope}>
-                  {
-                      scopeOptions.map(option => {
-                        return (
-                          <option
-                            id={`createTokenScope${option.id}`}
-                            value={option.value}
-                          >
-                            {option.display}
-                          </option>
-                        )
-                      })
-                    }
-                  </Form.Select>
-                </Form.Group>
-              </Col>
-            </Row>
-            {!refreshSuccess && (
-              <Card className="mt-2">
-                <Card.Header className="d-flex bg-light">
-                  Input the refresh token value:
-                </Card.Header>
-                <Card.Body>
-                  <Form.Group>
-                    <Form.Control
-                    as="textarea"
-                    rows={3}
-                    id="refreshTokenTextArea"
-                  />
-                  </Form.Group>
-                </Card.Body>
-              </Card>
-            )}
-            {refreshSuccess && (
-              <Card>
-              <Card.Header className="d-flex flex-row bg-light">
-                <button
-                  onClick={e => this.copyToken(e, "refresh")}
-                  className="btn btn-sm btn-outline-primary mr-2"
-                >
-                  Copy
-                </button>
-                <button
-                  onClick={e => this.downloadToken(e, "refresh")}
-                  className="btn btn-sm btn-outline-primary"
-                >
-                  Download
-                </button>
-              </Card.Header>
-              <Card.Body>
-                <Form.Group>
-                  <Form.Control
-                    ref={(textarea) => this.textArea = textarea}
-                    as="textarea"
-                    id="refreshTokenTextArea"
-                    defaultValue={refreshToken}
-                    rows={6}
-                  />
-                </Form.Group>
-              </Card.Body>
-            </Card>
-          )}
-          {
-            refreshCopySuccess && (
-            <Alert variant="success">
-              Copied to clipboard successfully!
-            </Alert>
-          )}
-          </Form>
-          {
-            !refreshSuccess && (
-              <button
-                className="btn btn-outline-success mt-3"
-                onClick={e => this.refreshToken(e)}
-              >
-                Refresh Token
-              </button>
-            )
-          }
-          <h2 className="my-4">Revoke Refresh Token</h2>
-            <Card>
-              <Card.Header className="d-flex bg-light">
-                Paste the refresh token to revoke:
-              </Card.Header>
-              <Card.Body>
-                <Form.Group>
-                  <Form.Control
-                    as="textarea"
-                    rows={3}
-                    id="revokeTokenTextArea"
-                    onChange={this.changeRevokeToken}
-                  />
-                </Form.Group>
-              </Card.Body>
-            </Card>
-            {revokeSuccess && (
-              <Alert variant="success">
-                The token is revoked successfully!
-              </Alert>
-            )}
-            <button
-              className="btn btn-outline-danger mt-3"
-              onClick={e => this.revokeToken(e)}
-            >
-              Revoke Token
-            </button>
           <h2 className="my-4">Validate Identity Token</h2>
           <Card>
             <Card.Header className="d-flex bg-light">
