@@ -22,9 +22,6 @@
 # SOFTWARE.
 #
 # Author Komal Thareja (kthare10@renci.org)
-"""
-Module for handling /tokens APIs
-"""
 from datetime import datetime
 
 import connexion
@@ -38,7 +35,7 @@ from fabric_cm.credmgr.swagger_server import received_counter, success_counter, 
 from fabric_cm.credmgr.swagger_server.models.token_post import TokenPost
 from fabric_cm.credmgr.swagger_server.response.constants import HTTP_METHOD_POST, TOKENS_REVOKE_URL, \
     TOKENS_REFRESH_URL, TOKENS_CREATE_URL, TOKENS_REVOKES_URL, HTTP_METHOD_GET, TOKENS_REVOKE_LIST_URL, \
-    TOKENS_VALIDATE_URL
+    TOKENS_VALIDATE_URL, TOKENS_DELETE_URL
 from fabric_cm.credmgr.logging import LOG
 from fabric_cm.credmgr.swagger_server.response.cors_response import cors_200, cors_500, cors_400
 from fabric_cm.credmgr.swagger_server.response.decorators import login_required, login_or_token_required
@@ -90,6 +87,64 @@ def tokens_create_post(project_id: str, project_name: str, scope: str = None, li
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_POST, TOKENS_CREATE_URL).inc()
+        return cors_500(details=str(ex))
+
+
+@login_required
+def tokens_delete_delete(claims: dict = None):  # noqa: E501
+    """Delete all tokens for a user
+
+    Request to delete all tokens for a user  # noqa: E501
+    @param claims
+
+    :rtype: Status200OkNoContent
+    """
+    received_counter.labels(HTTP_METHOD_POST, TOKENS_DELETE_URL).inc()
+    try:
+        credmgr = OAuthCredMgr()
+        token_dict = credmgr.delete_tokens(user_email=claims.get(OAuthCredMgr.EMAIL))
+        response = Tokens()
+        token = Token().from_dict(token_dict)
+        response.data = [token]
+        response.size = 1
+        response.type = "token"
+        LOG.debug(response)
+        success_counter.labels(HTTP_METHOD_POST, TOKENS_DELETE_URL).inc()
+        return cors_200(response_body=response)
+    except Exception as ex:
+        LOG.exception(ex)
+        failure_counter.labels(HTTP_METHOD_POST, TOKENS_DELETE_URL).inc()
+        return cors_500(details=str(ex))
+
+
+@login_required
+def tokens_deletetoken_hash_delete(token_hash: str, claims: dict = None):  # noqa: E501
+    """Delete a token for an user
+
+    Request to delete a token for an user  # noqa: E501
+
+    :param token_hash: Token identified by SHA256 Hash
+    :type token_hash: str
+    :param claims:
+    :type claims: dict
+
+    :rtype: Status200OkNoContent
+    """
+    received_counter.labels(HTTP_METHOD_POST, TOKENS_DELETE_URL).inc()
+    try:
+        credmgr = OAuthCredMgr()
+        token_dict = credmgr.delete_tokens(user_email=claims.get(OAuthCredMgr.EMAIL), token_hash=token_hash)
+        response = Tokens()
+        token = Token().from_dict(token_dict)
+        response.data = [token]
+        response.size = 1
+        response.type = "token"
+        LOG.debug(response)
+        success_counter.labels(HTTP_METHOD_POST, TOKENS_DELETE_URL).inc()
+        return cors_200(response_body=response)
+    except Exception as ex:
+        LOG.exception(ex)
+        failure_counter.labels(HTTP_METHOD_POST, TOKENS_DELETE_URL).inc()
         return cors_500(details=str(ex))
 
 

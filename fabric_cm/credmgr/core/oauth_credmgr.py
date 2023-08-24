@@ -461,6 +461,23 @@ class OAuthCredMgr:
         if scope not in allowed_scopes:
             raise OAuthCredMgrError(f"Scope {scope} is not allowed! Allowed scope values: {allowed_scopes}")
 
+    def delete_tokens(self, user_email: str = None, user_id: str = None, token_hash: str = None):
+        """
+        Delete Expired Tokens
+        @param user_id user uuid
+        @param user_email user email
+        @param token_hash token hash
+        """
+        tokens = DB_OBJ.get_tokens(user_email=user_email, user_id=user_id, token_hash=token_hash)
+        if tokens is None:
+            return
+
+        # Remove the expired tokens
+        for t in tokens:
+            DB_OBJ.remove_token(token_hash=t.get(self.TOKEN_HASH))
+            log_event(token_hash=t.get(self.TOKEN_HASH), action="delete", project_id=tokens[0].get('project_id'),
+                      user_id=tokens[0].get('user_id'), user_email=tokens[0].get('user_email'))
+
     def delete_expired_tokens(self, user_email: str = None, user_id: str = None):
         """
         Delete Expired Tokens

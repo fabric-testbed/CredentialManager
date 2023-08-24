@@ -39,6 +39,28 @@ class TestTokensController(BaseTestCase):
         self.assert200(response,
                        'Response body is : ' + response.data.decode('utf-8'))
 
+    def test_tokens_delete_delete(self):
+        """Test case for tokens_delete_delete
+
+        Delete all tokens for a user
+        """
+        response = self.client.open(
+            '/credmgr//tokens/delete',
+            method='DELETE')
+        self.assert200(response,
+                       'Response body is : ' + response.data.decode('utf-8'))
+
+    def test_tokens_deletetoken_hash_delete(self):
+        """Test case for tokens_deletetoken_hash_delete
+
+        Delete a token for an user
+        """
+        response = self.client.open(
+            '/credmgr//tokens/delete{token_hash}'.format(token_hash='token_hash_example'),
+            method='DELETE')
+        self.assert200(response,
+                       'Response body is : ' + response.data.decode('utf-8'))
+
     def test_tokens_get(self):
         """Test case for tokens_get
 

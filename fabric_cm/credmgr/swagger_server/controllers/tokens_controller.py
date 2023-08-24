@@ -29,6 +29,30 @@ def tokens_create_post(project_id=None, project_name=None, scope=None, lifetime=
     return rc.tokens_create_post(project_id, project_name, scope, lifetime, comment)
 
 
+def tokens_delete_delete():  # noqa: E501
+    """Delete all tokens for a user
+
+    Request to delete all tokens for a user  # noqa: E501
+
+
+    :rtype: Status200OkNoContent
+    """
+    return rc.tokens_delete_delete()
+
+
+def tokens_deletetoken_hash_delete(token_hash):  # noqa: E501
+    """Delete a token for an user
+
+    Request to delete a token for an user  # noqa: E501
+
+    :param token_hash: Token identified by SHA256 Hash
+    :type token_hash: str
+
+    :rtype: Status200OkNoContent
+    """
+    return rc.tokens_deletetoken_hash_delete(token_hash=token_hash)
+
+
 def tokens_get(token_hash=None, project_id=None, expires=None, states=None, limit=None, offset=None):  # noqa: E501
     """Get tokens
 
