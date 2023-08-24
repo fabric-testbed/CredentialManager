@@ -324,14 +324,14 @@ paths:
               schema:
                 $ref: '#/components/schemas/status_500_internal_server_error'
       x-openapi-router-controller: fabric_cm.credmgr.swagger_server.controllers.tokens_controller
-  /tokens/delete{token_hash}:
+  /tokens/delete/{token_hash}:
     delete:
       tags:
       - tokens
       summary: Delete a token for an user
       description: |
         Request to delete a token for an user
-      operationId: tokens_deletetoken_hash_delete
+      operationId: tokens_delete_token_hash_delete
       parameters:
       - name: token_hash
         in: path

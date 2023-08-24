@@ -40,7 +40,7 @@ def tokens_delete_delete():  # noqa: E501
     return rc.tokens_delete_delete()
 
 
-def tokens_deletetoken_hash_delete(token_hash):  # noqa: E501
+def tokens_delete_token_hash_delete(token_hash):  # noqa: E501
     """Delete a token for an user
 
     Request to delete a token for an user  # noqa: E501
@@ -50,7 +50,7 @@ def tokens_deletetoken_hash_delete(token_hash):  # noqa: E501
 
     :rtype: Status200OkNoContent
     """
-    return rc.tokens_deletetoken_hash_delete(token_hash=token_hash)
+    return rc.tokens_delete_token_hash_delete(token_hash=token_hash)
 
 
 def tokens_get(token_hash=None, project_id=None, expires=None, states=None, limit=None, offset=None):  # noqa: E501

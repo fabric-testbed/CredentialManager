@@ -486,7 +486,7 @@
         }
       }
     },
-    "/tokens/delete{token_hash}": {
+    "/tokens/delete/{token_hash}": {
       "delete": {
         "tags": [
           "tokens"
