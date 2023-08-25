@@ -77,11 +77,11 @@ class CredentialManagerPage extends React.Component {
     e.preventDefault();
     this.setState({ showFullPageSpinner: true, spinnerMessage: "Creating Token..."});
     try {
-      const project = this.state.selectedProjectId;
+      const projectId = this.state.selectedProjectId;
       const scope = this.state.selectedCreateScope;
       const lifetime = this.parseTokenLifetime(); // Added lifetime parameter
       const comment = this.state.createTokenComment; // Added comment for the token
-      const { data: res } = await createIdToken(project, scope, lifetime, comment);
+      const { data: res } = await createIdToken(projectId, scope, lifetime, comment);
       console.log("Response received: " + res)
       this.setState({
         createCopySuccess: false,
@@ -92,9 +92,7 @@ class CredentialManagerPage extends React.Component {
       });
 
       // auto refresh token list
-      this.setState({ selectedProjectId: project }, () => {
-        this.listTokens();
-      });
+      this.listTokens();
 
       toast.success("Token created successfully.");
     } catch (ex) {
@@ -127,7 +125,7 @@ class CredentialManagerPage extends React.Component {
     try {
       const projectId = this.state.selectedProjectId;
       const res = await getTokenByProjectId(projectId); // Assuming getTokenByProjectId returns an array of tokens
-      this.setState({ listSuccess: true, tokenList: res.data.data, revokeIdentitySuccess: false, revokedTokenHash: "" });
+      this.setState({ listSuccess: true, tokenList: res.data.data });
     } catch (ex) {
       toast.error("Failed to get tokens.");
     }
@@ -138,7 +136,7 @@ class CredentialManagerPage extends React.Component {
 
     try {
       const { data: res } = await validateToken(this.state.validateTokenValue);
-      this.setState({ validateSuccess: true, isTokenValid: true, decodedToken: res.token, tokenMsg: res.data[0].details });
+      this.setState({ validateSuccess: true, isTokenValid: true, decodedToken: res.token, tokenMsg: "Token is validated." });
     }
     catch (ex) {
       this.setState({ validateSuccess: true, isTokenValid: false, decodedToken: "" });
@@ -171,9 +169,12 @@ class CredentialManagerPage extends React.Component {
 
   handleSelectProject = (e) =>{
     const project = this.state.projects.filter(p => p.uuid === e.target.value)[0];
+    // change selected project, then hide any created token from UI
     this.setState({
       selectedProjectId: project.uuid,
-      isTokenHolder: project.memberships.is_token_holder
+      isTokenHolder: project.memberships.is_token_holder,
+      createSuccess: false,
+      createCopySuccess: false,
     }, () => {
       this.listTokens();
     });
