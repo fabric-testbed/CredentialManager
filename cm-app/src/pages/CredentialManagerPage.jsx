@@ -4,6 +4,7 @@ import Card from 'react-bootstrap/Card';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Alert from 'react-bootstrap/Alert';
+import Badge from 'react-bootstrap/Badge';
 import SpinnerFullPage from "../components/SpinnerFullPage.jsx";
 import toLocaleTime from "../utils/toLocaleTime";
 import { createIdToken, revokeToken, getTokenByProjectId, validateToken } from "../services/credentialManagerService.js";
@@ -52,8 +53,6 @@ class CredentialManagerPage extends React.Component {
         const { data: res } = await getProjects(localStorage.getItem("cmUserID"));
         const projects = res.results;
         this.setState({ projects });
-        console.log("project on loading:");
-        console.log(projects[0]);
         if (projects.length > 0) {
           this.setState({
             selectedProjectId: projects[0].uuid,
@@ -99,6 +98,7 @@ class CredentialManagerPage extends React.Component {
 
       toast.success("Token created successfully.");
     } catch (ex) {
+      this.setState({ showFullPageSpinner: false, spinnerMessage: ""});
       toast.error("Failed to create token.");
     }
   }
@@ -125,8 +125,8 @@ class CredentialManagerPage extends React.Component {
 
   listTokens = async () => {
     try {
-      const project = this.state.selectedProject;
-      const res = await getTokenByProjectId(project); // Assuming getTokenByProjectId returns an array of tokens
+      const projectId = this.state.selectedProjectId;
+      const res = await getTokenByProjectId(projectId); // Assuming getTokenByProjectId returns an array of tokens
       this.setState({ listSuccess: true, tokenList: res.data.data, revokeIdentitySuccess: false, revokedTokenHash: "" });
     } catch (ex) {
       toast.error("Failed to get tokens.");
@@ -170,12 +170,12 @@ class CredentialManagerPage extends React.Component {
   }
 
   handleSelectProject = (e) =>{
-    console.log("selected project:");
     const project = this.state.projects.filter(p => p.uuid === e.target.value)[0];
-    console.log(project);
     this.setState({
       selectedProjectId: project.uuid,
       isTokenHolder: project.memberships.is_token_holder
+    }, () => {
+      this.listTokens();
     });
   }
 
@@ -194,6 +194,16 @@ class CredentialManagerPage extends React.Component {
   handleCreateTokenComment = (e) => {
     this.setState({ createTokenComment: e.target.value });
   };
+
+  getTokenStateClasses = (state) => {
+    if (state === "Revoked" || state === "Expired") {
+      return "danger";
+    } else if (state === "Valid" || state === "Refreshed") {
+      return "success";
+    } else {
+      return "primary";
+    }
+  }
 
   render() {
     const { projects, scopeOptions, createSuccess, createToken, createCopySuccess, inputLifetime,
@@ -246,7 +256,7 @@ class CredentialManagerPage extends React.Component {
             </a>&nbsp;
             for obtaining and using FABRIC API tokens.
           </div>
-          <h2 className="my-3">Create Token and List Tokens</h2>
+          <h3 className="my-3">Create and List Tokens</h3>
           <Form>
           <Row>
             <Col xs={12}>
@@ -265,8 +275,7 @@ class CredentialManagerPage extends React.Component {
             </Col>
             </Row>
           </Form>
-          <h2 className="mb-4">Create Token</h2>
-          <div className="alert alert-primary mb-2" role="alert">
+          <div className="alert alert-success my-2" role="alert">
             {
               !isTokenHolder ? 
               <span>
@@ -299,7 +308,6 @@ class CredentialManagerPage extends React.Component {
                     disabled={!isTokenHolder}
                     as="input"
                     type="number"
-                    min="1"
                     value={inputLifetime}
                     onChange={this.handleInputCreateLifetime}
                   />
@@ -318,7 +326,7 @@ class CredentialManagerPage extends React.Component {
                   </Form.Select>
                 </Form.Group>
               </Col>
-              <Col xs={4}>
+              <Col xs={3}>
                 <Form.Group>
                 <Form.Label>Comment (optional)</Form.Label>
                 <Form.Control as="input" type="text" value={createTokenComment} onChange={this.handleCreateTokenComment} />
@@ -343,13 +351,13 @@ class CredentialManagerPage extends React.Component {
                   </Form.Select>
                 </Form.Group>
               </Col>
-              <Col xs={1} className="d-flex flex-row align-items-center justify-content-end">
+              <Col xs={2} className="d-flex flex-row align-items-center justify-content-end">
                 <button
                   className="btn btn-outline-success mt-4"
                   disabled={createSuccess}
                   onClick={e => this.createToken(e)}
                 >
-                  Create
+                  Create Token
                 </button>
               </Col>
             </Row>
@@ -393,8 +401,7 @@ class CredentialManagerPage extends React.Component {
               </Alert>
             )}
           </Form>
-          <h2 className="my-4">List Tokens</h2>
-          <div className="mt-1">
+          <div className="mt-3">
             {
               listSuccess && tokenList.length > 0 ?
               <table className="table table-striped table-bordered w-auto">
@@ -417,7 +424,11 @@ class CredentialManagerPage extends React.Component {
                         <td className="col-md-2">{token['comment']}</td>
                         <td className="col-md-2">{toLocaleTime(token['created_at'])}</td>
                         <td className="col-md-2">{toLocaleTime(token['expires_at'])}</td>
-                        <td className="col-md-1">{token['state']}</td>
+                        <td className="col-md-1">
+                          <Badge bg={this.getTokenStateClasses(token['state'])}>
+                            {token['state']}
+                          </Badge>
+                        </td>
                         <td className="col-md-1">{token['created_from']}</td>
                         <td className="col-md-1">
                           {
@@ -441,7 +452,7 @@ class CredentialManagerPage extends React.Component {
               </div>
             }
           </div>
-          <h2 className="my-4">Validate Identity Token</h2>
+          <h3 className="my-3">Validate Identity Token</h3>
           <Card>
             <Card.Header className="d-flex bg-light">
             Paste the token to validate:

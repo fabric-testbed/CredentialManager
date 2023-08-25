@@ -48,8 +48,8 @@ axios.interceptors.response.use(null, (error) => {
   && error.response.data.errors && error.response.data.errors.length > 0) {
     for (const err of error.response.data.errors) {
       // console log and toast the human-readable error details.
-      console.log(`ERROR: ${err.details}`);
-      toast.error(err.details);
+      console.log(`ERROR: ${err.detail}`);
+      toast.error(err.detail);
     }
   }
 
