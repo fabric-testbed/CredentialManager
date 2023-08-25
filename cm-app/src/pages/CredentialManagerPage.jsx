@@ -37,7 +37,7 @@ class CredentialManagerPage extends React.Component {
     tokenMsg: "",
     inputLifetime: 4, // Default lifetime is 4 hours
     selectLifetimeUnit: "hours",
-    createTokenComment: "Created via GUI", // Added comment for creating tokens,
+    tokenComment: "Created via GUI", // Added comment for creating tokens,
     showFullPageSpinner: false,
     spinnerMessage: ""
   }
@@ -80,19 +80,19 @@ class CredentialManagerPage extends React.Component {
       const projectId = this.state.selectedProjectId;
       const scope = this.state.selectedCreateScope;
       const lifetime = this.parseTokenLifetime(); // Added lifetime parameter
-      const comment = this.state.createTokenComment; // Added comment for the token
+      const comment = this.state.tokenComment; // Added comment for the token
       const { data: res } = await createIdToken(projectId, scope, lifetime, comment);
       console.log("Response received: " + res)
       this.setState({
         createCopySuccess: false,
-        createSuccess: true.valueOf,
+        createSuccess: true,
         createToken: JSON.stringify(res["data"][0], undefined, 4),
         showFullPageSpinner: false,
-        spinnerMessage: ""
+        spinnerMessage: "",
+        selectedProjectId: projectId
+      }, () => {
+        this.listTokens();
       });
-
-      // auto refresh token list
-      this.listTokens();
 
       toast.success("Token created successfully.");
     } catch (ex) {
@@ -169,12 +169,15 @@ class CredentialManagerPage extends React.Component {
 
   handleSelectProject = (e) =>{
     const project = this.state.projects.filter(p => p.uuid === e.target.value)[0];
-    // change selected project, then hide any created token from UI
+    // change selected project, hide any created token from UI and reset options
     this.setState({
       selectedProjectId: project.uuid,
       isTokenHolder: project.memberships.is_token_holder,
       createSuccess: false,
       createCopySuccess: false,
+      selectLifetimeUnit: "hours", 
+      selectedCreateScope: "all",
+      tokenComment: "Created via GUI"
     }, () => {
       this.listTokens();
     });
@@ -184,7 +187,7 @@ class CredentialManagerPage extends React.Component {
     this.setState({ selectedCreateScope: e.target.value });
   }
 
-  handleInputCreateLifetime = (e) => {
+  handleLifetimeChange = (e) => {
     this.setState({ inputLifetime: parseInt(e.target.value) });
   };
 
@@ -192,8 +195,8 @@ class CredentialManagerPage extends React.Component {
     this.setState({ selectLifetimeUnit: e.target.value });
   }
 
-  handleCreateTokenComment = (e) => {
-    this.setState({ createTokenComment: e.target.value });
+  handleCommentChange = (e) => {
+    this.setState({ tokenComment: e.target.value });
   };
 
   getTokenStateClasses = (state) => {
@@ -207,9 +210,10 @@ class CredentialManagerPage extends React.Component {
   }
 
   render() {
-    const { projects, scopeOptions, createSuccess, createToken, createCopySuccess, inputLifetime,
-           listSuccess, tokenList, decodedToken, tokenMsg, validateTokenValue, isTokenValid, validateSuccess,
-            createTokenComment, showFullPageSpinner, spinnerMessage, isTokenHolder } = this.state;
+    const { projects, scopeOptions, createSuccess, createToken, createCopySuccess, inputLifetime, selectedProjectId,
+      selectLifetimeUnit, selectedCreateScope, listSuccess, tokenList, decodedToken, tokenMsg, validateTokenValue, 
+      isTokenValid, validateSuccess, tokenComment, showFullPageSpinner, spinnerMessage, 
+      isTokenHolder } = this.state;
 
     const portalLink = this.portalLinkMap[checkCmAppType()];
 
@@ -263,7 +267,10 @@ class CredentialManagerPage extends React.Component {
             <Col xs={12}>
               <Form.Group>
                 <Form.Label>Select Project</Form.Label>
-                <Form.Select onChange={this.handleSelectProject}>
+                <Form.Select
+                  value={selectedProjectId}
+                  onChange={this.handleSelectProject}
+                >
                   {
                     projects.length > 0 && projects.map(project => {
                       return (
@@ -310,7 +317,7 @@ class CredentialManagerPage extends React.Component {
                     as="input"
                     type="number"
                     value={inputLifetime}
-                    onChange={this.handleInputCreateLifetime}
+                    onChange={this.handleLifetimeChange}
                   />
                 </Form.Group>
               </Col>
@@ -318,6 +325,7 @@ class CredentialManagerPage extends React.Component {
                 <Form.Group>
                   <Form.Label>Unit</Form.Label>
                   <Form.Select
+                    value={selectLifetimeUnit}
                     onChange={this.handleLifetimeUnitChange}
                     disabled={!isTokenHolder}
                   >
@@ -329,14 +337,17 @@ class CredentialManagerPage extends React.Component {
               </Col>
               <Col xs={3}>
                 <Form.Group>
-                <Form.Label>Comment (optional)</Form.Label>
-                <Form.Control as="input" type="text" value={createTokenComment} onChange={this.handleCreateTokenComment} />
+                <Form.Label>Comment (10 - 100 characters)</Form.Label>
+                <Form.Control as="input" type="text" value={tokenComment} onChange={this.handleCommentChange} />
               </Form.Group>
               </Col>
               <Col xs={3}>
                 <Form.Group>
                   <Form.Label>Select Scope</Form.Label>
-                  <Form.Select onChange={this.handleSelectCreateScope}>
+                  <Form.Select
+                    value={selectedCreateScope}
+                    onChange={this.handleSelectCreateScope}
+                  >
                     {
                       scopeOptions.map(option => {
                         return (
