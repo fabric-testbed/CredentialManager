@@ -175,6 +175,7 @@ class CredentialManagerPage extends React.Component {
       isTokenHolder: project.memberships.is_token_holder,
       createSuccess: false,
       createCopySuccess: false,
+      inputLifetime: 4,
       selectLifetimeUnit: "hours", 
       selectedCreateScope: "all",
       tokenComment: "Created via GUI"
@@ -285,15 +286,15 @@ class CredentialManagerPage extends React.Component {
           </Form>
           <div className="alert alert-success my-2" role="alert">
             {
-              !isTokenHolder ? 
+              !isTokenHolder ?
               <span>
-                The default token lifetime is 4 hours. You don't have access to <a
+                The default token lifetime is 4 hours. To obtain <a
                   href={externalLinks.learnArticleLonglivedTokens}
                   target="_blank"
                   rel="noreferrer"
                 >
                   <b>long-lived tokens</b>
-                </a> for this project.
+                </a> for the selected project, please request access from <a href={portalLink} target="_blank" rel="noreferrer">FABRIC Portal</a>.
               </span> :
               <span>
                 You have access to <a
