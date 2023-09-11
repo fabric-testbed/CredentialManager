@@ -41,7 +41,7 @@ class CoreApi:
         self.cookie_name = cookie_name
         self.cookie_domain = cookie_domain
 
-    def get_user_and_project_info(self, project_id: str) -> Tuple[str, list, list]:
+    def get_user_and_project_info(self, project_id: str) -> Tuple[str, str, list, list]:
         """
         Determine User's info using CORE API
         :param project_id: Project Id
@@ -80,6 +80,7 @@ class CoreApi:
 
         LOG.debug(f"GET WHOAMI Response : {response.json()}")
         uuid = response.json().get("results")[0]["uuid"]
+        email = response.json().get("results")[0]["email"]
 
         # Get Project
         if project_id.lower() == "all":
@@ -142,7 +143,7 @@ class CoreApi:
         LOG.debug(f"GET PEOPLE Response : {response.json()}")
 
         roles = response.json().get("results")[0]["roles"]
-        return uuid, roles, projects
+        return email, uuid, roles, projects
 
 
 class CoreApiError(Exception):
