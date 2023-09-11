@@ -92,8 +92,8 @@ def vouch_authorize() -> Union[dict, None]:
         for key, value in claims_or_exception.items():
             result[key] = value
 
-        if claims_or_exception.get(EMAIL) is None:
-            claims_or_exception[EMAIL] = Utils.get_user_email(cookie=cookie)
+        if result.get(EMAIL) is None:
+            result[EMAIL] = Utils.get_user_email(cookie=cookie)
         return result
 
 
