@@ -1,6 +1,7 @@
 from functools import wraps
 from typing import Union
 
+from fabric_cm.credmgr.common.utils import Utils
 from fabric_cm.credmgr.core.oauth_credmgr import OAuthCredMgr, TokenState
 from fabric_cm.credmgr.swagger_server import jwt_validator
 from fss_utils.jwt_manager import JWTManager, ValidateCode
@@ -14,6 +15,8 @@ from fabric_cm.credmgr.swagger_server.response.cors_response import cors_401
 from fabric_cm.credmgr.logging import LOG
 from flask import request
 
+EMAIL = "email"
+
 
 def login_required(f):
     @wraps(f)
@@ -23,7 +26,6 @@ def login_required(f):
             LOG.info(f"login_required(): {details}")
             return cors_401(details=details)
         claims = vouch_authorize()
-        LOG.info(f"CLAIMS: {claims}")
         if claims is None:
             details = 'Cookie signature has expired'
             LOG.info(f"login_required(): {details}")
@@ -50,7 +52,6 @@ def login_or_token_required(f):
             LOG.info(f"login_or_token_required(): {details}")
             return cors_401(details=details)
         claims = vouch_authorize()
-        LOG.info(f"CLAIMS: {claims}")
         if claims is None:
             details = 'Cookie signature has expired'
             LOG.info(f"login_or_token_required(): {details}")
@@ -90,6 +91,9 @@ def vouch_authorize() -> Union[dict, None]:
                   OAuthCredMgr.COOKIE: cookie}
         for key, value in claims_or_exception.items():
             result[key] = value
+
+        if claims_or_exception.get(EMAIL) is None:
+            claims_or_exception[EMAIL] = Utils.get_user_email(cookie=cookie)
         return result
 
 

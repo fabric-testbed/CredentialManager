@@ -204,17 +204,18 @@ class OAuthCredMgr:
                 comment = "Created via GUI"
 
             # Delete any expired tokens
-            self.delete_expired_tokens(user_email=token_encoder.claims[self.EMAIL],
-                                       user_id=token_encoder.claims[self.UUID])
+            self.delete_expired_tokens(user_email=token_encoder.claims.get(self.EMAIL),
+                                       user_id=token_encoder.claims.get(self.UUID))
 
             # Add token meta info to the database
-            DB_OBJ.add_token(user_id=token_encoder.claims[self.UUID], user_email=token_encoder.claims[self.EMAIL],
+            DB_OBJ.add_token(user_id=token_encoder.claims.get(self.UUID),
+                             user_email=token_encoder.claims.get(self.EMAIL),
                              project_id=token_encoder.project_id, token_hash=token_hash, created_at=created_at,
                              expires_at=expires_at, state=state.value, created_from=remote_addr,
                              comment=comment)
 
             log_event(token_hash=token_hash, action=action, project_id=token_encoder.project_id,
-                      user_id=token_encoder.claims[self.UUID], user_email=token_encoder.claims[self.EMAIL])
+                      user_id=token_encoder.claims.get(self.UUID), user_email=token_encoder.claims.get(self.EMAIL))
 
             return {self.TOKEN_HASH: token_hash,
                     self.CREATED_AT: created_at.strftime(OAuthCredMgr.TIME_FORMAT),
@@ -227,7 +228,8 @@ class OAuthCredMgr:
             LOG.warning("JWT Token validator not initialized, skipping validation")
 
     def create_token(self, project_id: str, project_name: str, scope: str, ci_logon_id_token: str, refresh_token: str,
-                     remote_addr: str, user_email: str, comment: str = None, cookie: str = None, lifetime: int = 4) -> dict:
+                     remote_addr: str, user_email: str, comment: str = None, cookie: str = None,
+                     lifetime: int = 4) -> dict:
         """
         Generates key file and return authorization url for user to
         authenticate itself and also returns user id

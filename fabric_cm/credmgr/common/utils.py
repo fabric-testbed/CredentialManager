@@ -88,7 +88,7 @@ class Utils:
         core_api = CoreApi(api_server=CONFIG_OBJ.get_core_api_url(), cookie=cookie,
                            cookie_name=CONFIG_OBJ.get_vouch_cookie_name(),
                            cookie_domain=CONFIG_OBJ.get_vouch_cookie_domain_name())
-        uuid = core_api.get_user_id()
+        uuid, email = core_api.get_user_id_and_email()
         roles = core_api.get_user_roles(uuid=uuid)
 
         if CONFIG_OBJ.get_facility_operator_role() in roles:
@@ -100,6 +100,14 @@ class Utils:
         if lifetime_in_hours * 3600 <= CONFIG_OBJ.get_token_life_time():
             return True
         return False
+
+    @staticmethod
+    def get_user_email(*, cookie: str):
+        core_api = CoreApi(api_server=CONFIG_OBJ.get_core_api_url(), cookie=cookie,
+                           cookie_name=CONFIG_OBJ.get_vouch_cookie_name(),
+                           cookie_domain=CONFIG_OBJ.get_vouch_cookie_domain_name())
+        uuid, email = core_api.get_user_id_and_email()
+        return email
 
     @staticmethod
     def get_project_id(*, project_name: str, cookie: str):

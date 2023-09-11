@@ -62,7 +62,7 @@ class CoreApi:
         }
         self.session.headers.update(headers)
 
-    def get_user_id(self):
+    def get_user_id_and_email(self) -> Tuple[str, str]:
         """
         Return User's uuid by querying via /whoami Core API
         @return User's uuid
@@ -75,7 +75,8 @@ class CoreApi:
 
         LOG.debug(f"GET WHOAMI Response : {response.json()}")
         uuid = response.json().get("results")[0]["uuid"]
-        return uuid
+        email = response.json().get("results")[0]["email"]
+        return uuid, email
 
     def get_user_roles(self, uuid: str):
         """
@@ -112,7 +113,7 @@ class CoreApi:
     def __get_user_projects(self, *, project_name: str = None):
         offset = 0
         limit = 50
-        uuid = self.get_user_id()
+        uuid, email = self.get_user_id_and_email()
         result = []
         total_fetched = 0
 
@@ -164,7 +165,7 @@ class CoreApi:
 
         :returns a tuple containing user specific roles and project tags
         """
-        uuid = self.get_user_id()
+        uuid, email = self.get_user_id_and_email()
 
         projects_res = self.get_user_projects(project_id=project_id)
 
