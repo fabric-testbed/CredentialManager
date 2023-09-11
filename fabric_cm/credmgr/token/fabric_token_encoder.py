@@ -139,12 +139,13 @@ class FabricTokenEncoder:
             core_api = CoreApi(api_server=url, cookie=self._get_vouch_cookie(),
                                cookie_name=CONFIG_OBJ.get_vouch_cookie_name(),
                                cookie_domain=CONFIG_OBJ.get_vouch_cookie_domain_name())
-            uuid, roles, projects = core_api.get_user_and_project_info(project_id=self.project)
+            email, uuid, roles, projects = core_api.get_user_and_project_info(project_id=self.project)
         else:
             uuid = None
             email = self.claims.get("email")
-            roles, tags = CmLdapMgrSingleton.get().get_user_and_project_info(eppn=None, email=email,
-                                                                             project_id=self.project)
+            sub = self.claims.get("sub")
+            email, roles, tags = CmLdapMgrSingleton.get().get_user_and_project_info(eppn=None, email=email, sub=sub,
+                                                                                    project_id=self.project)
             projects = [{
                 "uuid": self.project,
                 "tags": tags
@@ -156,6 +157,8 @@ class FabricTokenEncoder:
         self.claims["scope"] = self.scope
         if uuid is not None:
             self.claims["uuid"] = uuid
+        if self.claims.get("email") is None:
+            self.claims["email"] = email
         LOG.debug("Claims %s", self.claims)
         self.unset = False
 
