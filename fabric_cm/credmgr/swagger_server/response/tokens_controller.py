@@ -29,6 +29,7 @@ from http.client import INTERNAL_SERVER_ERROR
 
 import connexion
 from fss_utils.jwt_manager import JWTManager, ValidateCode
+from oauthlib.oauth2.rfc6749.errors import CustomOAuth2Error
 
 from fabric_cm.credmgr.credential_managers.oauth_credmgr import OAuthCredmgr
 from fabric_cm.credmgr.swagger_server.models import Tokens, Token, Status200OkNoContent, Status200OkNoContentData
@@ -124,6 +125,11 @@ def tokens_refresh_post(body: Request, project_id=None, scope=None):  # noqa: E5
         LOG.debug(response)
         success_counter.labels(HTTP_METHOD_POST, TOKENS_REFRESH_URL).inc()
         return cors_200(response_body=response)
+    except CustomOAuth2Error as ex:
+        LOG.exception(ex)
+        LOG.error(f"Error: {ex.error} Type: {type(ex.error)}")
+        failure_counter.labels(HTTP_METHOD_POST, TOKENS_REFRESH_URL).inc()
+        return cors_500(details=str(ex.error))
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_POST, TOKENS_REFRESH_URL).inc()
