@@ -298,7 +298,7 @@ def tokens_get(token_hash=None, project_id=None, expires=None, states=None, limi
 
     try:
         credmgr = OAuthCredMgr()
-        token_list = credmgr.get_tokens(token_hash=token_hash, project_id=project_id, user_email=claims[OAuthCredMgr.EMAIL],
+        token_list = credmgr.get_tokens(token_hash=token_hash, project_id=project_id, user_email=claims.get(OAuthCredMgr.EMAIL),
                                         expires=expires, states=states, limit=limit, offset=offset)
         success_counter.labels(HTTP_METHOD_GET, TOKENS_REVOKE_LIST_URL).inc()
         response = Tokens()

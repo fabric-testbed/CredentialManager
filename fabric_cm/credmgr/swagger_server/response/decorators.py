@@ -23,6 +23,7 @@ def login_required(f):
             LOG.info(f"login_required(): {details}")
             return cors_401(details=details)
         claims = vouch_authorize()
+        LOG.info(f"CLAIMS: {claims}")
         if claims is None:
             details = 'Cookie signature has expired'
             LOG.info(f"login_required(): {details}")
@@ -49,6 +50,7 @@ def login_or_token_required(f):
             LOG.info(f"login_or_token_required(): {details}")
             return cors_401(details=details)
         claims = vouch_authorize()
+        LOG.info(f"CLAIMS: {claims}")
         if claims is None:
             details = 'Cookie signature has expired'
             LOG.info(f"login_or_token_required(): {details}")
