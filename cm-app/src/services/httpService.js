@@ -44,13 +44,10 @@ axios.interceptors.response.use(null, (error) => {
     return Promise.reject(error); 
   }
 
-  if (error.response && error.response.data 
-  && error.response.data.errors && error.response.data.errors.length > 0) {
-    for (const err of error.response.data.errors) {
-      // console log and toast the human-readable error details.
-      console.log(`ERROR: ${err.details}`);
-      toast.error(err.details);
-    }
+  if (error.response && error.response.data && error.response.data.detail) {
+    // console log and toast the human-readable error details.
+    console.log(`ERROR: ${error.response.data.detail}`);
+    toast.error(error.response.data.detail);
   }
 
   return Promise.reject(error); 

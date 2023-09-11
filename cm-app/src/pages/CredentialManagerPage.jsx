@@ -4,6 +4,7 @@ import Card from 'react-bootstrap/Card';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Alert from 'react-bootstrap/Alert';
+import Badge from 'react-bootstrap/Badge';
 import SpinnerFullPage from "../components/SpinnerFullPage.jsx";
 import toLocaleTime from "../utils/toLocaleTime";
 import { createIdToken, revokeToken, getTokenByProjectId, validateToken } from "../services/credentialManagerService.js";
@@ -26,8 +27,8 @@ class CredentialManagerPage extends React.Component {
       { id: 3, value: "mf", display: "Measurement Framework"},
     ],
     selectedCreateScope: "all",
-    selectedCreateProject: "",
-    selectedListProject: "",
+    selectedProjectId: "",
+    isTokenHolder: false,
     validateTokenValue: "",
     isTokenValid: false,
     validateSuccess: false,
@@ -36,7 +37,7 @@ class CredentialManagerPage extends React.Component {
     tokenMsg: "",
     inputLifetime: 4, // Default lifetime is 4 hours
     selectLifetimeUnit: "hours",
-    createTokenComment: "Created via GUI", // Added comment for creating tokens,
+    tokenComment: "Created via GUI", // Added comment for creating tokens,
     showFullPageSpinner: false,
     spinnerMessage: ""
   }
@@ -53,11 +54,9 @@ class CredentialManagerPage extends React.Component {
         const projects = res.results;
         this.setState({ projects });
         if (projects.length > 0) {
-          const defaultProject = projects[0].uuid;
           this.setState({
-            selectedCreateProject: defaultProject,
-            selectedRefreshProject: defaultProject,
-            selectedListProject: defaultProject
+            selectedProjectId: projects[0].uuid,
+            isTokenHolder: projects[0].memberships.is_token_holder
           }, () => {
             this.listTokens();
           });
@@ -78,27 +77,26 @@ class CredentialManagerPage extends React.Component {
     e.preventDefault();
     this.setState({ showFullPageSpinner: true, spinnerMessage: "Creating Token..."});
     try {
-      const project = this.state.selectedCreateProject;
+      const projectId = this.state.selectedProjectId;
       const scope = this.state.selectedCreateScope;
       const lifetime = this.parseTokenLifetime(); // Added lifetime parameter
-      const comment = this.state.createTokenComment; // Added comment for the token
-      const { data: res } = await createIdToken(project, scope, lifetime, comment);
+      const comment = this.state.tokenComment; // Added comment for the token
+      const { data: res } = await createIdToken(projectId, scope, lifetime, comment);
       console.log("Response received: " + res)
       this.setState({
         createCopySuccess: false,
-        createSuccess: true.valueOf,
+        createSuccess: true,
         createToken: JSON.stringify(res["data"][0], undefined, 4),
         showFullPageSpinner: false,
-        spinnerMessage: ""
-      });
-
-      // auto refresh token list
-      this.setState({ selectedListProject: project }, () => {
+        spinnerMessage: "",
+        selectedProjectId: projectId
+      }, () => {
         this.listTokens();
       });
 
       toast.success("Token created successfully.");
     } catch (ex) {
+      this.setState({ showFullPageSpinner: false, spinnerMessage: ""});
       toast.error("Failed to create token.");
     }
   }
@@ -125,9 +123,9 @@ class CredentialManagerPage extends React.Component {
 
   listTokens = async () => {
     try {
-      const project = this.state.selectedListProject;
-      const res = await getTokenByProjectId(project); // Assuming getTokenByProjectId returns an array of tokens
-      this.setState({ listSuccess: true, tokenList: res.data.data, revokeIdentitySuccess: false, revokedTokenHash: "" });
+      const projectId = this.state.selectedProjectId;
+      const res = await getTokenByProjectId(projectId); // Assuming getTokenByProjectId returns an array of tokens
+      this.setState({ listSuccess: true, tokenList: res.data.data });
     } catch (ex) {
       toast.error("Failed to get tokens.");
     }
@@ -138,7 +136,7 @@ class CredentialManagerPage extends React.Component {
 
     try {
       const { data: res } = await validateToken(this.state.validateTokenValue);
-      this.setState({ validateSuccess: true, isTokenValid: true, decodedToken: res.token, tokenMsg: res.data[0].details });
+      this.setState({ validateSuccess: true, isTokenValid: true, decodedToken: res.token, tokenMsg: "Token is validated." });
     }
     catch (ex) {
       this.setState({ validateSuccess: true, isTokenValid: false, decodedToken: "" });
@@ -169,12 +167,19 @@ class CredentialManagerPage extends React.Component {
     element.click();
   }
 
-  handleSelectCreateProject = (e) =>{
-    this.setState({ selectedCreateProject: e.target.value });
-  }
-
-  handleSelectListProject = (e) => {
-    this.setState({ selectedListProject: e.target.value }, () => {
+  handleSelectProject = (e) =>{
+    const project = this.state.projects.filter(p => p.uuid === e.target.value)[0];
+    // change selected project, hide any created token from UI and reset options
+    this.setState({
+      selectedProjectId: project.uuid,
+      isTokenHolder: project.memberships.is_token_holder,
+      createSuccess: false,
+      createCopySuccess: false,
+      inputLifetime: 4,
+      selectLifetimeUnit: "hours", 
+      selectedCreateScope: "all",
+      tokenComment: "Created via GUI"
+    }, () => {
       this.listTokens();
     });
   }
@@ -183,7 +188,7 @@ class CredentialManagerPage extends React.Component {
     this.setState({ selectedCreateScope: e.target.value });
   }
 
-  handleInputCreateLifetime = (e) => {
+  handleLifetimeChange = (e) => {
     this.setState({ inputLifetime: parseInt(e.target.value) });
   };
 
@@ -191,14 +196,25 @@ class CredentialManagerPage extends React.Component {
     this.setState({ selectLifetimeUnit: e.target.value });
   }
 
-  handleCreateTokenComment = (e) => {
-    this.setState({ createTokenComment: e.target.value });
+  handleCommentChange = (e) => {
+    this.setState({ tokenComment: e.target.value });
   };
 
+  getTokenStateClasses = (state) => {
+    if (state === "Revoked" || state === "Expired") {
+      return "danger";
+    } else if (state === "Valid" || state === "Refreshed") {
+      return "success";
+    } else {
+      return "primary";
+    }
+  }
+
   render() {
-    const { projects, scopeOptions, createSuccess, createToken, createCopySuccess, inputLifetime,
-           listSuccess, tokenList, decodedToken, tokenMsg, validateTokenValue, isTokenValid, validateSuccess,
-            createTokenComment, showFullPageSpinner, spinnerMessage } = this.state;
+    const { projects, scopeOptions, createSuccess, createToken, createCopySuccess, inputLifetime, selectedProjectId,
+      selectLifetimeUnit, selectedCreateScope, listSuccess, tokenList, decodedToken, tokenMsg, validateTokenValue, 
+      isTokenValid, validateSuccess, tokenComment, showFullPageSpinner, spinnerMessage, 
+      isTokenHolder } = this.state;
 
     const portalLink = this.portalLinkMap[checkCmAppType()];
 
@@ -235,7 +251,6 @@ class CredentialManagerPage extends React.Component {
         }
         {
           projects.length > 0 && <div>
-          <h2 className="mb-4">Create Token</h2>
           <div className="alert alert-primary mb-2" role="alert">
             Please consult &nbsp;
             <a
@@ -245,60 +260,95 @@ class CredentialManagerPage extends React.Component {
             >
               <b>this guide</b>
             </a>&nbsp;
-            for obtaining and using FABRIC API tokens. The default token lifetime is 4 hours. If you have access to create long-lived tokens, the lifetime limit is 9 weeks. For 
-            more information about long-lived tokens, Please consult &nbsp;
-            <a
-              href={externalLinks.learnArticleLonglivedTokens}
-              target="_blank"
-              rel="noreferrer"
-            >
-              <b>this guide</b>
-            </a>.
+            for obtaining and using FABRIC API tokens.
+          </div>
+          <h3 className="my-3">Create and List Tokens</h3>
+          <Form>
+          <Row>
+            <Col xs={12}>
+              <Form.Group>
+                <Form.Label>Select Project</Form.Label>
+                <Form.Select
+                  value={selectedProjectId}
+                  onChange={this.handleSelectProject}
+                >
+                  {
+                    projects.length > 0 && projects.map(project => {
+                      return (
+                        <option value={project.uuid}>{project.name}</option>
+                      )
+                    })
+                  }
+                </Form.Select>
+              </Form.Group>
+            </Col>
+            </Row>
+          </Form>
+          <div className="alert alert-success my-2" role="alert">
+            {
+              !isTokenHolder ?
+              <span>
+                The default token lifetime is 4 hours. To obtain <a
+                  href={externalLinks.learnArticleLonglivedTokens}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <b>long-lived tokens</b>
+                </a> for the selected project, please request access from <a href={portalLink} target="_blank" rel="noreferrer">FABRIC Portal</a>.
+              </span> :
+              <span>
+                You have access to <a
+                  href={externalLinks.learnArticleLonglivedTokens}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                <b>long-lived tokens</b></a> for this project. The lifetime limit is 9 weeks.
+              </span>
+            }
           </div>
           <Form>
             <Row>
-              <Col xs={3}>
-                <Form.Group>
-                  <Form.Label>Select Project</Form.Label>
-                  <Form.Select onChange={this.handleSelectCreateProject}>
-                    {
-                      projects.length > 0 && projects.map(project => {
-                        return (
-                          <option value={project.uuid}>{project.name}</option>
-                        )
-                      })
-                    }
-                  </Form.Select>
-                </Form.Group>
-              </Col>
               <Col xs={2}>
                 <Form.Group>
                   <Form.Label>
                     Lifetime
                   </Form.Label>
-                  <Form.Control as="input" type="number" min="1" value={inputLifetime} onChange={this.handleInputCreateLifetime} />
+                  <Form.Control
+                    disabled={!isTokenHolder}
+                    as="input"
+                    type="number"
+                    value={inputLifetime}
+                    onChange={this.handleLifetimeChange}
+                  />
                 </Form.Group>
               </Col>
               <Col xs={2}>
                 <Form.Group>
                   <Form.Label>Unit</Form.Label>
-                  <Form.Select onChange={this.handleLifetimeUnitChange}>
+                  <Form.Select
+                    value={selectLifetimeUnit}
+                    onChange={this.handleLifetimeUnitChange}
+                    disabled={!isTokenHolder}
+                  >
                     <option value={"hours"}>Hours</option>
                     <option value={"days"}>Days</option>
                     <option value={"weeks"}>Weeks</option>
                   </Form.Select>
                 </Form.Group>
               </Col>
-              <Col xs={2}>
+              <Col xs={3}>
                 <Form.Group>
-                <Form.Label>Comment (optional)</Form.Label>
-                <Form.Control as="input" type="text" value={createTokenComment} onChange={this.handleCreateTokenComment} />
+                <Form.Label>Comment (10 - 100 characters)</Form.Label>
+                <Form.Control as="input" type="text" value={tokenComment} onChange={this.handleCommentChange} />
               </Form.Group>
               </Col>
-              <Col xs={2}>
+              <Col xs={3}>
                 <Form.Group>
                   <Form.Label>Select Scope</Form.Label>
-                  <Form.Select onChange={this.handleSelectCreateScope}>
+                  <Form.Select
+                    value={selectedCreateScope}
+                    onChange={this.handleSelectCreateScope}
+                  >
                     {
                       scopeOptions.map(option => {
                         return (
@@ -314,13 +364,13 @@ class CredentialManagerPage extends React.Component {
                   </Form.Select>
                 </Form.Group>
               </Col>
-              <Col xs={1} className="d-flex flex-row align-items-center justify-content-end">
+              <Col xs={2} className="d-flex flex-row align-items-center justify-content-end">
                 <button
                   className="btn btn-outline-success mt-4"
                   disabled={createSuccess}
                   onClick={e => this.createToken(e)}
                 >
-                  Create
+                  Create Token
                 </button>
               </Col>
             </Row>
@@ -364,26 +414,7 @@ class CredentialManagerPage extends React.Component {
               </Alert>
             )}
           </Form>
-          <h2 className="my-4">List Tokens</h2>
-          <Form>
-            <Row>
-              <Col>
-                <Form.Group>
-                  <Form.Label>Select Project</Form.Label>
-                  <Form.Select onChange={this.handleSelectListProject}>
-                    {
-                      projects.length > 0 && projects.map(project => {
-                        return (
-                          <option value={project.uuid}>{project.name}</option>
-                        )
-                      })
-                    }
-                  </Form.Select>
-                </Form.Group>
-              </Col>
-            </Row>
-          </Form>
-          <div className="mt-1">
+          <div className="mt-3">
             {
               listSuccess && tokenList.length > 0 ?
               <table className="table table-striped table-bordered w-auto">
@@ -406,7 +437,11 @@ class CredentialManagerPage extends React.Component {
                         <td className="col-md-2">{token['comment']}</td>
                         <td className="col-md-2">{toLocaleTime(token['created_at'])}</td>
                         <td className="col-md-2">{toLocaleTime(token['expires_at'])}</td>
-                        <td className="col-md-1">{token['state']}</td>
+                        <td className="col-md-1">
+                          <Badge bg={this.getTokenStateClasses(token['state'])}>
+                            {token['state']}
+                          </Badge>
+                        </td>
                         <td className="col-md-1">{token['created_from']}</td>
                         <td className="col-md-1">
                           {
@@ -430,7 +465,7 @@ class CredentialManagerPage extends React.Component {
               </div>
             }
           </div>
-          <h2 className="my-4">Validate Identity Token</h2>
+          <h3 className="my-3">Validate Identity Token</h3>
           <Card>
             <Card.Header className="d-flex bg-light">
             Paste the token to validate:
