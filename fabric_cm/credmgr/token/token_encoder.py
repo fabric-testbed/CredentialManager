@@ -46,6 +46,7 @@ class TokenEncoder:
     SCOPE = "scope"
     TAGS = "tags"
     EMAIL = "email"
+    SUB = "sub"
 
     def __init__(self, id_token, idp_claims: dict, project_id: str = None, project_name: str = None,
                  scope: str = "all", cookie: str = None):
@@ -136,12 +137,13 @@ class TokenEncoder:
                                cookie=cookie,
                                cookie_name=CONFIG_OBJ.get_vouch_cookie_name(),
                                cookie_domain=CONFIG_OBJ.get_vouch_cookie_domain_name())
-            uuid, roles, projects = core_api.get_user_and_project_info(project_id=self.project_id)
+            email, uuid, roles, projects = core_api.get_user_and_project_info(project_id=self.project_id)
         else:
             uuid = None
-            email = self.claims.get("email")
-            roles, tags = CmLdapMgrSingleton.get().get_user_and_project_info(eppn=None, email=email,
-                                                                             project_id=self.project_id)
+            email = self.claims.get(self.EMAIL)
+            sub = self.claims.get(self.SUB)
+            email, roles, tags = CmLdapMgrSingleton.get().get_user_and_project_info(eppn=None, email=email, sub=sub,
+                                                                                    project_id=self.project_id)
             projects = [{
                 self.UUID: self.project_id,
                 self.TAGS: tags
@@ -153,6 +155,8 @@ class TokenEncoder:
         self.claims[self.SCOPE] = self.scope
         if uuid is not None:
             self.claims[self.UUID] = uuid
+        if self.claims.get(self.EMAIL) is None:
+            self.claims[self.EMAIL] = email
         LOG.debug("Claims %s", self.claims)
         self.unset = False
 

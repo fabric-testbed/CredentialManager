@@ -157,7 +157,7 @@ class CoreApi:
         else:
             return self.__get_user_projects()
 
-    def get_user_and_project_info(self, project_id: str) -> Tuple[str, list, list]:
+    def get_user_and_project_info(self, project_id: str) -> Tuple[str, str, list, list]:
         """
         Determine User's info using CORE API
         :param project_id: Project Id
@@ -204,7 +204,7 @@ class CoreApi:
             raise CoreApiError(f"User is not a member of Project: {project_id}")
 
         roles = self.get_user_roles(uuid=uuid)
-        return uuid, roles, projects
+        return email, uuid, roles, projects
 
 
 class CoreApiError(Exception):
