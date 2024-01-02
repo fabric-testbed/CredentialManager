@@ -19,7 +19,7 @@ dependencies = [
     "requests",
     "requests_oauthlib",
     "connexion==2.14.2",
-    "swagger-ui-bundle",
+    "swagger-ui-bundle==0.0.9",
     "python_dateutil",
     "setuptools",
     "ldap3",
