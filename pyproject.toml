@@ -18,7 +18,7 @@ requires-python = '>=3.9'
 dependencies = [
     "requests",
     "requests_oauthlib",
-    "connexion",
+    "connexion==2.14.2",
     "swagger-ui-bundle",
     "python_dateutil",
     "setuptools",

@@ -21,7 +21,7 @@
 # SOFTWARE.
 #
 # Author Komal Thareja (kthare10@renci.org)
-FROM python:3
+FROM python:3.11
 MAINTAINER Komal Thareja<komal.thareja@gmail.com>
 
 RUN mkdir -p /usr/src/app
