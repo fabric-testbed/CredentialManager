@@ -22,5 +22,34 @@
 # SOFTWARE.
 #
 # Author Komal Thareja (kthare10@renci.org)
-from fabric_cm.credmgr.logging.log import get_logger
-LOG, FILE_HANDLER = get_logger()
+from fabric_cm.credmgr.config import CONFIG_OBJ
+
+from fabric_cm.credmgr.logging.log_helper import LogHelper
+LOG = LogHelper.make_logger(log_dir=CONFIG_OBJ.get_logger_dir(),
+                            log_file=CONFIG_OBJ.get_logger_file(),
+                            log_level=CONFIG_OBJ.get_logger_level(),
+                            log_retain=CONFIG_OBJ.get_logger_retain(),
+                            log_size=CONFIG_OBJ.get_logger_size(),
+                            logger=CONFIG_OBJ.get_logger_name())
+
+METRICS_LOG = LogHelper.make_logger(log_dir=CONFIG_OBJ.get_logger_dir(),
+                                    log_file=CONFIG_OBJ.get_metrics_log_file(),
+                                    log_level=CONFIG_OBJ.get_logger_level(),
+                                    log_retain=CONFIG_OBJ.get_logger_retain(),
+                                    log_size=CONFIG_OBJ.get_logger_size(),
+                                    logger=f"{CONFIG_OBJ.get_logger_name()}-metrics",
+                                    log_format='%(asctime)s - %(message)s')
+
+
+def log_event(*, token_hash: str, action: str, project_id: str, user_email: str, user_id: str):
+    """
+    Log Event for metrics
+    """
+    try:
+        log_message = f"CSEL Token event token:{token_hash} " \
+                      f"{action} by prj:{project_id} " \
+                      f"usr:{user_email}:{user_id}"
+
+        METRICS_LOG.info(log_message)
+    except Exception as e:
+        METRICS_LOG.error(f"Error occurred: {e}", stack_info=True)

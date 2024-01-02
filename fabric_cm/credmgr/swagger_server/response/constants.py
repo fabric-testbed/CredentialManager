@@ -27,9 +27,15 @@ CERTS_URL = '/certs'
 TOKENS_CREATE_URL = '/tokens/create'
 TOKENS_REFRESH_URL = '/tokens/refresh'
 TOKENS_REVOKE_URL = '/tokens/revoke'
+TOKENS_REVOKES_URL = '/tokens/revokes'
+TOKENS_REVOKE_LIST_URL = '/tokens/revoke_list'
+TOKENS_VALIDATE_URL = '/tokens/validate'
+TOKENS_DELETE_URL = '/tokens/delete'
+TOKENS_DELETE_TOKEN_HASH_URL = '/tokens/delete/{token_hash}'
 
 HTTP_METHOD_GET = 'get'
 HTTP_METHOD_POST = 'post'
+HTTP_METHOD_DELETE = 'delete'
 
 
 VOUCH_ID_TOKEN = 'X-Vouch-Idp-IdToken'

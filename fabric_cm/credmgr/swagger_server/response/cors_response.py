@@ -8,7 +8,7 @@ from flask import request, Response
 from fabric_cm.credmgr.swagger_server.models import Tokens, Version, Status200OkNoContent, \
     Status200OkNoContentData, Status400BadRequestErrors, Status400BadRequest, Status401UnauthorizedErrors, \
     Status401Unauthorized, Status403ForbiddenErrors, Status403Forbidden, Status404NotFoundErrors, Status404NotFound, \
-    Status500InternalServerErrorErrors, Status500InternalServerError
+    Status500InternalServerErrorErrors, Status500InternalServerError, RevokeList, DecodedToken
 
 _INDENT = int(os.getenv('OC_API_JSON_RESPONSE_INDENT', '4'))
 
@@ -43,11 +43,10 @@ def cors_response(req: request, status_code: int = 200, body: object = None, x_e
     response.headers['Access-Control-Allow-Headers'] = \
         'DNT, User-Agent, X-Requested-With, If-Modified-Since, Cache-Control, Content-Type, Range, Authorization'
     response.headers['Access-Control-Expose-Headers'] = 'Content-Length, Content-Range'
-
     return response
 
 
-def cors_200(response_body: Union[Tokens, Version, Status200OkNoContent] = None) -> cors_response:
+def cors_200(response_body: Union[Tokens, Version, Status200OkNoContent, DecodedToken, RevokeList] = None) -> cors_response:
     """
     Return 200 - OK
     """

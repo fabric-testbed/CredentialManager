@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # MIT License
 #
 # Copyright (c) 2020 FABRIC Testbed
@@ -20,23 +21,28 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-# Author Komal Thareja (kthare10@renci.org)
-FROM python:3.11
-MAINTAINER Komal Thareja<komal.thareja@gmail.com>
+#
+# Author: Komal Thareja (kthare10@renci.org)
 
-RUN mkdir -p /usr/src/app
-RUN mkdir -p /etc/credmgr/
-RUN touch /etc/credmgr/private.pem
-RUN touch /etc/credmgr/public.pem
+from sqlalchemy import TIMESTAMP
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import Column, String, Integer, Sequence
 
-WORKDIR /usr/src/app
+Base = declarative_base()
 
-COPY . /usr/src/app/
 
-RUN pip3 install .
-
-EXPOSE 7000 8100
-
-ENTRYPOINT ["python3"]
-
-CMD ["-m", "fabric_cm.credmgr.swagger_server"]
+class Tokens(Base):
+    """
+    Represents Tokens Database Table
+    """
+    __tablename__ = 'Tokens'
+    token_id = Column(Integer, Sequence('token_id', start=1, increment=1), autoincrement=True, primary_key=True)
+    user_id = Column(String, nullable=False, index=True)
+    user_email = Column(String, nullable=False, index=True)
+    project_id = Column(String, nullable=False, index=True)
+    comment = Column(String, nullable=False)
+    state = Column(Integer, nullable=False, index=True)
+    token_hash = Column(String, nullable=False, index=True)
+    created_from = Column(String, nullable=False)
+    created_at = Column(TIMESTAMP(timezone=True), nullable=True)
+    expires_at = Column(TIMESTAMP(timezone=True), nullable=True)

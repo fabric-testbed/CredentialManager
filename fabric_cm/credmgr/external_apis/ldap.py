@@ -48,18 +48,18 @@ class CmLdapMgr:
 
         self.server = Server(host=self.ldap_host, use_ssl=True, get_info=ALL)
 
-    def get_user_and_project_info(self, eppn: str, email: str, project_id: str, sub: str) -> (list, list):
+    def get_user_and_project_info(self, eppn: str, email: str, sub: str, project_id: str) -> (list, list):
         """
         Return active projects for a user identified by eppn or email
         @params eppn: eppn
+        @param sub: sub
         @params email: user email
         @params project_id: project id
-        @param sub: sub
         @return tuple of roles and project tags(always empty) as tags are not in CoManage
         """
         if eppn:
             ldap_search_filter = '(eduPersonPrincipalName=' + eppn + ')'
-        elif sub:
+        elif sub is not None:
             ldap_search_filter = '(uid=' + sub + ')'
         else:
             ldap_search_filter = '(mail=' + email + ')'
@@ -80,7 +80,7 @@ class CmLdapMgr:
                 attributes = conn.entries[0]['isMemberOf']
                 attributes = [attr for attr in attributes if 'active' in attr]
                 if email is None:
-                    email = conn.entries[0]['mail']
+                    email = str(conn.entries[0]['mail'])
             else:
                 attributes = None
             conn.unbind()

@@ -23,7 +23,7 @@
 #
 # Author Komal Thareja (kthare10@renci.org)
 import datetime
-from typing import Tuple
+from typing import Tuple, List
 
 import requests
 
@@ -41,6 +41,122 @@ class CoreApi:
         self.cookie_name = cookie_name
         self.cookie_domain = cookie_domain
 
+        if self.api_server is None or self.cookie is None:
+            raise CoreApiError(f"Core URL: {self.api_server} or Cookie: {self.cookie} not available")
+
+        # Create Session
+        self.session = requests.Session()
+
+        # Set the Cookie
+        cookie_obj = requests.cookies.create_cookie(
+            name=self.cookie_name,
+            value=self.cookie
+        )
+        self.session.cookies.set_cookie(cookie_obj)
+        LOG.debug(f"Using vouch cookie: {self.session.cookies}")
+
+        # Set the headers
+        headers = {
+            'Accept': 'application/json',
+            'Content-Type': "application/json"
+        }
+        self.session.headers.update(headers)
+
+    def get_user_id_and_email(self) -> Tuple[str, str]:
+        """
+        Return User's uuid by querying via /whoami Core API
+        @return User's uuid
+        """
+        url = f'{self.api_server}/whoami'
+        response = self.session.get(url, verify=CONFIG_OBJ.is_core_api_ssl_verify())
+        if response.status_code != 200:
+            raise CoreApiError(f"Core API error occurred status_code: {response.status_code} "
+                               f"message: {response.content}")
+
+        LOG.debug(f"GET WHOAMI Response : {response.json()}")
+        uuid = response.json().get("results")[0]["uuid"]
+        email = response.json().get("results")[0]["email"]
+        return uuid, email
+
+    def get_user_roles(self, uuid: str):
+        """
+        Get User by UUID to get roles (Facility Operator is not Project Specific
+        @param uuid User's uuid
+        @return return user's roles
+        """
+        # Get User by UUID to get roles (Facility Operator is not Project Specific,
+        # so need the roles from people end point)
+        url = f"{self.api_server}/people/{uuid}?as_self=true"
+        response = self.session.get(url, verify=CONFIG_OBJ.is_core_api_ssl_verify())
+
+        if response.status_code != 200:
+            raise CoreApiError(f"Core API error occurred status_code: {response.status_code} "
+                               f"message: {response.content}")
+
+        LOG.debug(f"GET PEOPLE Response : {response.json()}")
+
+        roles = response.json().get("results")[0]["roles"]
+        return roles
+
+    def __get_user_project_by_id(self, *, project_id: str):
+        url = f"{self.api_server}/projects/{project_id}"
+        response = self.session.get(url, verify=CONFIG_OBJ.is_core_api_ssl_verify())
+
+        if response.status_code != 200:
+            raise CoreApiError(f"Core API error occurred status_code: {response.status_code} "
+                               f"message: {response.content}")
+
+        LOG.debug(f"GET Project Response : {response.json()}")
+
+        return response.json().get("results")
+
+    def __get_user_projects(self, *, project_name: str = None):
+        offset = 0
+        limit = 50
+        uuid, email = self.get_user_id_and_email()
+        result = []
+        total_fetched = 0
+
+        while True:
+            if project_name is not None:
+                url = f"{self.api_server}/projects?search={project_name}&offset={offset}&limit={limit}" \
+                      f"&person_uuid={uuid}&sort_by=name&order_by=asc"
+            else:
+                url = f"{self.api_server}/projects?offset={offset}&limit={limit}&person_uuid={uuid}" \
+                      f"&sort_by=name&order_by=asc"
+
+            response = self.session.get(url, verify=CONFIG_OBJ.is_core_api_ssl_verify())
+
+            if response.status_code != 200:
+                raise CoreApiError(f"Core API error occurred status_code: {response.status_code} "
+                                   f"message: {response.content}")
+
+            LOG.debug(f"GET Project Response : {response.json()}")
+
+            size = response.json().get("size")
+            total = response.json().get("total")
+            projects = response.json().get("results")
+
+            total_fetched += size
+
+            for x in projects:
+                result.append(x)
+
+            if total_fetched == total:
+                break
+            offset = size
+            limit += limit
+
+        return result
+
+    def get_user_projects(self, project_name: str = None, project_id: str = None) -> List[dict]:
+        if project_id is not None and project_id != "all":
+            return self.__get_user_project_by_id(project_id=project_id)
+        elif project_name is not None and project_name != "all":
+            return self.__get_user_projects(project_name=project_name)
+        else:
+            return self.__get_user_projects()
+
     def get_user_and_project_info(self, project_id: str) -> Tuple[str, str, list, list]:
         """
         Determine User's info using CORE API
@@ -49,53 +165,9 @@ class CoreApi:
 
         :returns a tuple containing user specific roles and project tags
         """
-        if self.api_server is None or self.cookie is None:
-            raise CoreApiError(f"Core URL: {self.api_server} or Cookie: {self.cookie} not available")
+        uuid, email = self.get_user_id_and_email()
 
-        # Create Session
-        s = requests.Session()
-
-        # Set the Cookie
-        cookie_obj = requests.cookies.create_cookie(
-            name=self.cookie_name,
-            value=self.cookie
-        )
-        s.cookies.set_cookie(cookie_obj)
-        LOG.debug(f"Using vouch cookie: {s.cookies}")
-
-        # Set the headers
-        headers = {
-            'Accept': 'application/json',
-            'Content-Type': "application/json"
-        }
-        s.headers.update(headers)
-        ssl_verify = CONFIG_OBJ.is_core_api_ssl_verify()
-
-        # WhoAmI
-        url = f'{self.api_server}/whoami'
-        response = s.get(url, verify=ssl_verify)
-        if response.status_code != 200:
-            raise CoreApiError(f"Core API error occurred status_code: {response.status_code} "
-                               f"message: {response.content}")
-
-        LOG.debug(f"GET WHOAMI Response : {response.json()}")
-        uuid = response.json().get("results")[0]["uuid"]
-        email = response.json().get("results")[0]["email"]
-
-        # Get Project
-        if project_id.lower() == "all":
-            # Get All projects
-            url = f"{self.api_server}/projects?offset=0&limit=50&person_uuid={uuid}&sort_by=name&order_by=asc"
-        else:
-            url = f"{self.api_server}/projects/{project_id}"
-        response = s.get(url, verify=ssl_verify)
-
-        if response.status_code != 200:
-            raise CoreApiError(f"Core API error occurred status_code: {response.status_code} "
-                               f"message: {response.content}")
-
-        LOG.debug(f"GET Project Response : {response.json()}")
-        projects_res = response.json().get("results")
+        projects_res = self.get_user_projects(project_id=project_id)
 
         projects = []
         for p in projects_res:
@@ -131,18 +203,7 @@ class CoreApi:
         if len(projects) == 0:
             raise CoreApiError(f"User is not a member of Project: {project_id}")
 
-        # Get User by UUID to get roles (Facility Operator is not Project Specific,
-        # so need the roles from people end point)
-        url = f"{self.api_server}/people/{uuid}?as_self=true"
-        response = s.get(url, verify=ssl_verify)
-
-        if response.status_code != 200:
-            raise CoreApiError(f"Core API error occurred status_code: {response.status_code} "
-                               f"message: {response.content}")
-
-        LOG.debug(f"GET PEOPLE Response : {response.json()}")
-
-        roles = response.json().get("results")[0]["roles"]
+        roles = self.get_user_roles(uuid=uuid)
         return email, uuid, roles, projects
 
 

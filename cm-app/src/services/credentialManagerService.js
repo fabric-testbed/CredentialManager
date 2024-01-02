@@ -4,8 +4,8 @@ import checkCmAppType from "../utils/checkCmAppType";
 
 const apiEndpoint = config.credentialManagerApiUrl[checkCmAppType()];
 
-export function createIdToken(projectId, scope) {
-  return http.post(apiEndpoint + "/create?project_id=" + projectId + "&scope=" + scope);
+export function createIdToken(projectId, scope, lifetime, comment) {
+  return http.post(apiEndpoint + "/create?project_id=" + projectId + "&scope=" + scope + "&lifetime=" + lifetime + "&comment=" + comment)
 }
 
 export function refreshToken(projectId, scope, refresh_token) {
@@ -15,9 +15,34 @@ export function refreshToken(projectId, scope, refresh_token) {
   return http.post(apiEndpoint + "/refresh?project_id=" + projectId + "&scope=" + scope, data);
 }
 
-export function revokeToken(refresh_token) {
+export function revokeToken(token_type, token) {
   const data = {
-    "refresh_token": refresh_token
+    "token": token,
+    "type": token_type
   }
-  return http.post(apiEndpoint + "/revoke", data);
+  return http.post(apiEndpoint + "/revokes", data);
+}
+
+export function tokenRevokeList(projectId) {
+  return http.get(apiEndpoint + "/revoke_list?project_id=" + projectId);
+}
+
+export function getTokenByHash(tokenHash) {
+  return http.get(apiEndpoint + "?token_hash=" + tokenHash + "&limit=200&offset=0");
+}
+
+export function getTokenByProjectId(projectId) {
+  return http.get(apiEndpoint + "?project_id=" + projectId + "&limit=200&offset=0")
+}
+
+export function getTokens() {
+  return http.get(apiEndpoint + "?limit=200&offset=0");
+}
+
+export function validateToken(token) {
+  const data = {
+    "token": token,
+    "type": "identity"
+  }
+  return http.post(apiEndpoint + "/validate", data);
 }
