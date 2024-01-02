@@ -2,7 +2,7 @@
   "fabricCoreApiUrl": {
     "alpha": "https://alpha-6.fabric-testbed.net",
     "beta": "https://beta-3.fabric-testbed.net",
-    "production": "https://core-api.fabric-testbed.net"
+    "production": "https://uis.fabric-testbed.net"
   },
   "credentialManagerApiUrl": {
     "alpha": "https://alpha-2.fabric-testbed.net/credmgr/tokens",
