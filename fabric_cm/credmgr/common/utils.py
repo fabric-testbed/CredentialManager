@@ -79,15 +79,17 @@ class Utils:
         return cookie_or_exception
 
     @staticmethod
-    def is_facility_operator(*, cookie: str):
+    def is_facility_operator(*, cookie: str, token: str = None):
         """
         Validate if user with provided vouch cookie a facility operator
         @param cookie cookie
+        @param token token
         @return True if user is FP; False otherwise
         """
         core_api = CoreApi(api_server=CONFIG_OBJ.get_core_api_url(), cookie=cookie,
                            cookie_name=CONFIG_OBJ.get_vouch_cookie_name(),
-                           cookie_domain=CONFIG_OBJ.get_vouch_cookie_domain_name())
+                           cookie_domain=CONFIG_OBJ.get_vouch_cookie_domain_name(),
+                           token=token)
         uuid, email = core_api.get_user_id_and_email()
         roles = core_api.get_user_roles(uuid=uuid)
 

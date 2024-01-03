@@ -27,6 +27,7 @@ from datetime import datetime
 import connexion
 from oauthlib.oauth2.rfc6749.errors import CustomOAuth2Error
 
+from fabric_cm.credmgr.common.utils import Utils
 from fabric_cm.credmgr.core.oauth_credmgr import OAuthCredMgr, TokenState
 from fabric_cm.credmgr.swagger_server.models import Tokens, Token, Status200OkNoContent, Status200OkNoContentData, \
     RevokeList, DecodedToken
@@ -39,7 +40,7 @@ from fabric_cm.credmgr.swagger_server.response.constants import HTTP_METHOD_POST
 from fabric_cm.credmgr.logging import LOG
 from fabric_cm.credmgr.swagger_server.response.cors_response import cors_200, cors_500, cors_400
 from fabric_cm.credmgr.swagger_server.response.decorators import login_required, login_or_token_required
-
+from flask import request
 
 @login_required
 def tokens_create_post(project_id: str, project_name: str, scope: str = None, lifetime: int = 4, comment: str = None,
@@ -247,8 +248,11 @@ def tokens_revokes_post(body: TokenPost, claims: dict = None):  # noqa: E501
     try:
         credmgr = OAuthCredMgr()
         if body.type == "identity":
+            cookie = claims.get(OAuthCredMgr.COOKIE)
+            id_token = request.headers.get('authorization')
+            id_token = id_token.replace('Bearer ', '')
             credmgr.revoke_identity_token(token_hash=body.token, user_email=claims.get(OAuthCredMgr.EMAIL),
-                                          cookie=claims.get(OAuthCredMgr.COOKIE))
+                                          cookie=cookie, token=id_token)
         else:
             credmgr.revoke_token(refresh_token=body.token)
         success_counter.labels(HTTP_METHOD_POST, TOKENS_REVOKES_URL).inc()

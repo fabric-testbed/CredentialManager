@@ -371,7 +371,8 @@ class OAuthCredMgr:
         if response.status_code != 200:
             raise OAuthCredMgrError("Refresh token could not be revoked!")
 
-    def revoke_identity_token(self, token_hash: str, cookie: str, user_email: str = None, project_id: str = None):
+    def revoke_identity_token(self, token_hash: str, cookie: str, user_email: str = None, project_id: str = None,
+                              token: str = None):
         """
          Revoke a fabric identity token
 
@@ -381,6 +382,8 @@ class OAuthCredMgr:
          :type user_email: str
          :param cookie: Cookie
          :type cookie: str
+         :param token: Token
+         :type token: str
 
          @returns dictionary containing status of the operation
          @raises Exception in case of error
@@ -389,7 +392,7 @@ class OAuthCredMgr:
             raise OAuthCredMgrError(f"User Id/Email or Token Hash required")
 
         # Facility Operator query all tokens
-        if Utils.is_facility_operator(cookie=cookie):
+        if Utils.is_facility_operator(cookie=cookie, token=token):
             tokens = self.get_tokens(token_hash=token_hash)
         # Otherwise query only this user's tokens
         else:
