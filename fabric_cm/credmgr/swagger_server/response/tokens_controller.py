@@ -249,12 +249,10 @@ def tokens_revokes_post(body: TokenPost, claims: dict = None):  # noqa: E501
         credmgr = OAuthCredMgr()
         if body.type == "identity":
             cookie = claims.get(OAuthCredMgr.COOKIE)
-            # Build the cookie
-            if cookie is None:
-                id_token = request.headers.get('authorization')
-                id_token = id_token.replace('Bearer ', '')
+            id_token = request.headers.get('authorization')
+            id_token = id_token.replace('Bearer ', '')
             credmgr.revoke_identity_token(token_hash=body.token, user_email=claims.get(OAuthCredMgr.EMAIL),
-                                          cookie=cookie)
+                                          cookie=cookie, token=id_token)
         else:
             credmgr.revoke_token(refresh_token=body.token)
         success_counter.labels(HTTP_METHOD_POST, TOKENS_REVOKES_URL).inc()
