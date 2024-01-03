@@ -35,31 +35,39 @@ class CoreApi:
     """
     Class implements functionality to interface with Project Registry
     """
-    def __init__(self, api_server: str, cookie: str, cookie_name: str, cookie_domain: str):
+    def __init__(self, api_server: str, cookie: str, cookie_name: str, cookie_domain: str, token: str = None):
         self.api_server = api_server
         self.cookie = cookie
         self.cookie_name = cookie_name
         self.cookie_domain = cookie_domain
+        self.token = token
 
-        if self.api_server is None or self.cookie is None:
-            raise CoreApiError(f"Core URL: {self.api_server} or Cookie: {self.cookie} not available")
+        if self.api_server is None:
+            raise CoreApiError(f"Core URL: {self.api_server} not available")
 
-        # Create Session
-        self.session = requests.Session()
-
-        # Set the Cookie
-        cookie_obj = requests.cookies.create_cookie(
-            name=self.cookie_name,
-            value=self.cookie
-        )
-        self.session.cookies.set_cookie(cookie_obj)
-        LOG.debug(f"Using vouch cookie: {self.session.cookies}")
+        if self.cookie is None and self.token is None:
+            raise CoreApiError(f"Either cookie or token must be specified!")
 
         # Set the headers
         headers = {
             'Accept': 'application/json',
             'Content-Type': "application/json"
         }
+
+        # Create Session
+        self.session = requests.Session()
+
+        if cookie is not None:
+            # Set the Cookie
+            cookie_obj = requests.cookies.create_cookie(
+                name=self.cookie_name,
+                value=self.cookie
+            )
+            self.session.cookies.set_cookie(cookie_obj)
+            LOG.debug(f"Using vouch cookie: {self.session.cookies}")
+        else:
+            headers['authorization'] = f"Bearer {token}"
+
         self.session.headers.update(headers)
 
     def get_user_id_and_email(self) -> Tuple[str, str]:
