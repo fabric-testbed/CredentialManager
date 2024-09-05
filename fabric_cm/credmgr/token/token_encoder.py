@@ -22,6 +22,7 @@
 # SOFTWARE.
 #
 # Author Komal Thareja (kthare10@renci.org)
+import re
 from datetime import datetime
 from dateutil import tz
 from fss_utils.jwt_manager import JWTManager, ValidateCode
@@ -122,6 +123,14 @@ class TokenEncoder:
 
         return False
 
+    # Function to exclude roles with name containing UUIDs
+    @staticmethod
+    def exclude_uuid_roles(*, claims):
+        if "roles" in claims:
+            claims["roles"] = [role for role in claims["roles"] if not re.search(
+                r'[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}', role["name"])]
+        return claims
+
     def _add_fabric_claims(self):
         """
         Set the claims for the Token by adding membership, project and scope
@@ -157,6 +166,7 @@ class TokenEncoder:
             self.claims[self.UUID] = uuid
         if self.claims.get(self.EMAIL) is None:
             self.claims[self.EMAIL] = email
+        self.exclude_uuid_roles(claims=self.claims)
         LOG.debug("Claims %s", self.claims)
         self.unset = False
 
