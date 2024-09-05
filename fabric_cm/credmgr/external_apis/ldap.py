@@ -65,7 +65,6 @@ class CmLdapMgr:
             ldap_search_filter = '(mail=' + email + ')'
         LOG.debug("ldap_host:%s", self.ldap_host)
         LOG.debug("ldap_user:%s", self.ldap_user)
-        LOG.debug("ldap_password:%s", self.ldap_password)
         LOG.debug("ldap_search_base:%s", self.ldap_search_base)
         LOG.debug("ldap_search_filter:%s", ldap_search_filter)
         try:
