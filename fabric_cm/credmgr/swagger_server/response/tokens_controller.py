@@ -250,7 +250,8 @@ def tokens_revokes_post(body: TokenPost, claims: dict = None):  # noqa: E501
         if body.type == "identity":
             cookie = claims.get(OAuthCredMgr.COOKIE)
             id_token = request.headers.get('authorization')
-            id_token = id_token.replace('Bearer ', '')
+            if id_token:
+                id_token = id_token.replace('Bearer ', '')
             credmgr.revoke_identity_token(token_hash=body.token, user_email=claims.get(OAuthCredMgr.EMAIL),
                                           cookie=cookie, token=id_token)
         else:
