@@ -106,7 +106,7 @@ class TokenEncoder:
         self.encoded = True
         return self.token
 
-    def _validate_lifetime(self, *, validity: int, roles: dict, project: dict):
+    def _validate_lifetime(self, *, validity: int, project: dict):
         """
         Set the claims for the Token by adding membership, project and scope
         """
