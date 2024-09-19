@@ -32,6 +32,7 @@ services:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf
       - ./ssl/fullchain.pem:/etc/ssl/public.pem
       - ./ssl/privkey.pem:/etc/ssl/private.pem
+      - /opt/data/production/logs/nginx/cm:/var/log/nginx
     restart: always
 
   credmgr:
