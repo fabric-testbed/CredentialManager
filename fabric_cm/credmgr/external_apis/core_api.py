@@ -104,6 +104,9 @@ class CoreApi:
         LOG.debug(f"GET PEOPLE Response : {response.json()}")
 
         roles = response.json().get("results")[0]["roles"]
+        if isinstance(roles, list):
+            for role in roles:
+                role.pop('description', None)
         return roles
 
     def __get_user_project_by_id(self, *, project_id: str):
