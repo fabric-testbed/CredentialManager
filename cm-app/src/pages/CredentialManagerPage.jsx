@@ -48,6 +48,21 @@ class CredentialManagerPage extends React.Component {
     "production": externalLinks.portalLinkProduction,
   }
 
+  // Extract error details from API response
+  getErrorMessage = (error, fallbackMessage) => {
+    try {
+      // Check if error response has the expected structure
+      if (error?.response?.data?.errors && Array.isArray(error.response.data.errors) && error.response.data.errors.length > 0) {
+        const firstError = error.response.data.errors[0];
+        // Prefer details field, fallback to message field
+        return firstError.details || firstError.message || fallbackMessage;
+      }
+    } catch (e) {
+      // If parsing fails, return fallback message
+    }
+    return fallbackMessage;
+  }
+
   async componentDidMount() {
       try {
         const { data: res } = await getProjects(localStorage.getItem("cmUserID"));
@@ -62,7 +77,8 @@ class CredentialManagerPage extends React.Component {
           });
         }
       } catch (ex) {
-        toast.error("Failed to load user's project information. Please reload this page.");
+        const errorMessage = this.getErrorMessage(ex, "Failed to load user's project information. Please reload this page.");
+        toast.error(errorMessage);
       }
   }
 
@@ -97,7 +113,8 @@ class CredentialManagerPage extends React.Component {
       toast.success("Token created successfully.");
     } catch (ex) {
       this.setState({ showFullPageSpinner: false, spinnerMessage: ""});
-      toast.error("Failed to create token.");
+      const errorMessage = this.getErrorMessage(ex, "Failed to create token.");
+      toast.error(errorMessage);
     }
   }
 
@@ -117,7 +134,8 @@ class CredentialManagerPage extends React.Component {
     }
     catch (ex) {
       this.setState({ revokeIdentitySuccess: false, revokedTokenHash: "" });
-      toast.error("Failed to revoke token.")
+      const errorMessage = this.getErrorMessage(ex, "Failed to revoke token.");
+      toast.error(errorMessage);
     }
   }
 
@@ -127,7 +145,8 @@ class CredentialManagerPage extends React.Component {
       const res = await getTokenByProjectId(projectId); // Assuming getTokenByProjectId returns an array of tokens
       this.setState({ listSuccess: true, tokenList: res.data.data });
     } catch (ex) {
-      toast.error("Failed to get tokens.");
+      const errorMessage = this.getErrorMessage(ex, "Failed to get tokens.");
+      toast.error(errorMessage);
     }
   }
 
@@ -140,7 +159,8 @@ class CredentialManagerPage extends React.Component {
     }
     catch (ex) {
       this.setState({ validateSuccess: true, isTokenValid: false, decodedToken: "" });
-      toast.error("Failed to validate token.")
+      const errorMessage = this.getErrorMessage(ex, "Failed to validate token.");
+      toast.error(errorMessage);
     }
   }
 
