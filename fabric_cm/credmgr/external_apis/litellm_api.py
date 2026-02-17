@@ -76,7 +76,7 @@ class LiteLLMApi:
             raise LiteLLMApiError(f"LiteLLM API error creating user: status_code={response.status_code} "
                                   f"message={response.text}")
 
-        LOG.debug(f"LiteLLM create_user response: {response.json()}")
+        LOG.debug(f"LiteLLM create_user completed: status_code={response.status_code}")
         return response.json()
 
     def get_user_info(self, user_id: str) -> dict:
@@ -94,7 +94,7 @@ class LiteLLMApi:
             raise LiteLLMApiError(f"LiteLLM API error getting user info: status_code={response.status_code} "
                                   f"message={response.text}")
 
-        LOG.debug(f"LiteLLM get_user_info response: {response.json()}")
+        LOG.debug(f"LiteLLM get_user_info completed: status_code={response.status_code}")
         return response.json()
 
     # ---- Team Management ----
@@ -126,7 +126,7 @@ class LiteLLMApi:
             raise LiteLLMApiError(f"LiteLLM API error adding user to team: status_code={response.status_code} "
                                   f"message={response.text}")
 
-        LOG.debug(f"LiteLLM add_user_to_team response: {response.json()}")
+        LOG.debug(f"LiteLLM add_user_to_team completed: status_code={response.status_code}")
         return response.json()
 
     # ---- Key Management ----
@@ -168,26 +168,24 @@ class LiteLLMApi:
             raise LiteLLMApiError(f"LiteLLM API error generating key: status_code={response.status_code} "
                                   f"message={response.text}")
 
-        LOG.debug(f"LiteLLM generate_key response: {response.json()}")
+        LOG.debug(f"LiteLLM generate_key completed: status_code={response.status_code}")
         return response.json()
 
     def list_keys(self, user_id: str) -> list:
         """
-        List all keys for a user from LiteLLM
+        List all keys for a user from LiteLLM via /user/info endpoint.
+        The /key/list endpoint requires a virtual key, so we use /user/info
+        which works with the master key and returns the user's keys.
         @param user_id User identifier
         @return list of key records
         """
-        url = f'{self.api_server}/key/list'
+        try:
+            user_info = self.get_user_info(user_id=user_id)
+        except LiteLLMApiError:
+            return []
 
-        LOG.debug(f"LiteLLM list_keys request: {url}")
-        response = self.session.get(url, params={'user_id': user_id})
-
-        if response.status_code != 200:
-            raise LiteLLMApiError(f"LiteLLM API error listing keys: status_code={response.status_code} "
-                                  f"message={response.text}")
-
-        LOG.debug(f"LiteLLM list_keys response: {response.json()}")
-        return response.json()
+        keys = user_info.get('keys', [])
+        return keys
 
     def delete_key(self, key_id: str) -> dict:
         """
@@ -208,7 +206,7 @@ class LiteLLMApi:
             raise LiteLLMApiError(f"LiteLLM API error deleting key: status_code={response.status_code} "
                                   f"message={response.text}")
 
-        LOG.debug(f"LiteLLM delete_key response: {response.json()}")
+        LOG.debug(f"LiteLLM delete_key completed: status_code={response.status_code}")
         return response.json()
 
     def get_key_info(self, key_id: str) -> dict:
@@ -226,7 +224,7 @@ class LiteLLMApi:
             raise LiteLLMApiError(f"LiteLLM API error getting key info: status_code={response.status_code} "
                                   f"message={response.text}")
 
-        LOG.debug(f"LiteLLM get_key_info response: {response.json()}")
+        LOG.debug(f"LiteLLM get_key_info completed: status_code={response.status_code}")
         return response.json()
 
 
