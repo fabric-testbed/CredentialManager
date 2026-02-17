@@ -546,7 +546,7 @@ class OAuthCredMgr:
 
         # Verify user is an active member of the allowed FABRIC project
         allowed_project = CONFIG_OBJ.get_litellm_allowed_project()
-        projects = core_api.get_user_projects(project_name=allowed_project)
+        projects = core_api.get_user_projects(project_id=allowed_project)
 
         if not projects:
             raise OAuthCredMgrError(f"User is not a member of project: {allowed_project}")
