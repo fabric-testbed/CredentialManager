@@ -39,6 +39,7 @@ class Config:
     SECTION_CORE_API = 'core-api'
     SECTION_VOUCH = 'vouch'
     SECTION_DATABASE = 'database'
+    SECTION_LITELLM = 'litellm'
 
     # Runtime parameters
     REST_PORT = 'rest-port'
@@ -92,6 +93,14 @@ class Config:
     # Project Registry Parameters
     CORE_API_URL = 'core-api-url'
     SSL_VERIFY = 'ssl_verify'
+
+    # LiteLLM Parameters
+    LITELLM_URL = 'litellm-url'
+    LITELLM_API_KEY = 'litellm-api-key'
+    LITELLM_ALLOWED_PROJECT = 'litellm-allowed-project'
+    LITELLM_TEAM_ID = 'litellm-team-id'
+    LITELLM_DEFAULT_MAX_BUDGET = 'litellm-default-max-budget'
+    LITELLM_DEFAULT_DURATION = 'litellm-default-duration'
 
     # Vouch Parameters
     VOUCH = 'vouch'
@@ -273,3 +282,21 @@ class Config:
 
     def get_llt_role_suffix(self) -> str:
         return self._get_config_from_section(self.SECTION_RUNTIME, self.LLT_ROLE_SUFFIX)
+
+    def get_litellm_url(self) -> str:
+        return self._get_config_from_section(self.SECTION_LITELLM, self.LITELLM_URL)
+
+    def get_litellm_api_key(self) -> str:
+        return self._get_config_from_section(self.SECTION_LITELLM, self.LITELLM_API_KEY)
+
+    def get_litellm_allowed_project(self) -> str:
+        return self._get_config_from_section(self.SECTION_LITELLM, self.LITELLM_ALLOWED_PROJECT)
+
+    def get_litellm_team_id(self) -> str:
+        return self._get_config_from_section(self.SECTION_LITELLM, self.LITELLM_TEAM_ID)
+
+    def get_litellm_default_max_budget(self) -> float:
+        return float(self._get_config_from_section(self.SECTION_LITELLM, self.LITELLM_DEFAULT_MAX_BUDGET))
+
+    def get_litellm_default_duration(self) -> str:
+        return self._get_config_from_section(self.SECTION_LITELLM, self.LITELLM_DEFAULT_DURATION)

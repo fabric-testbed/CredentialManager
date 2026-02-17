@@ -27,7 +27,7 @@ import threading
 from datetime import datetime
 from typing import List
 
-from fabric_cm.db import Base, Tokens
+from fabric_cm.db import Base, Tokens, LitellmKeys
 from sqlalchemy import create_engine, desc
 from sqlalchemy.orm import scoped_session, sessionmaker
 
@@ -202,3 +202,75 @@ class DbApi:
             if d[k] is None:
                 d.pop(k)
         return d
+
+    def add_litellm_key(self, *, user_id: str, user_email: str, litellm_key_id: str,
+                        litellm_key_name: str, api_key_hash: str,
+                        created_at: datetime, expires_at: datetime = None, comment: str = None):
+        """
+        Add a LiteLLM key record
+        @param user_id User ID (FABRIC UUID)
+        @param user_email User Email
+        @param litellm_key_id Key identifier from LiteLLM
+        @param litellm_key_name Human-readable key alias
+        @param api_key_hash SHA256 hash of the API key
+        @param created_at Creation time
+        @param expires_at Expiration time
+        @param comment Comment
+        """
+        session = self.get_session()
+        try:
+            key_obj = LitellmKeys(user_id=user_id, user_email=user_email, litellm_key_id=litellm_key_id,
+                                  litellm_key_name=litellm_key_name, api_key_hash=api_key_hash,
+                                  created_at=created_at, expires_at=expires_at, comment=comment)
+            session.add(key_obj)
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            self.logger.error(f"Exception occurred: {e}", stack_info=True)
+            raise e
+
+    def get_litellm_keys(self, *, user_email: str = None, litellm_key_id: str = None,
+                         offset: int = 0, limit: int = 200) -> list:
+        """
+        Get LiteLLM keys
+        @param user_email User's email
+        @param litellm_key_id LiteLLM key identifier
+        @param offset offset
+        @param limit limit
+        @return list of LiteLLM key records
+        """
+        result = []
+        session = self.get_session()
+        try:
+            filter_dict = {}
+            if user_email is not None:
+                filter_dict['user_email'] = user_email
+            if litellm_key_id is not None:
+                filter_dict['litellm_key_id'] = litellm_key_id
+
+            rows = session.query(LitellmKeys).filter_by(**filter_dict)
+            rows = rows.order_by(desc(LitellmKeys.created_at))
+
+            if offset is not None and limit is not None:
+                rows = rows.offset(offset).limit(limit)
+
+            for row in rows.all():
+                result.append(self.__generate_dict_from_row(row=row))
+        except Exception as e:
+            self.logger.error(f"Exception occurred: {e}", stack_info=True)
+            raise e
+        return result
+
+    def remove_litellm_key(self, *, litellm_key_id: str):
+        """
+        Remove a LiteLLM key record
+        @param litellm_key_id LiteLLM key identifier
+        """
+        session = self.get_session()
+        try:
+            session.query(LitellmKeys).filter_by(litellm_key_id=litellm_key_id).delete()
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            self.logger.error(f"Exception occurred: {e}", stack_info=True)
+            raise e

@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Header from "./components/Header";
 import Home from './pages/Home';
 import CredentialManagerPage from './pages/CredentialManagerPage';
+import LiteLLMKeysPage from './pages/LiteLLMKeysPage';
 import Footer from "./components/Footer";
 import { getWhoAmI } from "./services/coreApiService.js";
 import { toast, ToastContainer } from "react-toastify";
@@ -82,6 +83,7 @@ class App extends React.Component {
               <Route path="/login" element={<Home cmUserStatus={cmUserStatus} />} />
               <Route path="/logout" element={<Home cmUserStatus={cmUserStatus} />} />
               <Route path="/cm" element={<CredentialManagerPage cmUserStatus={cmUserStatus}/>} />
+              <Route path="/litellm" element={<LiteLLMKeysPage cmUserStatus={cmUserStatus}/>} />
             </Routes>
             <Footer />
             <ToastContainer 

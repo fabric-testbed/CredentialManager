@@ -46,3 +46,24 @@ export function validateToken(token) {
   }
   return http.post(apiEndpoint + "/validate", data);
 }
+
+// LiteLLM Key Management
+
+export function createLiteLLMKey(keyName, comment) {
+  let url = apiEndpoint + "/create_litellm?";
+  if (keyName) {
+    url += "key_name=" + encodeURIComponent(keyName) + "&";
+  }
+  if (comment) {
+    url += "comment=" + encodeURIComponent(comment);
+  }
+  return http.post(url);
+}
+
+export function getLiteLLMKeys(limit = 200, offset = 0) {
+  return http.get(apiEndpoint + "/litellm_keys?limit=" + limit + "&offset=" + offset);
+}
+
+export function deleteLiteLLMKey(litellmKeyId) {
+  return http.delete(apiEndpoint + "/delete_litellm/" + encodeURIComponent(litellmKeyId));
+}

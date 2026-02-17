@@ -36,7 +36,8 @@ from fabric_cm.credmgr.swagger_server import received_counter, success_counter, 
 from fabric_cm.credmgr.swagger_server.models.token_post import TokenPost
 from fabric_cm.credmgr.swagger_server.response.constants import HTTP_METHOD_POST, TOKENS_REVOKE_URL, \
     TOKENS_REFRESH_URL, TOKENS_CREATE_URL, TOKENS_REVOKES_URL, HTTP_METHOD_GET, TOKENS_REVOKE_LIST_URL, \
-    TOKENS_VALIDATE_URL, TOKENS_DELETE_URL, TOKENS_DELETE_TOKEN_HASH_URL, HTTP_METHOD_DELETE
+    TOKENS_VALIDATE_URL, TOKENS_DELETE_URL, TOKENS_DELETE_TOKEN_HASH_URL, HTTP_METHOD_DELETE, \
+    TOKENS_CREATE_LITELLM_URL, TOKENS_DELETE_LITELLM_URL, TOKENS_LITELLM_KEYS_URL
 from fabric_cm.credmgr.logging import LOG
 from fabric_cm.credmgr.swagger_server.response.cors_response import cors_200, cors_500, cors_400
 from fabric_cm.credmgr.swagger_server.response.decorators import login_required, login_or_token_required
@@ -378,4 +379,113 @@ def tokens_validate_post(body: TokenPost):  # noqa: E501
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_POST, TOKENS_VALIDATE_URL).inc()
+        return cors_500(details=str(ex))
+
+
+@login_required
+def tokens_create_litellm_post(key_name: str = None, comment: str = None,
+                                claims: dict = None):  # noqa: E501
+    """Create a LiteLLM API key
+
+    Request to create a LiteLLM API key for an user  # noqa: E501
+
+    :param key_name: Human-readable name for the key
+    :type key_name: str
+    :param comment: Comment
+    :type comment: str
+    :param claims: claims
+    :type claims: dict
+
+    :rtype: Status200OkNoContent
+    """
+    received_counter.labels(HTTP_METHOD_POST, TOKENS_CREATE_LITELLM_URL).inc()
+    try:
+        credmgr = OAuthCredMgr()
+        result = credmgr.create_litellm_key(cookie=claims.get(OAuthCredMgr.COOKIE),
+                                             key_name=key_name, comment=comment)
+        response_data = Status200OkNoContentData()
+        response_data.details = result
+        response = Status200OkNoContent()
+        response.data = [response_data]
+        response.size = len(response.data)
+        response.status = 200
+        response.type = 'no_content'
+        LOG.debug(response)
+        success_counter.labels(HTTP_METHOD_POST, TOKENS_CREATE_LITELLM_URL).inc()
+        return cors_200(response_body=response)
+    except Exception as ex:
+        LOG.exception(ex)
+        failure_counter.labels(HTTP_METHOD_POST, TOKENS_CREATE_LITELLM_URL).inc()
+        return cors_500(details=str(ex))
+
+
+@login_required
+def tokens_delete_litellm_delete(litellm_key_id: str, claims: dict = None):  # noqa: E501
+    """Delete a LiteLLM API key
+
+    Request to delete a LiteLLM API key  # noqa: E501
+
+    :param litellm_key_id: LiteLLM key identifier
+    :type litellm_key_id: str
+    :param claims:
+    :type claims: dict
+
+    :rtype: Status200OkNoContent
+    """
+    received_counter.labels(HTTP_METHOD_DELETE, TOKENS_DELETE_LITELLM_URL).inc()
+    try:
+        credmgr = OAuthCredMgr()
+        credmgr.delete_litellm_key(litellm_key_id=litellm_key_id,
+                                    user_email=claims.get(OAuthCredMgr.EMAIL),
+                                    cookie=claims.get(OAuthCredMgr.COOKIE))
+        response_data = Status200OkNoContentData()
+        response_data.details = f"LiteLLM key {litellm_key_id} has been successfully deleted"
+        response = Status200OkNoContent()
+        response.data = [response_data]
+        response.size = len(response.data)
+        response.status = 200
+        response.type = 'no_content'
+        LOG.debug(response)
+        success_counter.labels(HTTP_METHOD_DELETE, TOKENS_DELETE_LITELLM_URL).inc()
+        return cors_200(response_body=response)
+    except Exception as ex:
+        LOG.exception(ex)
+        failure_counter.labels(HTTP_METHOD_DELETE, TOKENS_DELETE_LITELLM_URL).inc()
+        return cors_500(details=str(ex))
+
+
+@login_required
+def tokens_litellm_keys_get(limit: int = 200, offset: int = 0,
+                             claims: dict = None):  # noqa: E501
+    """Get LiteLLM API keys for a user
+
+    Get LiteLLM API keys for a user  # noqa: E501
+
+    :param limit: maximum number of results to return per page (1 or more)
+    :type limit: int
+    :param offset: number of items to skip before starting to collect the result set
+    :type offset: int
+    :param claims: claims
+    :type claims: dict
+
+    :rtype: Status200OkNoContent
+    """
+    received_counter.labels(HTTP_METHOD_GET, TOKENS_LITELLM_KEYS_URL).inc()
+    try:
+        credmgr = OAuthCredMgr()
+        keys = credmgr.get_litellm_keys(cookie=claims.get(OAuthCredMgr.COOKIE),
+                                         offset=offset, limit=limit)
+        response_data = Status200OkNoContentData()
+        response_data.details = keys
+        response = Status200OkNoContent()
+        response.data = [response_data]
+        response.size = len(response.data)
+        response.status = 200
+        response.type = 'no_content'
+        LOG.debug(response)
+        success_counter.labels(HTTP_METHOD_GET, TOKENS_LITELLM_KEYS_URL).inc()
+        return cors_200(response_body=response)
+    except Exception as ex:
+        LOG.exception(ex)
+        failure_counter.labels(HTTP_METHOD_GET, TOKENS_LITELLM_KEYS_URL).inc()
         return cors_500(details=str(ex))

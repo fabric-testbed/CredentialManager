@@ -30,8 +30,30 @@ const Header = (props) => {
         />
         FABRIC Credential Manager
       </NavLink>
+      {
+        props.cmUserStatus === "active" &&
+        <div className="d-flex flex-row">
+          <NavLink
+            to="/"
+            className={({ isActive }) =>
+              "btn btn-sm mx-1 " + (isActive ? "btn-primary" : "btn-outline-primary")
+            }
+            end
+          >
+            FABRIC Tokens
+          </NavLink>
+          <NavLink
+            to="/litellm"
+            className={({ isActive }) =>
+              "btn btn-sm mx-1 " + (isActive ? "btn-primary" : "btn-outline-primary")
+            }
+          >
+            LiteLLM Keys
+          </NavLink>
+        </div>
+      }
       <div className="ml-auto">
-        { 
+        {
           props.cmUserStatus === "active" ?
           <form className="form-inline my-2 my-lg-0">
             <NavLink to="/logout">

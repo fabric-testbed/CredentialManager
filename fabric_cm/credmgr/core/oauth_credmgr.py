@@ -47,6 +47,7 @@ from fss_utils.jwt_manager import ValidateCode
 
 from http.client import INTERNAL_SERVER_ERROR, NOT_FOUND
 
+from fabric_cm.credmgr.external_apis.litellm_api import LiteLLMApi, LiteLLMApiError
 from ..common.utils import Utils
 
 
@@ -498,6 +499,180 @@ class OAuthCredMgr:
             DB_OBJ.remove_token(token_hash=t.get(self.TOKEN_HASH))
             log_event(token_hash=t.get(self.TOKEN_HASH), action="delete", project_id=tokens[0].get('project_id'),
                       user_id=tokens[0].get('user_id'), user_email=tokens[0].get('user_email'))
+
+    def _ensure_litellm_user_and_team(self, litellm_api: LiteLLMApi, uuid: str, email: str):
+        """
+        Ensure user exists in LiteLLM and is a member of the configured team.
+        Creates user if not found, adds to team if not already a member.
+        @param litellm_api LiteLLMApi instance
+        @param uuid FABRIC user UUID
+        @param email User's email
+        """
+        # Step 1: Check if user exists in LiteLLM, create if not
+        try:
+            litellm_api.get_user_info(user_id=uuid)
+            LOG.info(f"LiteLLM user {uuid} already exists")
+        except LiteLLMApiError:
+            LOG.info(f"Creating LiteLLM user {uuid} ({email})")
+            litellm_api.create_user(user_id=uuid, user_email=email,
+                                    max_budget=CONFIG_OBJ.get_litellm_default_max_budget())
+
+        # Step 2: Add user to team (LiteLLM handles idempotency)
+        team_id = CONFIG_OBJ.get_litellm_team_id()
+        try:
+            LOG.info(f"Adding LiteLLM user {uuid} to team {team_id}")
+            litellm_api.add_user_to_team(team_id=team_id, user_id=uuid,
+                                         max_budget_in_team=CONFIG_OBJ.get_litellm_default_max_budget())
+        except LiteLLMApiError as e:
+            # User may already be in the team — log and continue
+            LOG.warning(f"Could not add user {uuid} to team {team_id}: {e}")
+
+    def create_litellm_key(self, cookie: str, key_name: str = None, comment: str = None) -> dict:
+        """
+        Create a LiteLLM API key for the user.
+        Full workflow: verify FABRIC project membership → ensure LiteLLM user → add to team → generate key.
+        @param cookie Vouch cookie
+        @param key_name Human-readable name for the key
+        @param comment Comment
+        @return dict with api_key, litellm_key_id, key_name, timestamps
+        """
+        from fabric_cm.credmgr.external_apis.core_api import CoreApi
+
+        core_api = CoreApi(api_server=CONFIG_OBJ.get_core_api_url(), cookie=cookie,
+                           cookie_name=CONFIG_OBJ.get_vouch_cookie_name(),
+                           cookie_domain=CONFIG_OBJ.get_vouch_cookie_domain_name())
+
+        uuid, email = core_api.get_user_id_and_email()
+
+        # Verify user is an active member of the allowed FABRIC project
+        allowed_project = CONFIG_OBJ.get_litellm_allowed_project()
+        projects = core_api.get_user_projects(project_name=allowed_project)
+
+        if not projects:
+            raise OAuthCredMgrError(f"User is not a member of project: {allowed_project}")
+
+        project_found = False
+        for p in projects:
+            if not p.get("active", False):
+                continue
+            memberships = p.get("memberships", {})
+            if memberships.get("is_member") or memberships.get("is_creator") or memberships.get("is_owner"):
+                project_found = True
+                break
+
+        if not project_found:
+            raise OAuthCredMgrError(f"User is not an active member of project: {allowed_project}")
+
+        litellm_api = LiteLLMApi(api_server=CONFIG_OBJ.get_litellm_url(),
+                                 master_key=CONFIG_OBJ.get_litellm_api_key())
+
+        # Ensure user exists in LiteLLM and is part of the team
+        self._ensure_litellm_user_and_team(litellm_api, uuid, email)
+
+        duration = CONFIG_OBJ.get_litellm_default_duration()
+        max_budget = CONFIG_OBJ.get_litellm_default_max_budget()
+        team_id = CONFIG_OBJ.get_litellm_team_id()
+
+        metadata = {'user_email': email, 'fabric_user_uuid': uuid}
+
+        # Generate the key with team_id so it's associated with the team
+        result = litellm_api.generate_key(user_id=uuid, user_email=email, team_id=team_id,
+                                          key_alias=key_name, duration=duration,
+                                          max_budget=max_budget, metadata=metadata)
+
+        api_key = result.get('key')
+        litellm_key_id = result.get('token')
+        expires_at_str = result.get('expires')
+
+        if api_key is None or litellm_key_id is None:
+            raise OAuthCredMgrError("LiteLLM did not return expected key data")
+
+        api_key_hash = self.__generate_sha256(token=api_key)
+        created_at = datetime.now(timezone.utc)
+
+        expires_at = None
+        if expires_at_str is not None:
+            try:
+                expires_at = datetime.fromisoformat(expires_at_str.replace('Z', '+00:00'))
+            except (ValueError, AttributeError):
+                LOG.warning(f"Could not parse LiteLLM expires value: {expires_at_str}")
+
+        # Save record to local DB for audit trail
+        DB_OBJ.add_litellm_key(user_id=uuid, user_email=email, litellm_key_id=litellm_key_id,
+                               litellm_key_name=key_name, api_key_hash=api_key_hash,
+                               created_at=created_at, expires_at=expires_at, comment=comment)
+
+        log_event(token_hash=api_key_hash, action="create_litellm_key", project_id=allowed_project,
+                  user_id=uuid, user_email=email)
+
+        return {
+            'api_key': api_key,
+            'litellm_key_id': litellm_key_id,
+            'key_name': key_name,
+            'created_at': created_at.strftime(OAuthCredMgr.TIME_FORMAT),
+            'expires_at': expires_at.strftime(OAuthCredMgr.TIME_FORMAT) if expires_at else None,
+            'comment': comment
+        }
+
+    def delete_litellm_key(self, litellm_key_id: str, user_email: str, cookie: str):
+        """
+        Delete a LiteLLM API key
+        @param litellm_key_id LiteLLM key identifier
+        @param user_email User's email
+        @param cookie Vouch cookie
+        """
+        litellm_api = LiteLLMApi(api_server=CONFIG_OBJ.get_litellm_url(),
+                                 master_key=CONFIG_OBJ.get_litellm_api_key())
+
+        # Verify the key exists and belongs to user (query LiteLLM directly)
+        try:
+            key_info = litellm_api.get_key_info(key_id=litellm_key_id)
+        except LiteLLMApiError:
+            raise OAuthCredMgrError(http_error_code=NOT_FOUND,
+                                    message=f"LiteLLM key {litellm_key_id} not found")
+
+        # Check ownership: key's user_id must match, or caller must be facility operator
+        key_owner = key_info.get('info', {}).get('user_id', key_info.get('user_id'))
+        from fabric_cm.credmgr.external_apis.core_api import CoreApi
+        core_api = CoreApi(api_server=CONFIG_OBJ.get_core_api_url(), cookie=cookie,
+                           cookie_name=CONFIG_OBJ.get_vouch_cookie_name(),
+                           cookie_domain=CONFIG_OBJ.get_vouch_cookie_domain_name())
+        uuid, email = core_api.get_user_id_and_email()
+
+        if key_owner != uuid:
+            if not Utils.is_facility_operator(cookie=cookie):
+                raise OAuthCredMgrError(f"User {user_email} is not authorized to delete this key")
+
+        litellm_api.delete_key(key_id=litellm_key_id)
+
+        # Also remove from local DB if present
+        try:
+            DB_OBJ.remove_litellm_key(litellm_key_id=litellm_key_id)
+        except Exception:
+            LOG.warning(f"LiteLLM key {litellm_key_id} not found in local DB (may have been created externally)")
+
+        log_event(token_hash=litellm_key_id, action="delete_litellm_key",
+                  project_id=CONFIG_OBJ.get_litellm_allowed_project(),
+                  user_id=uuid, user_email=email)
+
+    def get_litellm_keys(self, cookie: str, offset: int = 0, limit: int = 200) -> list:
+        """
+        Get LiteLLM keys for a user by querying LiteLLM API directly
+        @param cookie Vouch cookie
+        @param offset offset
+        @param limit limit
+        @return list of LiteLLM key records from LiteLLM
+        """
+        from fabric_cm.credmgr.external_apis.core_api import CoreApi
+        core_api = CoreApi(api_server=CONFIG_OBJ.get_core_api_url(), cookie=cookie,
+                           cookie_name=CONFIG_OBJ.get_vouch_cookie_name(),
+                           cookie_domain=CONFIG_OBJ.get_vouch_cookie_domain_name())
+        uuid, email = core_api.get_user_id_and_email()
+
+        litellm_api = LiteLLMApi(api_server=CONFIG_OBJ.get_litellm_url(),
+                                 master_key=CONFIG_OBJ.get_litellm_api_key())
+
+        return litellm_api.list_keys(user_id=uuid)
 
     def validate_token(self, *, token: str) -> Tuple[str, dict]:
         """

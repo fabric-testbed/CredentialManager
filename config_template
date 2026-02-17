@@ -104,3 +104,11 @@ db-user = fabric
 db-password = fabric
 db-name = credmgr
 db-host = credmgr-db:5432
+
+[litellm]
+litellm-url = https://ai.fabric-testbed.net
+litellm-api-key = <MASTER_KEY>
+litellm-allowed-project = FABRIC-LLM
+litellm-team-id = <LITELLM_TEAM_ID>
+litellm-default-max-budget = 10.0
+litellm-default-duration = 30d

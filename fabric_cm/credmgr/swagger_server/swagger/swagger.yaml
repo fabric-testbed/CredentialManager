@@ -640,6 +640,197 @@ paths:
               schema:
                 $ref: '#/components/schemas/status_500_internal_server_error'
       x-openapi-router-controller: fabric_cm.credmgr.swagger_server.controllers.tokens_controller
+  /tokens/create_litellm:
+    post:
+      tags:
+      - tokens
+      summary: Create a LiteLLM API key
+      description: |
+        Request to create a LiteLLM API key for an user
+      operationId: tokens_create_litellm_post
+      parameters:
+      - name: key_name
+        in: query
+        description: Human-readable name for the key
+        required: false
+        style: form
+        explode: true
+        schema:
+          maxLength: 100
+          type: string
+      - name: comment
+        in: query
+        description: Comment
+        required: false
+        style: form
+        explode: true
+        schema:
+          maxLength: 100
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_200_ok_no_content'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_400_bad_request'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_401_unauthorized'
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_403_forbidden'
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_404_not_found'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_500_internal_server_error'
+      x-openapi-router-controller: fabric_cm.credmgr.swagger_server.controllers.tokens_controller
+  /tokens/delete_litellm/{litellm_key_id}:
+    delete:
+      tags:
+      - tokens
+      summary: Delete a LiteLLM API key
+      description: |
+        Request to delete a LiteLLM API key
+      operationId: tokens_delete_litellm_delete
+      parameters:
+      - name: litellm_key_id
+        in: path
+        description: LiteLLM key identifier
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_200_ok_no_content'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_400_bad_request'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_401_unauthorized'
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_403_forbidden'
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_404_not_found'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_500_internal_server_error'
+      x-openapi-router-controller: fabric_cm.credmgr.swagger_server.controllers.tokens_controller
+  /tokens/litellm_keys:
+    get:
+      tags:
+      - tokens
+      summary: Get LiteLLM API keys for a user
+      description: |
+        Get LiteLLM API keys for a user
+      operationId: tokens_litellm_keys_get
+      parameters:
+      - name: limit
+        in: query
+        description: maximum number of results to return per page (1 or more)
+        required: false
+        style: form
+        explode: true
+        schema:
+          maximum: 200
+          minimum: 1
+          type: integer
+          format: int32
+          default: 200
+      - name: offset
+        in: query
+        description: number of items to skip before starting to collect the result
+          set
+        required: false
+        style: form
+        explode: true
+        schema:
+          minimum: 0
+          type: integer
+          format: int32
+          default: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_200_ok_no_content'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_400_bad_request'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_401_unauthorized'
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_403_forbidden'
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_404_not_found'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_500_internal_server_error'
+      x-openapi-router-controller: fabric_cm.credmgr.swagger_server.controllers.tokens_controller
 components:
   schemas:
     status_200_ok_paginated:

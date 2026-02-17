@@ -146,7 +146,7 @@ def tokens_validate_post(body):  # noqa: E501
 
     Validate an identity token issued by Credential Manager  # noqa: E501
 
-    :param body: 
+    :param body:
     :type body: dict | bytes
 
     :rtype: DecodedToken
@@ -154,4 +154,47 @@ def tokens_validate_post(body):  # noqa: E501
     if connexion.request.is_json:
         body = TokenPost.from_dict(connexion.request.get_json())  # noqa: E501
     return rc.tokens_validate_post(body)
+
+
+def tokens_create_litellm_post(key_name=None, comment=None):  # noqa: E501
+    """Create a LiteLLM API key
+
+    Request to create a LiteLLM API key for an user  # noqa: E501
+
+    :param key_name: Human-readable name for the key
+    :type key_name: str
+    :param comment: Comment
+    :type comment: str
+
+    :rtype: Status200OkNoContent
+    """
+    return rc.tokens_create_litellm_post(key_name=key_name, comment=comment)
+
+
+def tokens_delete_litellm_delete(litellm_key_id):  # noqa: E501
+    """Delete a LiteLLM API key
+
+    Request to delete a LiteLLM API key  # noqa: E501
+
+    :param litellm_key_id: LiteLLM key identifier
+    :type litellm_key_id: str
+
+    :rtype: Status200OkNoContent
+    """
+    return rc.tokens_delete_litellm_delete(litellm_key_id=litellm_key_id)
+
+
+def tokens_litellm_keys_get(limit=200, offset=0):  # noqa: E501
+    """Get LiteLLM API keys for a user
+
+    Get LiteLLM API keys for a user  # noqa: E501
+
+    :param limit: maximum number of results to return per page (1 or more)
+    :type limit: int
+    :param offset: number of items to skip before starting to collect the result set
+    :type offset: int
+
+    :rtype: Status200OkNoContent
+    """
+    return rc.tokens_litellm_keys_get(limit=limit, offset=offset)
 
