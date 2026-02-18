@@ -215,7 +215,7 @@ paths:
       - name: redirect_uri
         in: query
         description: Localhost URI to redirect to with token data (e.g. http://localhost:12345/callback)
-        required: true
+        required: false
         style: form
         explode: true
         schema:

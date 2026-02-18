@@ -394,14 +394,17 @@ def _validate_localhost_redirect(redirect_uri: str) -> bool:
             parsed.port is not None)
 
 
-def tokens_create_cli_get(project_id: str, project_name: str, scope: str = None, lifetime: int = 4,
-                          comment: str = None, redirect_uri: str = None):  # noqa: E501
+def tokens_create_cli_get(project_id: str = None, project_name: str = None, scope: str = None,
+                          lifetime: int = 4, comment: str = None,
+                          redirect_uri: str = None):  # noqa: E501
     """Generate tokens for a CLI user and redirect with token data
 
-    Unlike other endpoints this does NOT use @login_required because
-    vouch's publicAccess:true means nginx never returns 401 to trigger
-    the login redirect. Instead we check auth manually and redirect to
-    the vouch login page ourselves when the user is not logged in.
+    Two-phase flow:
+    Phase 1 (not logged in): Store create params in a cookie, redirect to
+        vouch login with a simple URL (just the endpoint path, no query
+        params — avoids vouch URL validation issues).
+    Phase 2 (logged in, after CILogon): Read params back from cookie,
+        create the token, clear cookie, redirect to localhost callback.
 
     :param project_id: Project Id
     :param project_name: Project identified by name
@@ -411,27 +414,58 @@ def tokens_create_cli_get(project_id: str, project_name: str, scope: str = None,
     :param redirect_uri: Localhost URI to redirect to with token data
     :rtype: Redirect 302
     """
+    import json as _json
+
+    COOKIE_NAME = "fabric_cli_params"
+
     received_counter.labels(HTTP_METHOD_GET, TOKENS_CREATE_CLI_URL).inc()
     try:
+        # Phase 2: if params missing from query, try to restore from cookie
+        cli_cookie = request.cookies.get(COOKIE_NAME)
+        if cli_cookie and not redirect_uri:
+            try:
+                saved = _json.loads(cli_cookie)
+                redirect_uri = redirect_uri or saved.get("redirect_uri")
+                project_id = project_id or saved.get("project_id")
+                project_name = project_name or saved.get("project_name")
+                scope = scope or saved.get("scope")
+                lifetime = lifetime if lifetime != 4 else saved.get("lifetime", 4)
+                comment = comment or saved.get("comment")
+            except Exception:
+                LOG.warning("CLI create: failed to parse cli params cookie")
+
         if not redirect_uri or not _validate_localhost_redirect(redirect_uri):
             failure_counter.labels(HTTP_METHOD_GET, TOKENS_CREATE_CLI_URL).inc()
             return cors_400(details="redirect_uri is required and must point to localhost "
                                     "(e.g. http://localhost:12345/callback)")
 
-        # Check authentication manually
+        # Check authentication
         claims = vouch_authorize()
         if claims is None:
-            # User is not logged in — redirect to /cli-login which passes
-            # the url param through to vouch (unlike /login which hardcodes it).
-            # After CILogon auth, vouch redirects the browser back to our
-            # original create_cli URL with the cookie now set.
+            # Phase 1: not logged in — save params in a cookie, then redirect
+            # to vouch login with a simple URL (just this endpoint, no params).
             scheme = request.headers.get('X-Forwarded-Proto', 'https')
             host = request.headers.get('Host', request.host)
-            original_url = f"{scheme}://{host}{request.full_path}"
-            login_url = f"{scheme}://{host}/cli-login?url={quote(original_url, safe='')}"
-            LOG.info(f"CLI create: user not logged in, redirecting to cli-login")
-            return redirect(login_url, code=302)
+            # Simple return URL — just the endpoint path, no query params
+            return_url = f"{scheme}://{host}/credmgr/tokens/create_cli"
+            login_url = f"{scheme}://{host}/cli-login?url={quote(return_url, safe='')}"
 
+            # Save the original params so we can restore them after login
+            cli_params = _json.dumps({
+                "redirect_uri": redirect_uri,
+                "project_id": project_id,
+                "project_name": project_name,
+                "scope": scope,
+                "lifetime": lifetime,
+                "comment": comment,
+            })
+
+            LOG.info("CLI create: user not logged in, saving params and redirecting to login")
+            resp = redirect(login_url, code=302)
+            resp.set_cookie(COOKIE_NAME, cli_params, max_age=600, httponly=True, samesite='Lax')
+            return resp
+
+        # Phase 2: logged in — create token and redirect to CLI callback
         credmgr = OAuthCredMgr()
         remote_addr = connexion.request.remote_addr
         if connexion.request.headers.get('X-Real-IP') is not None:
@@ -454,7 +488,6 @@ def tokens_create_cli_get(project_id: str, project_name: str, scope: str = None,
             "expires_at": token_dict.get("expires_at", ""),
             "state": token_dict.get("state", ""),
         }
-        # Preserve any existing query params in redirect_uri
         existing_params = parse_qs(parsed.query)
         for k, v in existing_params.items():
             if k not in params:
@@ -464,9 +497,12 @@ def tokens_create_cli_get(project_id: str, project_name: str, scope: str = None,
             parsed.params, urlencode(params), parsed.fragment
         ))
 
-        LOG.info(f"CLI token created, redirecting to localhost callback")
+        LOG.info("CLI token created, redirecting to localhost callback")
         success_counter.labels(HTTP_METHOD_GET, TOKENS_CREATE_CLI_URL).inc()
-        return redirect(redirect_url, code=302)
+        resp = redirect(redirect_url, code=302)
+        # Clear the params cookie
+        resp.set_cookie(COOKIE_NAME, '', max_age=0, httponly=True, samesite='Lax')
+        return resp
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_GET, TOKENS_CREATE_CLI_URL).inc()
