@@ -56,6 +56,15 @@ interface ChatboxConfig {
   };
 }
 
+interface ClaudeCodeConfig {
+  env: {
+    ANTHROPIC_BASE_URL: string;
+    ANTHROPIC_AUTH_TOKEN: string;
+    ANTHROPIC_DEFAULT_SONNET_MODEL?: string;
+    ANTHROPIC_DEFAULT_HAIKU_MODEL?: string;
+  };
+}
+
 function getErrorMessage(error: unknown, fallbackMessage: string): string {
   try {
     const err = error as { response?: { data?: { errors?: Array<{ details?: string; message?: string }> } } };
@@ -99,6 +108,9 @@ export default function LLMTokensPage() {
     null
   );
   const [chatboxCopySuccess, setChatboxCopySuccess] = useState(false);
+  const [claudeCodeConfig, setClaudeCodeConfig] =
+    useState<ClaudeCodeConfig | null>(null);
+  const [claudeCodeCopySuccess, setClaudeCodeCopySuccess] = useState(false);
   const [listSuccess, setListSuccess] = useState(false);
   const [keyName, setKeyName] = useState("");
   const [keyComment, setKeyComment] = useState("");
@@ -149,9 +161,41 @@ export default function LLMTokensPage() {
     }
   };
 
+  const generateClaudeCodeConfig = async (
+    apiKey: string
+  ): Promise<ClaudeCodeConfig | null> => {
+    try {
+      const { data: res } = await getLLMModels();
+      const modelData = res.data && res.data[0] && res.data[0].details;
+      const apiHost = modelData?.api_host || "";
+      const models: Array<{ modelId: string }> = modelData?.models || [];
+
+      const config: ClaudeCodeConfig = {
+        env: {
+          ANTHROPIC_BASE_URL: apiHost.endsWith("/v1")
+            ? apiHost
+            : `${apiHost}/v1`,
+          ANTHROPIC_AUTH_TOKEN: apiKey,
+        },
+      };
+
+      // Map first available model as the default
+      if (models.length > 0) {
+        config.env.ANTHROPIC_DEFAULT_SONNET_MODEL = models[0].modelId;
+        config.env.ANTHROPIC_DEFAULT_HAIKU_MODEL =
+          models.length > 1 ? models[1].modelId : models[0].modelId;
+      }
+
+      return config;
+    } catch {
+      toast.warning("Could not fetch model list for Claude Code config.");
+      return null;
+    }
+  };
+
   const handleCreateKey = async (
     e: React.FormEvent,
-    withChatboxConfig = false
+    configType: "none" | "chatbox" | "claude" = "none"
   ) => {
     e.preventDefault();
     setShowFullPageSpinner(true);
@@ -164,16 +208,23 @@ export default function LLMTokensPage() {
       );
       const keyData = res.data && res.data[0] && res.data[0].details;
 
-      let config: ChatboxConfig | null = null;
-      if (withChatboxConfig && keyData?.api_key) {
-        config = await generateChatboxConfig(keyData.api_key);
+      let chatboxCfg: ChatboxConfig | null = null;
+      let claudeCfg: ClaudeCodeConfig | null = null;
+
+      if (configType === "chatbox" && keyData?.api_key) {
+        chatboxCfg = await generateChatboxConfig(keyData.api_key);
+      }
+      if (configType === "claude" && keyData?.api_key) {
+        claudeCfg = await generateClaudeCodeConfig(keyData.api_key);
       }
 
       setCreateSuccess(true);
       setCreateCopySuccess(false);
       setCreatedKey(keyData);
-      setChatboxConfig(config);
+      setChatboxConfig(chatboxCfg);
       setChatboxCopySuccess(false);
+      setClaudeCodeConfig(claudeCfg);
+      setClaudeCodeCopySuccess(false);
       setShowFullPageSpinner(false);
       setSpinnerMessage("");
       listKeys();
@@ -232,6 +283,32 @@ export default function LLMTokensPage() {
     URL.revokeObjectURL(url);
   };
 
+  const handleCopyClaudeCodeConfig = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (claudeCodeConfig) {
+      const success = await copyToClipboard(
+        JSON.stringify(claudeCodeConfig, null, 2)
+      );
+      if (success) setClaudeCodeCopySuccess(true);
+    }
+  };
+
+  const handleDownloadClaudeCodeConfig = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!claudeCodeConfig) return;
+    const blob = new Blob([JSON.stringify(claudeCodeConfig, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "claude-code-settings.json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   if (showFullPageSpinner) {
     return (
       <div className="container mx-auto min-h-[80vh] mt-8 mb-8">
@@ -284,11 +361,11 @@ export default function LLMTokensPage() {
             <option value={30}>30 days</option>
           </select>
         </div>
-        <div className="col-span-4 flex justify-end gap-2">
+        <div className="col-span-4 flex flex-wrap justify-end gap-2">
           <Button
             variant="outline"
             disabled={createSuccess}
-            onClick={(e) => handleCreateKey(e, false)}
+            onClick={(e) => handleCreateKey(e, "none")}
             className="border-fabric-success text-fabric-success hover:bg-fabric-success/10"
           >
             Create Token
@@ -296,10 +373,18 @@ export default function LLMTokensPage() {
           <Button
             variant="outline"
             disabled={createSuccess}
-            onClick={(e) => handleCreateKey(e, true)}
+            onClick={(e) => handleCreateKey(e, "chatbox")}
             className="border-fabric-primary text-fabric-primary hover:bg-fabric-primary/10"
           >
-            Create Token &amp; Chatbox Config
+            + Chatbox Config
+          </Button>
+          <Button
+            variant="outline"
+            disabled={createSuccess}
+            onClick={(e) => handleCreateKey(e, "claude")}
+            className="border-fabric-dark text-fabric-dark hover:bg-fabric-dark/10"
+          >
+            + Claude Code Config
           </Button>
         </div>
       </div>
@@ -380,6 +465,53 @@ export default function LLMTokensPage() {
           <div className="bg-fabric-info/10 border border-fabric-info/30 text-fabric-dark rounded p-4 mb-2 mt-2">
             Import this configuration into Chatbox to connect to FABRIC AI
             services.
+          </div>
+        </div>
+      )}
+
+      {/* Claude Code config display */}
+      {createSuccess && claudeCodeConfig && (
+        <div className="mt-2">
+          <Card>
+            <CardHeader className="flex flex-row gap-2 bg-muted/50 py-3 px-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCopyClaudeCodeConfig}
+                className="border-fabric-primary text-fabric-primary"
+              >
+                Copy Claude Code Config
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDownloadClaudeCodeConfig}
+              >
+                Download JSON
+              </Button>
+            </CardHeader>
+            <CardContent className="pt-4">
+              <Label>Claude Code Configuration (~/.claude/settings.json)</Label>
+              <Textarea
+                id="claudeCodeConfigTextArea"
+                defaultValue={JSON.stringify(claudeCodeConfig, null, 2)}
+                rows={10}
+                readOnly
+                className="font-mono text-sm"
+              />
+            </CardContent>
+          </Card>
+          {claudeCodeCopySuccess && (
+            <Alert className="bg-fabric-success/10 border-fabric-success/30 mt-2">
+              <AlertDescription>
+                Claude Code config copied to clipboard!
+              </AlertDescription>
+            </Alert>
+          )}
+          <div className="bg-fabric-info/10 border border-fabric-info/30 text-fabric-dark rounded p-4 mb-2 mt-2">
+            Save this to <code className="bg-muted px-1 rounded">~/.claude/settings.json</code> to
+            configure Claude Code to use FABRIC AI services. Note: Claude Desktop
+            does not support custom API providers directly.
           </div>
         </div>
       )}
