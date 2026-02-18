@@ -307,11 +307,24 @@ export default function LLMTokensPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "claude-code-settings.json";
+    a.download = "fabric-settings.json";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  const resetCreateForm = () => {
+    setCreateSuccess(false);
+    setCreateCopySuccess(false);
+    setCreatedKey(null);
+    setChatboxConfig(null);
+    setChatboxCopySuccess(false);
+    setClaudeCodeConfig(null);
+    setClaudeCodeCopySuccess(false);
+    setKeyName("");
+    setKeyComment("");
+    setKeyDuration(30);
   };
 
   if (showFullPageSpinner) {
@@ -422,8 +435,16 @@ export default function LLMTokensPage() {
               <AlertDescription>API key copied to clipboard!</AlertDescription>
             </Alert>
           )}
-          <div className="bg-fabric-warning/10 border border-fabric-warning/30 text-fabric-dark rounded p-4 mb-2 mt-2">
-            Save this API key now. It will not be shown again.
+          <div className="bg-fabric-warning/10 border border-fabric-warning/30 text-fabric-dark rounded p-4 mb-2 mt-2 flex items-center justify-between">
+            <span>Save this API key now. It will not be shown again.</span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={resetCreateForm}
+              className="border-fabric-success text-fabric-success hover:bg-fabric-success/10 ml-4 shrink-0"
+            >
+              Create Another Token
+            </Button>
           </div>
         </div>
       )}
@@ -496,7 +517,7 @@ export default function LLMTokensPage() {
               </Button>
             </CardHeader>
             <CardContent className="pt-4">
-              <Label>Claude Code Configuration (~/.claude/settings.json)</Label>
+              <Label>Claude Code Configuration (~/.claude/fabric-settings.json)</Label>
               <Textarea
                 id="claudeCodeConfigTextArea"
                 defaultValue={JSON.stringify(claudeCodeConfig, null, 2)}
@@ -514,8 +535,9 @@ export default function LLMTokensPage() {
             </Alert>
           )}
           <div className="bg-fabric-info/10 border border-fabric-info/30 text-fabric-dark rounded p-4 mb-2 mt-2">
-            Save this to <code className="bg-muted px-1 rounded">~/.claude/settings.json</code> to
-            configure Claude Code to use FABRIC AI services. Note: Claude Desktop
+            Save this to <code className="bg-muted px-1 rounded">~/.claude/fabric-settings.json</code> and
+            run <code className="bg-muted px-1 rounded">claude --config ~/.claude/fabric-settings.json</code> to
+            use FABRIC AI services with Claude Code. Note: Claude Desktop
             does not support custom API providers directly.
           </div>
         </div>

@@ -473,10 +473,24 @@ export default function CredentialManagerPage() {
                   />
                 </CardContent>
               </Card>
-              <div className="bg-fabric-warning/10 border border-fabric-warning/30 text-fabric-dark rounded p-4 mb-2 mt-2">
-                If you need to use multiple tokens in parallel in e.g. separate
-                API sessions, please log out and log back in to generate new
-                tokens.
+              <div className="bg-fabric-warning/10 border border-fabric-warning/30 text-fabric-dark rounded p-4 mb-2 mt-2 flex items-center justify-between">
+                <span>
+                  If you need to use multiple tokens in parallel in e.g. separate
+                  API sessions, please log out and log back in to generate new
+                  tokens.
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setCreateSuccess(false);
+                    setCreateCopySuccess(false);
+                    setCreateTokenResult("");
+                  }}
+                  className="border-fabric-success text-fabric-success hover:bg-fabric-success/10 ml-4 shrink-0"
+                >
+                  Create Another Token
+                </Button>
               </div>
             </div>
           )}
