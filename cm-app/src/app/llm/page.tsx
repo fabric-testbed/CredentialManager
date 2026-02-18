@@ -60,8 +60,13 @@ interface ClaudeCodeConfig {
   env: {
     ANTHROPIC_BASE_URL: string;
     ANTHROPIC_AUTH_TOKEN: string;
-    ANTHROPIC_DEFAULT_SONNET_MODEL?: string;
-    ANTHROPIC_DEFAULT_HAIKU_MODEL?: string;
+    API_TIMEOUT_MS: string;
+    CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: number;
+    ANTHROPIC_MODEL: string;
+    ANTHROPIC_SMALL_FAST_MODEL: string;
+    ANTHROPIC_DEFAULT_SONNET_MODEL: string;
+    ANTHROPIC_DEFAULT_OPUS_MODEL: string;
+    ANTHROPIC_DEFAULT_HAIKU_MODEL: string;
   };
 }
 
@@ -169,24 +174,24 @@ export default function LLMTokensPage() {
       const modelData = res.data && res.data[0] && res.data[0].details;
       const apiHost = modelData?.api_host || "";
       const models: Array<{ modelId: string }> = modelData?.models || [];
+      const defaultModel =
+        models.length > 0 ? models[0].modelId : "default_model";
 
-      const config: ClaudeCodeConfig = {
+      return {
         env: {
-          ANTHROPIC_BASE_URL: apiHost.endsWith("/v1")
+          ANTHROPIC_BASE_URL: apiHost.endsWith("/")
             ? apiHost
-            : `${apiHost}/v1`,
+            : `${apiHost}/`,
           ANTHROPIC_AUTH_TOKEN: apiKey,
+          API_TIMEOUT_MS: "3000000",
+          CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: 1,
+          ANTHROPIC_MODEL: defaultModel,
+          ANTHROPIC_SMALL_FAST_MODEL: defaultModel,
+          ANTHROPIC_DEFAULT_SONNET_MODEL: defaultModel,
+          ANTHROPIC_DEFAULT_OPUS_MODEL: defaultModel,
+          ANTHROPIC_DEFAULT_HAIKU_MODEL: defaultModel,
         },
       };
-
-      // Map first available model as the default
-      if (models.length > 0) {
-        config.env.ANTHROPIC_DEFAULT_SONNET_MODEL = models[0].modelId;
-        config.env.ANTHROPIC_DEFAULT_HAIKU_MODEL =
-          models.length > 1 ? models[1].modelId : models[0].modelId;
-      }
-
-      return config;
     } catch {
       toast.warning("Could not fetch model list for Claude Code config.");
       return null;
