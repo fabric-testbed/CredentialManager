@@ -198,3 +198,14 @@ def tokens_litellm_keys_get(limit=200, offset=0):  # noqa: E501
     """
     return rc.tokens_litellm_keys_get(limit=limit, offset=offset)
 
+
+def tokens_litellm_models_get():  # noqa: E501
+    """Get available LLM models
+
+    Get available LLM models and API host information  # noqa: E501
+
+
+    :rtype: Status200OkNoContent
+    """
+    return rc.tokens_litellm_models_get()
+

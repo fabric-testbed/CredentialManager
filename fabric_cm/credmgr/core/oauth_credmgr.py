@@ -678,6 +678,25 @@ class OAuthCredMgr:
 
         return litellm_api.list_keys(user_id=uuid)
 
+    def get_litellm_models(self) -> dict:
+        """
+        Get available LiteLLM models and the LiteLLM API URL.
+        @return dict with 'api_host' and 'models' list
+        """
+        litellm_api = LiteLLMApi(api_server=CONFIG_OBJ.get_litellm_url(),
+                                 master_key=CONFIG_OBJ.get_litellm_api_key())
+
+        models = litellm_api.list_models()
+        model_list = []
+        for m in models:
+            model_id = m.get('id', '')
+            model_list.append({'modelId': model_id})
+
+        return {
+            'api_host': CONFIG_OBJ.get_litellm_url(),
+            'models': model_list
+        }
+
     def validate_token(self, *, token: str) -> Tuple[str, dict]:
         """
         Validate a token

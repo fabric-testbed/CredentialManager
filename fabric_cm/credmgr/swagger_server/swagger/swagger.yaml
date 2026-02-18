@@ -831,6 +831,40 @@ paths:
               schema:
                 $ref: '#/components/schemas/status_500_internal_server_error'
       x-openapi-router-controller: fabric_cm.credmgr.swagger_server.controllers.tokens_controller
+  /tokens/litellm_models:
+    get:
+      tags:
+      - tokens
+      summary: Get available LLM models
+      description: |
+        Get available LLM models and API host information
+      operationId: tokens_litellm_models_get
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_200_ok_no_content'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_400_bad_request'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_401_unauthorized'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_500_internal_server_error'
+      x-openapi-router-controller: fabric_cm.credmgr.swagger_server.controllers.tokens_controller
 components:
   schemas:
     status_200_ok_paginated:

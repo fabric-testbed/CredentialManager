@@ -4,10 +4,9 @@ import Card from 'react-bootstrap/Card';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Alert from 'react-bootstrap/Alert';
-import Badge from 'react-bootstrap/Badge';
 import SpinnerFullPage from "../components/SpinnerFullPage.jsx";
 import toLocaleTime from "../utils/toLocaleTime";
-import { createLiteLLMKey, getLiteLLMKeys, deleteLiteLLMKey } from "../services/credentialManagerService.js";
+import { createLiteLLMKey, getLiteLLMKeys, deleteLiteLLMKey, getLiteLLMModels } from "../services/credentialManagerService.js";
 import { toast } from "react-toastify";
 
 class LiteLLMKeysPage extends React.Component {
@@ -16,6 +15,8 @@ class LiteLLMKeysPage extends React.Component {
     createdKey: null,
     createSuccess: false,
     createCopySuccess: false,
+    chatboxConfig: null,
+    chatboxCopySuccess: false,
     listSuccess: false,
     keyName: "",
     keyComment: "",
@@ -45,31 +46,67 @@ class LiteLLMKeysPage extends React.Component {
       const keysData = res.data && res.data[0] && res.data[0].details;
       this.setState({ listSuccess: true, keys: Array.isArray(keysData) ? keysData : [] });
     } catch (ex) {
-      const errorMessage = this.getErrorMessage(ex, "Failed to load LiteLLM keys.");
+      const errorMessage = this.getErrorMessage(ex, "Failed to load LLM tokens.");
       toast.error(errorMessage);
     }
   }
 
-  createKey = async (e) => {
+  generateChatboxConfig = async (apiKey) => {
+    try {
+      const { data: res } = await getLiteLLMModels();
+      const modelData = res.data && res.data[0] && res.data[0].details;
+      const apiHost = modelData?.api_host || "";
+      const models = (modelData?.models || []).map(m => ({
+        modelId: m.modelId,
+        capabilities: ["reasoning", "tool_use"],
+        contextWindow: 131072
+      }));
+
+      const config = {
+        id: `fabric-llm-${crypto.randomUUID()}`,
+        name: "FABRIC AI",
+        type: "openai",
+        settings: {
+          apiHost: apiHost,
+          apiKey: apiKey,
+          models: models
+        }
+      };
+      return config;
+    } catch (ex) {
+      toast.warning("Could not fetch model list for Chatbox config.");
+      return null;
+    }
+  }
+
+  createKey = async (e, withChatboxConfig = false) => {
     e.preventDefault();
-    this.setState({ showFullPageSpinner: true, spinnerMessage: "Creating LiteLLM API Key..." });
+    this.setState({ showFullPageSpinner: true, spinnerMessage: "Creating LLM Token..." });
     try {
       const { keyName, keyComment } = this.state;
       const { data: res } = await createLiteLLMKey(keyName || null, keyComment || null);
       const keyData = res.data && res.data[0] && res.data[0].details;
+
+      let chatboxConfig = null;
+      if (withChatboxConfig && keyData?.api_key) {
+        chatboxConfig = await this.generateChatboxConfig(keyData.api_key);
+      }
+
       this.setState({
         createSuccess: true,
         createCopySuccess: false,
         createdKey: keyData,
+        chatboxConfig: chatboxConfig,
+        chatboxCopySuccess: false,
         showFullPageSpinner: false,
         spinnerMessage: ""
       }, () => {
         this.listKeys();
       });
-      toast.success("LiteLLM API key created successfully.");
+      toast.success("LLM token created successfully.");
     } catch (ex) {
       this.setState({ showFullPageSpinner: false, spinnerMessage: "" });
-      const errorMessage = this.getErrorMessage(ex, "Failed to create LiteLLM API key.");
+      const errorMessage = this.getErrorMessage(ex, "Failed to create LLM token.");
       toast.error(errorMessage);
     }
   }
@@ -78,10 +115,10 @@ class LiteLLMKeysPage extends React.Component {
     e.preventDefault();
     try {
       await deleteLiteLLMKey(keyId);
-      toast.success("LiteLLM API key deleted successfully.");
+      toast.success("LLM token deleted successfully.");
       this.listKeys();
     } catch (ex) {
-      const errorMessage = this.getErrorMessage(ex, "Failed to delete LiteLLM API key.");
+      const errorMessage = this.getErrorMessage(ex, "Failed to delete LLM token.");
       toast.error(errorMessage);
     }
   }
@@ -97,9 +134,36 @@ class LiteLLMKeysPage extends React.Component {
     }
   }
 
+  copyChatboxConfig = (e) => {
+    e.preventDefault();
+    const textarea = document.getElementById("chatboxConfigTextArea");
+    if (textarea) {
+      textarea.select();
+      document.execCommand('copy');
+      e.target.focus();
+      this.setState({ chatboxCopySuccess: true });
+    }
+  }
+
+  downloadChatboxConfig = (e) => {
+    e.preventDefault();
+    const { chatboxConfig } = this.state;
+    if (!chatboxConfig) return;
+    const blob = new Blob([JSON.stringify(chatboxConfig, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'chatbox-fabric-ai.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
   render() {
-    const { keys, createdKey, createSuccess, createCopySuccess, listSuccess,
-      keyName, keyComment, showFullPageSpinner, spinnerMessage } = this.state;
+    const { keys, createdKey, createSuccess, createCopySuccess, chatboxConfig,
+      chatboxCopySuccess, listSuccess, keyName, keyComment,
+      showFullPageSpinner, spinnerMessage } = this.state;
 
     if (showFullPageSpinner) {
       return (
@@ -115,10 +179,10 @@ class LiteLLMKeysPage extends React.Component {
     return (
       <div className="container">
         <div className="alert alert-primary mb-2 mt-4" role="alert">
-          Manage your LiteLLM API keys for accessing FABRIC AI services.
-          You must be a member of the FABRIC-LLM project to create keys.
+          Manage your LLM tokens for accessing FABRIC AI services.
+          You must be a member of the FABRIC-LLM project to create tokens.
         </div>
-        <h3 className="my-3">Create LiteLLM API Key</h3>
+        <h3 className="my-3">Create LLM Token</h3>
         <Form>
           <Row>
             <Col xs={4}>
@@ -147,11 +211,18 @@ class LiteLLMKeysPage extends React.Component {
             </Col>
             <Col xs={4} className="d-flex flex-row align-items-center justify-content-end">
               <button
-                className="btn btn-outline-success mt-4"
+                className="btn btn-outline-success mt-4 mr-2"
                 disabled={createSuccess}
-                onClick={e => this.createKey(e)}
+                onClick={e => this.createKey(e, false)}
               >
-                Create Key
+                Create Token
+              </button>
+              <button
+                className="btn btn-outline-primary mt-4"
+                disabled={createSuccess}
+                onClick={e => this.createKey(e, true)}
+              >
+                Create Token &amp; Chatbox Config
               </button>
             </Col>
           </Row>
@@ -178,19 +249,60 @@ class LiteLLMKeysPage extends React.Component {
                   </Form.Group>
                 </Card.Body>
               </Card>
-              <div className="alert alert-warning mb-2" role="alert">
+              {createCopySuccess && (
+                <Alert variant="success" className="mt-2">
+                  API key copied to clipboard!
+                </Alert>
+              )}
+              <div className="alert alert-warning mb-2 mt-2" role="alert">
                 Save this API key now. It will not be shown again.
               </div>
             </div>
           )}
-          {createCopySuccess && (
-            <Alert variant="success">
-              API key copied to clipboard!
-            </Alert>
+          {createSuccess && chatboxConfig && (
+            <div className="mt-2">
+              <Card>
+                <Card.Header className="d-flex flex-row bg-light">
+                  <button
+                    onClick={e => this.copyChatboxConfig(e)}
+                    className="btn btn-sm btn-outline-primary mr-2"
+                  >
+                    Copy Chatbox Config
+                  </button>
+                  <button
+                    onClick={e => this.downloadChatboxConfig(e)}
+                    className="btn btn-sm btn-outline-secondary"
+                  >
+                    Download JSON
+                  </button>
+                </Card.Header>
+                <Card.Body>
+                  <Form.Group>
+                    <Form.Label>Chatbox Configuration</Form.Label>
+                    <Form.Control
+                      as="textarea"
+                      id="chatboxConfigTextArea"
+                      defaultValue={JSON.stringify(chatboxConfig, null, 2)}
+                      rows={12}
+                      readOnly
+                      style={{fontFamily: "monospace", fontSize: "0.85em"}}
+                    />
+                  </Form.Group>
+                </Card.Body>
+              </Card>
+              {chatboxCopySuccess && (
+                <Alert variant="success" className="mt-2">
+                  Chatbox config copied to clipboard!
+                </Alert>
+              )}
+              <div className="alert alert-info mb-2 mt-2" role="alert">
+                Import this configuration into Chatbox to connect to FABRIC AI services.
+              </div>
+            </div>
           )}
         </Form>
 
-        <h3 className="my-3">Your LiteLLM API Keys</h3>
+        <h3 className="my-3">Your LLM Tokens</h3>
         <div className="mt-3">
           {
             listSuccess && keys.length > 0 ?
@@ -248,7 +360,7 @@ class LiteLLMKeysPage extends React.Component {
             </table>
             :
             <div className="alert alert-primary my-2">
-              No LiteLLM API keys found.
+              No LLM tokens found.
             </div>
           }
         </div>

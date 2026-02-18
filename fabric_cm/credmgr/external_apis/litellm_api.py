@@ -209,6 +209,26 @@ class LiteLLMApi:
         LOG.debug(f"LiteLLM delete_key completed: status_code={response.status_code}")
         return response.json()
 
+    # ---- Model Management ----
+
+    def list_models(self) -> list:
+        """
+        List all available models from LiteLLM via OpenAI-compatible /models endpoint.
+        @return list of model dicts
+        """
+        url = f'{self.api_server}/models'
+
+        LOG.debug(f"LiteLLM list_models request: {url}")
+        response = self.session.get(url)
+
+        if response.status_code != 200:
+            raise LiteLLMApiError(f"LiteLLM API error listing models: status_code={response.status_code} "
+                                  f"message={response.text}")
+
+        LOG.debug(f"LiteLLM list_models completed: status_code={response.status_code}")
+        result = response.json()
+        return result.get('data', [])
+
     def get_key_info(self, key_id: str) -> dict:
         """
         Get info about a LiteLLM API key

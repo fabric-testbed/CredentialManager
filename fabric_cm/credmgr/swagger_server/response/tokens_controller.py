@@ -37,7 +37,7 @@ from fabric_cm.credmgr.swagger_server.models.token_post import TokenPost
 from fabric_cm.credmgr.swagger_server.response.constants import HTTP_METHOD_POST, TOKENS_REVOKE_URL, \
     TOKENS_REFRESH_URL, TOKENS_CREATE_URL, TOKENS_REVOKES_URL, HTTP_METHOD_GET, TOKENS_REVOKE_LIST_URL, \
     TOKENS_VALIDATE_URL, TOKENS_DELETE_URL, TOKENS_DELETE_TOKEN_HASH_URL, HTTP_METHOD_DELETE, \
-    TOKENS_CREATE_LITELLM_URL, TOKENS_DELETE_LITELLM_URL, TOKENS_LITELLM_KEYS_URL
+    TOKENS_CREATE_LITELLM_URL, TOKENS_DELETE_LITELLM_URL, TOKENS_LITELLM_KEYS_URL, TOKENS_LITELLM_MODELS_URL
 from fabric_cm.credmgr.logging import LOG
 from fabric_cm.credmgr.swagger_server.response.cors_response import cors_200, cors_500, cors_400
 from fabric_cm.credmgr.swagger_server.response.decorators import login_required, login_or_token_required
@@ -488,4 +488,35 @@ def tokens_litellm_keys_get(limit: int = 200, offset: int = 0,
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_GET, TOKENS_LITELLM_KEYS_URL).inc()
+        return cors_500(details=str(ex))
+
+
+@login_required
+def tokens_litellm_models_get(claims: dict = None):  # noqa: E501
+    """Get available LLM models
+
+    Get available LLM models and API host information  # noqa: E501
+
+    :param claims: claims
+    :type claims: dict
+
+    :rtype: Status200OkNoContent
+    """
+    received_counter.labels(HTTP_METHOD_GET, TOKENS_LITELLM_MODELS_URL).inc()
+    try:
+        credmgr = OAuthCredMgr()
+        result = credmgr.get_litellm_models()
+        response_data = Status200OkNoContentData()
+        response_data.details = result
+        response = Status200OkNoContent()
+        response.data = [response_data]
+        response.size = len(response.data)
+        response.status = 200
+        response.type = 'no_content'
+        LOG.debug(response)
+        success_counter.labels(HTTP_METHOD_GET, TOKENS_LITELLM_MODELS_URL).inc()
+        return cors_200(response_body=response)
+    except Exception as ex:
+        LOG.exception(ex)
+        failure_counter.labels(HTTP_METHOD_GET, TOKENS_LITELLM_MODELS_URL).inc()
         return cors_500(details=str(ex))

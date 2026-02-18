@@ -48,7 +48,7 @@ const Header = (props) => {
               "btn btn-sm mx-1 " + (isActive ? "btn-primary" : "btn-outline-primary")
             }
           >
-            LiteLLM Keys
+            LLM Tokens
           </NavLink>
         </div>
       }

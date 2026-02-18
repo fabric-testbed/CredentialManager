@@ -67,3 +67,7 @@ export function getLiteLLMKeys(limit = 200, offset = 0) {
 export function deleteLiteLLMKey(litellmKeyId) {
   return http.delete(apiEndpoint + "/delete_litellm/" + encodeURIComponent(litellmKeyId));
 }
+
+export function getLiteLLMModels() {
+  return http.get(apiEndpoint + "/litellm_models");
+}

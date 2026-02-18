@@ -35,6 +35,7 @@ TOKENS_DELETE_TOKEN_HASH_URL = '/tokens/delete/{token_hash}'
 TOKENS_CREATE_LITELLM_URL = '/tokens/create_litellm'
 TOKENS_DELETE_LITELLM_URL = '/tokens/delete_litellm/{litellm_key_id}'
 TOKENS_LITELLM_KEYS_URL = '/tokens/litellm_keys'
+TOKENS_LITELLM_MODELS_URL = '/tokens/litellm_models'
 
 HTTP_METHOD_GET = 'get'
 HTTP_METHOD_POST = 'post'
