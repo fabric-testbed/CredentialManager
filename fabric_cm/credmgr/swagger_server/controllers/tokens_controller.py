@@ -156,38 +156,40 @@ def tokens_validate_post(body):  # noqa: E501
     return rc.tokens_validate_post(body)
 
 
-def tokens_create_litellm_post(key_name=None, comment=None):  # noqa: E501
-    """Create a LiteLLM API key
+def tokens_create_llm_post(key_name=None, comment=None, duration=30):  # noqa: E501
+    """Create an LLM token
 
-    Request to create a LiteLLM API key for an user  # noqa: E501
+    Request to create an LLM token for an user  # noqa: E501
 
     :param key_name: Human-readable name for the key
     :type key_name: str
     :param comment: Comment
     :type comment: str
+    :param duration: Token duration in days (1-30, default 30)
+    :type duration: int
 
     :rtype: Status200OkNoContent
     """
-    return rc.tokens_create_litellm_post(key_name=key_name, comment=comment)
+    return rc.tokens_create_llm_post(key_name=key_name, comment=comment, duration=duration)
 
 
-def tokens_delete_litellm_delete(litellm_key_id):  # noqa: E501
-    """Delete a LiteLLM API key
+def tokens_delete_llm_delete(llm_key_id):  # noqa: E501
+    """Delete an LLM token
 
-    Request to delete a LiteLLM API key  # noqa: E501
+    Request to delete an LLM token  # noqa: E501
 
-    :param litellm_key_id: LiteLLM key identifier
-    :type litellm_key_id: str
+    :param llm_key_id: LLM key identifier
+    :type llm_key_id: str
 
     :rtype: Status200OkNoContent
     """
-    return rc.tokens_delete_litellm_delete(litellm_key_id=litellm_key_id)
+    return rc.tokens_delete_llm_delete(llm_key_id=llm_key_id)
 
 
-def tokens_litellm_keys_get(limit=200, offset=0):  # noqa: E501
-    """Get LiteLLM API keys for a user
+def tokens_llm_keys_get(limit=200, offset=0):  # noqa: E501
+    """Get LLM tokens for a user
 
-    Get LiteLLM API keys for a user  # noqa: E501
+    Get LLM tokens for a user  # noqa: E501
 
     :param limit: maximum number of results to return per page (1 or more)
     :type limit: int
@@ -196,10 +198,10 @@ def tokens_litellm_keys_get(limit=200, offset=0):  # noqa: E501
 
     :rtype: Status200OkNoContent
     """
-    return rc.tokens_litellm_keys_get(limit=limit, offset=offset)
+    return rc.tokens_llm_keys_get(limit=limit, offset=offset)
 
 
-def tokens_litellm_models_get():  # noqa: E501
+def tokens_llm_models_get():  # noqa: E501
     """Get available LLM models
 
     Get available LLM models and API host information  # noqa: E501
@@ -207,5 +209,5 @@ def tokens_litellm_models_get():  # noqa: E501
 
     :rtype: Status200OkNoContent
     """
-    return rc.tokens_litellm_models_get()
+    return rc.tokens_llm_models_get()
 

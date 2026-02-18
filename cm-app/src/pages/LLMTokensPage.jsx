@@ -6,10 +6,10 @@ import Col from 'react-bootstrap/Col';
 import Alert from 'react-bootstrap/Alert';
 import SpinnerFullPage from "../components/SpinnerFullPage.jsx";
 import toLocaleTime from "../utils/toLocaleTime";
-import { createLiteLLMKey, getLiteLLMKeys, deleteLiteLLMKey, getLiteLLMModels } from "../services/credentialManagerService.js";
+import { createLLMKey, getLLMKeys, deleteLLMKey, getLLMModels } from "../services/credentialManagerService.js";
 import { toast } from "react-toastify";
 
-class LiteLLMKeysPage extends React.Component {
+class LLMTokensPage extends React.Component {
   state = {
     keys: [],
     createdKey: null,
@@ -20,6 +20,7 @@ class LiteLLMKeysPage extends React.Component {
     listSuccess: false,
     keyName: "",
     keyComment: "",
+    keyDuration: 30,
     showFullPageSpinner: false,
     spinnerMessage: ""
   }
@@ -42,7 +43,7 @@ class LiteLLMKeysPage extends React.Component {
 
   listKeys = async () => {
     try {
-      const { data: res } = await getLiteLLMKeys();
+      const { data: res } = await getLLMKeys();
       const keysData = res.data && res.data[0] && res.data[0].details;
       this.setState({ listSuccess: true, keys: Array.isArray(keysData) ? keysData : [] });
     } catch (ex) {
@@ -53,7 +54,7 @@ class LiteLLMKeysPage extends React.Component {
 
   generateChatboxConfig = async (apiKey) => {
     try {
-      const { data: res } = await getLiteLLMModels();
+      const { data: res } = await getLLMModels();
       const modelData = res.data && res.data[0] && res.data[0].details;
       const apiHost = modelData?.api_host || "";
       const models = (modelData?.models || []).map(m => ({
@@ -83,8 +84,8 @@ class LiteLLMKeysPage extends React.Component {
     e.preventDefault();
     this.setState({ showFullPageSpinner: true, spinnerMessage: "Creating LLM Token..." });
     try {
-      const { keyName, keyComment } = this.state;
-      const { data: res } = await createLiteLLMKey(keyName || null, keyComment || null);
+      const { keyName, keyComment, keyDuration } = this.state;
+      const { data: res } = await createLLMKey(keyName || null, keyComment || null, keyDuration);
       const keyData = res.data && res.data[0] && res.data[0].details;
 
       let chatboxConfig = null;
@@ -114,7 +115,7 @@ class LiteLLMKeysPage extends React.Component {
   deleteKey = async (e, keyId) => {
     e.preventDefault();
     try {
-      await deleteLiteLLMKey(keyId);
+      await deleteLLMKey(keyId);
       toast.success("LLM token deleted successfully.");
       this.listKeys();
     } catch (ex) {
@@ -125,7 +126,7 @@ class LiteLLMKeysPage extends React.Component {
 
   copyApiKey = (e) => {
     e.preventDefault();
-    const textarea = document.getElementById("litellmApiKeyTextArea");
+    const textarea = document.getElementById("llmApiKeyTextArea");
     if (textarea) {
       textarea.select();
       document.execCommand('copy');
@@ -162,7 +163,7 @@ class LiteLLMKeysPage extends React.Component {
 
   render() {
     const { keys, createdKey, createSuccess, createCopySuccess, chatboxConfig,
-      chatboxCopySuccess, listSuccess, keyName, keyComment,
+      chatboxCopySuccess, listSuccess, keyName, keyComment, keyDuration,
       showFullPageSpinner, spinnerMessage } = this.state;
 
     if (showFullPageSpinner) {
@@ -185,7 +186,7 @@ class LiteLLMKeysPage extends React.Component {
         <h3 className="my-3">Create LLM Token</h3>
         <Form>
           <Row>
-            <Col xs={4}>
+            <Col xs={3}>
               <Form.Group>
                 <Form.Label>Key Name (optional)</Form.Label>
                 <Form.Control
@@ -197,7 +198,7 @@ class LiteLLMKeysPage extends React.Component {
                 />
               </Form.Group>
             </Col>
-            <Col xs={4}>
+            <Col xs={3}>
               <Form.Group>
                 <Form.Label>Comment (optional)</Form.Label>
                 <Form.Control
@@ -207,6 +208,21 @@ class LiteLLMKeysPage extends React.Component {
                   value={keyComment}
                   onChange={(e) => this.setState({ keyComment: e.target.value })}
                 />
+              </Form.Group>
+            </Col>
+            <Col xs={2}>
+              <Form.Group>
+                <Form.Label>Duration (days)</Form.Label>
+                <Form.Control
+                  as="select"
+                  value={keyDuration}
+                  onChange={(e) => this.setState({ keyDuration: parseInt(e.target.value) })}
+                >
+                  <option value={1}>1 day</option>
+                  <option value={7}>7 days</option>
+                  <option value={14}>14 days</option>
+                  <option value={30}>30 days</option>
+                </Form.Control>
               </Form.Group>
             </Col>
             <Col xs={4} className="d-flex flex-row align-items-center justify-content-end">
@@ -241,7 +257,7 @@ class LiteLLMKeysPage extends React.Component {
                   <Form.Group>
                     <Form.Control
                       as="textarea"
-                      id="litellmApiKeyTextArea"
+                      id="llmApiKeyTextArea"
                       defaultValue={createdKey.api_key}
                       rows={2}
                       readOnly
@@ -325,7 +341,7 @@ class LiteLLMKeysPage extends React.Component {
                       <td className="col-md-2">{key['key_alias'] || key['key_name'] || '-'}</td>
                       <td className="col-md-3">
                         <span className="text-monospace" style={{fontSize: "0.85em"}}>
-                          {key['token'] || key['litellm_key_id'] || '-'}
+                          {key['token'] || key['llm_key_id'] || '-'}
                         </span>
                       </td>
                       <td className="col-md-1">
@@ -348,7 +364,7 @@ class LiteLLMKeysPage extends React.Component {
                       <td className="col-md-1">
                         <button
                           className="btn btn-sm btn-outline-danger"
-                          onClick={e => this.deleteKey(e, key['token'] || key['litellm_key_id'])}
+                          onClick={e => this.deleteKey(e, key['token'] || key['llm_key_id'])}
                         >
                           Delete
                         </button>
@@ -369,4 +385,4 @@ class LiteLLMKeysPage extends React.Component {
   }
 }
 
-export default LiteLLMKeysPage;
+export default LLMTokensPage;

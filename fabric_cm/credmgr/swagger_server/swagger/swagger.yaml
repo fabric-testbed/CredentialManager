@@ -640,14 +640,14 @@ paths:
               schema:
                 $ref: '#/components/schemas/status_500_internal_server_error'
       x-openapi-router-controller: fabric_cm.credmgr.swagger_server.controllers.tokens_controller
-  /tokens/create_litellm:
+  /tokens/create_llm:
     post:
       tags:
       - tokens
-      summary: Create a LiteLLM API key
+      summary: Create an LLM token
       description: |
-        Request to create a LiteLLM API key for an user
-      operationId: tokens_create_litellm_post
+        Request to create an LLM token for an user
+      operationId: tokens_create_llm_post
       parameters:
       - name: key_name
         in: query
@@ -667,6 +667,18 @@ paths:
         schema:
           maxLength: 100
           type: string
+      - name: duration
+        in: query
+        description: Token duration in days (1-30, default 30)
+        required: false
+        style: form
+        explode: true
+        schema:
+          maximum: 30
+          minimum: 1
+          type: integer
+          format: int32
+          default: 30
       responses:
         "200":
           description: OK
@@ -705,18 +717,18 @@ paths:
               schema:
                 $ref: '#/components/schemas/status_500_internal_server_error'
       x-openapi-router-controller: fabric_cm.credmgr.swagger_server.controllers.tokens_controller
-  /tokens/delete_litellm/{litellm_key_id}:
+  /tokens/delete_llm/{llm_key_id}:
     delete:
       tags:
       - tokens
-      summary: Delete a LiteLLM API key
+      summary: Delete an LLM token
       description: |
-        Request to delete a LiteLLM API key
-      operationId: tokens_delete_litellm_delete
+        Request to delete an LLM token
+      operationId: tokens_delete_llm_delete
       parameters:
-      - name: litellm_key_id
+      - name: llm_key_id
         in: path
-        description: LiteLLM key identifier
+        description: LLM key identifier
         required: true
         style: simple
         explode: false
@@ -760,14 +772,14 @@ paths:
               schema:
                 $ref: '#/components/schemas/status_500_internal_server_error'
       x-openapi-router-controller: fabric_cm.credmgr.swagger_server.controllers.tokens_controller
-  /tokens/litellm_keys:
+  /tokens/llm_keys:
     get:
       tags:
       - tokens
-      summary: Get LiteLLM API keys for a user
+      summary: Get LLM tokens for a user
       description: |
-        Get LiteLLM API keys for a user
-      operationId: tokens_litellm_keys_get
+        Get LLM tokens for a user
+      operationId: tokens_llm_keys_get
       parameters:
       - name: limit
         in: query
@@ -831,14 +843,14 @@ paths:
               schema:
                 $ref: '#/components/schemas/status_500_internal_server_error'
       x-openapi-router-controller: fabric_cm.credmgr.swagger_server.controllers.tokens_controller
-  /tokens/litellm_models:
+  /tokens/llm_models:
     get:
       tags:
       - tokens
       summary: Get available LLM models
       description: |
         Get available LLM models and API host information
-      operationId: tokens_litellm_models_get
+      operationId: tokens_llm_models_get
       responses:
         "200":
           description: OK

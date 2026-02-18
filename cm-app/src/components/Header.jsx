@@ -43,7 +43,7 @@ const Header = (props) => {
             FABRIC Tokens
           </NavLink>
           <NavLink
-            to="/litellm"
+            to="/llm"
             className={({ isActive }) =>
               "btn btn-sm mx-1 " + (isActive ? "btn-primary" : "btn-outline-primary")
             }

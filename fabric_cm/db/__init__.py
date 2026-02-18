@@ -48,16 +48,16 @@ class Tokens(Base):
     expires_at = Column(TIMESTAMP(timezone=True), nullable=True)
 
 
-class LitellmKeys(Base):
+class LlmKeys(Base):
     """
-    Represents LiteLLM API Keys Database Table
+    Represents LLM API Keys Database Table
     """
-    __tablename__ = 'LitellmKeys'
-    id = Column(Integer, Sequence('litellm_key_id_seq', start=1, increment=1), autoincrement=True, primary_key=True)
+    __tablename__ = 'LlmKeys'
+    id = Column(Integer, Sequence('llm_key_id_seq', start=1, increment=1), autoincrement=True, primary_key=True)
     user_id = Column(String, nullable=False, index=True)
     user_email = Column(String, nullable=False, index=True)
-    litellm_key_id = Column(String, nullable=False, unique=True, index=True)
-    litellm_key_name = Column(String, nullable=True)
+    llm_key_id = Column(String, nullable=False, unique=True, index=True)
+    llm_key_name = Column(String, nullable=True)
     api_key_hash = Column(String, nullable=False, index=True)
     created_at = Column(TIMESTAMP(timezone=True), nullable=True)
     expires_at = Column(TIMESTAMP(timezone=True), nullable=True)

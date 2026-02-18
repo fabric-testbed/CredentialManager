@@ -47,27 +47,30 @@ export function validateToken(token) {
   return http.post(apiEndpoint + "/validate", data);
 }
 
-// LiteLLM Key Management
+// LLM Token Management
 
-export function createLiteLLMKey(keyName, comment) {
-  let url = apiEndpoint + "/create_litellm?";
+export function createLLMKey(keyName, comment, duration) {
+  let url = apiEndpoint + "/create_llm?";
   if (keyName) {
     url += "key_name=" + encodeURIComponent(keyName) + "&";
   }
   if (comment) {
-    url += "comment=" + encodeURIComponent(comment);
+    url += "comment=" + encodeURIComponent(comment) + "&";
+  }
+  if (duration) {
+    url += "duration=" + encodeURIComponent(duration);
   }
   return http.post(url);
 }
 
-export function getLiteLLMKeys(limit = 200, offset = 0) {
-  return http.get(apiEndpoint + "/litellm_keys?limit=" + limit + "&offset=" + offset);
+export function getLLMKeys(limit = 200, offset = 0) {
+  return http.get(apiEndpoint + "/llm_keys?limit=" + limit + "&offset=" + offset);
 }
 
-export function deleteLiteLLMKey(litellmKeyId) {
-  return http.delete(apiEndpoint + "/delete_litellm/" + encodeURIComponent(litellmKeyId));
+export function deleteLLMKey(llmKeyId) {
+  return http.delete(apiEndpoint + "/delete_llm/" + encodeURIComponent(llmKeyId));
 }
 
-export function getLiteLLMModels() {
-  return http.get(apiEndpoint + "/litellm_models");
+export function getLLMModels() {
+  return http.get(apiEndpoint + "/llm_models");
 }

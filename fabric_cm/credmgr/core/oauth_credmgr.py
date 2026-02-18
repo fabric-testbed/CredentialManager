@@ -500,45 +500,47 @@ class OAuthCredMgr:
             log_event(token_hash=t.get(self.TOKEN_HASH), action="delete", project_id=tokens[0].get('project_id'),
                       user_id=tokens[0].get('user_id'), user_email=tokens[0].get('user_email'))
 
-    def _ensure_litellm_user_and_team(self, litellm_api: LiteLLMApi, uuid: str, email: str):
+    def _ensure_llm_user_and_team(self, llm_api: LiteLLMApi, uuid: str, email: str):
         """
-        Ensure user exists in LiteLLM and is a member of the configured team.
+        Ensure user exists in the LLM proxy and is a member of the configured team.
         Creates user if not found, adds to team if not already a member.
         Best-effort: logs warnings on failure but does not block key generation,
-        as users may have already been set up via the LiteLLM UI.
-        @param litellm_api LiteLLMApi instance
+        as users may have already been set up via the LLM proxy UI.
+        @param llm_api LLM API client instance
         @param uuid FABRIC user UUID
         @param email User's email
         """
-        # Step 1: Check if user exists in LiteLLM, create if not
+        # Step 1: Check if user exists in LLM proxy, create if not
         try:
-            litellm_api.get_user_info(user_id=uuid)
-            LOG.info(f"LiteLLM user {uuid} already exists")
+            llm_api.get_user_info(user_id=uuid)
+            LOG.info(f"LLM user {uuid} already exists")
         except LiteLLMApiError:
             try:
-                LOG.info(f"Creating LiteLLM user {uuid} ({email})")
-                litellm_api.create_user(user_id=uuid, user_email=email,
-                                        max_budget=CONFIG_OBJ.get_litellm_default_max_budget())
+                LOG.info(f"Creating LLM user {uuid} ({email})")
+                llm_api.create_user(user_id=uuid, user_email=email,
+                                        max_budget=CONFIG_OBJ.get_llm_default_max_budget())
             except LiteLLMApiError as e:
-                LOG.warning(f"Could not create LiteLLM user {uuid}: {e}")
+                LOG.warning(f"Could not create LLM user {uuid}: {e}")
 
-        # Step 2: Add user to team (LiteLLM handles idempotency)
-        team_id = CONFIG_OBJ.get_litellm_team_id()
+        # Step 2: Add user to team
+        team_id = CONFIG_OBJ.get_llm_team_id()
         try:
-            LOG.info(f"Adding LiteLLM user {uuid} to team {team_id}")
-            litellm_api.add_user_to_team(team_id=team_id, user_id=uuid,
-                                         max_budget_in_team=CONFIG_OBJ.get_litellm_default_max_budget())
+            LOG.info(f"Adding LLM user {uuid} to team {team_id}")
+            llm_api.add_user_to_team(team_id=team_id, user_id=uuid,
+                                         max_budget_in_team=CONFIG_OBJ.get_llm_default_max_budget())
         except LiteLLMApiError as e:
             LOG.warning(f"Could not add user {uuid} to team {team_id}: {e}")
 
-    def create_litellm_key(self, cookie: str, key_name: str = None, comment: str = None) -> dict:
+    def create_llm_key(self, cookie: str, key_name: str = None, comment: str = None,
+                       duration_days: int = 30) -> dict:
         """
-        Create a LiteLLM API key for the user.
-        Full workflow: verify FABRIC project membership → ensure LiteLLM user → add to team → generate key.
+        Create an LLM API key for the user.
+        Full workflow: verify FABRIC project membership → ensure LLM user → add to team → generate key.
         @param cookie Vouch cookie
         @param key_name Human-readable name for the key
         @param comment Comment
-        @return dict with api_key, litellm_key_id, key_name, timestamps
+        @param duration_days Token duration in days (1-30)
+        @return dict with api_key, llm_key_id, key_name, timestamps
         """
         from fabric_cm.credmgr.external_apis.core_api import CoreApi
 
@@ -549,7 +551,7 @@ class OAuthCredMgr:
         uuid, email = core_api.get_user_id_and_email()
 
         # Verify user is an active member of the allowed FABRIC project
-        allowed_project = CONFIG_OBJ.get_litellm_allowed_project()
+        allowed_project = CONFIG_OBJ.get_llm_allowed_project()
         projects = core_api.get_user_projects(project_id=allowed_project)
 
         if not projects:
@@ -567,29 +569,34 @@ class OAuthCredMgr:
         if not project_found:
             raise OAuthCredMgrError(f"User is not an active member of project: {allowed_project}")
 
-        litellm_api = LiteLLMApi(api_server=CONFIG_OBJ.get_litellm_url(),
-                                 master_key=CONFIG_OBJ.get_litellm_api_key())
+        llm_api = LiteLLMApi(api_server=CONFIG_OBJ.get_llm_url(),
+                                 master_key=CONFIG_OBJ.get_llm_api_key())
 
-        # Ensure user exists in LiteLLM and is part of the team
-        self._ensure_litellm_user_and_team(litellm_api, uuid, email)
+        # Ensure user exists in LLM proxy and is part of the team
+        self._ensure_llm_user_and_team(llm_api, uuid, email)
 
-        duration = CONFIG_OBJ.get_litellm_default_duration()
-        max_budget = CONFIG_OBJ.get_litellm_default_max_budget()
-        team_id = CONFIG_OBJ.get_litellm_team_id()
+        max_duration = int(CONFIG_OBJ.get_llm_default_duration().rstrip('d'))
+        if duration_days is None or duration_days < 1:
+            duration_days = max_duration
+        if duration_days > max_duration:
+            raise OAuthCredMgrError(f"Token duration cannot exceed {max_duration} days")
+        duration = f"{duration_days}d"
+        max_budget = CONFIG_OBJ.get_llm_default_max_budget()
+        team_id = CONFIG_OBJ.get_llm_team_id()
 
         metadata = {'user_email': email, 'fabric_user_uuid': uuid}
 
         # Generate the key with team_id so it's associated with the team
-        result = litellm_api.generate_key(user_id=uuid, user_email=email, team_id=team_id,
+        result = llm_api.generate_key(user_id=uuid, user_email=email, team_id=team_id,
                                           key_alias=key_name, duration=duration,
                                           max_budget=max_budget, metadata=metadata)
 
         api_key = result.get('key')
-        litellm_key_id = result.get('token')
+        llm_key_id = result.get('token')
         expires_at_str = result.get('expires')
 
-        if api_key is None or litellm_key_id is None:
-            raise OAuthCredMgrError("LiteLLM did not return expected key data")
+        if api_key is None or llm_key_id is None:
+            raise OAuthCredMgrError("LLM proxy did not return expected key data")
 
         api_key_hash = self.__generate_sha256(token=api_key)
         created_at = datetime.now(timezone.utc)
@@ -599,41 +606,41 @@ class OAuthCredMgr:
             try:
                 expires_at = datetime.fromisoformat(expires_at_str.replace('Z', '+00:00'))
             except (ValueError, AttributeError):
-                LOG.warning(f"Could not parse LiteLLM expires value: {expires_at_str}")
+                LOG.warning(f"Could not parse LLM expires value: {expires_at_str}")
 
         # Save record to local DB for audit trail
-        DB_OBJ.add_litellm_key(user_id=uuid, user_email=email, litellm_key_id=litellm_key_id,
-                               litellm_key_name=key_name, api_key_hash=api_key_hash,
+        DB_OBJ.add_llm_key(user_id=uuid, user_email=email, llm_key_id=llm_key_id,
+                           llm_key_name=key_name, api_key_hash=api_key_hash,
                                created_at=created_at, expires_at=expires_at, comment=comment)
 
-        log_event(token_hash=api_key_hash, action="create_litellm_key", project_id=allowed_project,
+        log_event(token_hash=api_key_hash, action="create_llm_key", project_id=allowed_project,
                   user_id=uuid, user_email=email)
 
         return {
             'api_key': api_key,
-            'litellm_key_id': litellm_key_id,
+            'llm_key_id': llm_key_id,
             'key_name': key_name,
             'created_at': created_at.strftime(OAuthCredMgr.TIME_FORMAT),
             'expires_at': expires_at.strftime(OAuthCredMgr.TIME_FORMAT) if expires_at else None,
             'comment': comment
         }
 
-    def delete_litellm_key(self, litellm_key_id: str, user_email: str, cookie: str):
+    def delete_llm_key(self, llm_key_id: str, user_email: str, cookie: str):
         """
-        Delete a LiteLLM API key
-        @param litellm_key_id LiteLLM key identifier
+        Delete an LLM API key
+        @param llm_key_id LLM key identifier
         @param user_email User's email
         @param cookie Vouch cookie
         """
-        litellm_api = LiteLLMApi(api_server=CONFIG_OBJ.get_litellm_url(),
-                                 master_key=CONFIG_OBJ.get_litellm_api_key())
+        llm_api = LiteLLMApi(api_server=CONFIG_OBJ.get_llm_url(),
+                                 master_key=CONFIG_OBJ.get_llm_api_key())
 
-        # Verify the key exists and belongs to user (query LiteLLM directly)
+        # Verify the key exists and belongs to user
         try:
-            key_info = litellm_api.get_key_info(key_id=litellm_key_id)
+            key_info = llm_api.get_key_info(key_id=llm_key_id)
         except LiteLLMApiError:
             raise OAuthCredMgrError(http_error_code=NOT_FOUND,
-                                    message=f"LiteLLM key {litellm_key_id} not found")
+                                    message=f"LLM key {llm_key_id} not found")
 
         # Check ownership: key's user_id must match, or caller must be facility operator
         key_owner = key_info.get('info', {}).get('user_id', key_info.get('user_id'))
@@ -647,25 +654,25 @@ class OAuthCredMgr:
             if not Utils.is_facility_operator(cookie=cookie):
                 raise OAuthCredMgrError(f"User {user_email} is not authorized to delete this key")
 
-        litellm_api.delete_key(key_id=litellm_key_id)
+        llm_api.delete_key(key_id=llm_key_id)
 
         # Also remove from local DB if present
         try:
-            DB_OBJ.remove_litellm_key(litellm_key_id=litellm_key_id)
+            DB_OBJ.remove_llm_key(llm_key_id=llm_key_id)
         except Exception:
-            LOG.warning(f"LiteLLM key {litellm_key_id} not found in local DB (may have been created externally)")
+            LOG.warning(f"LLM key {llm_key_id} not found in local DB (may have been created externally)")
 
-        log_event(token_hash=litellm_key_id, action="delete_litellm_key",
-                  project_id=CONFIG_OBJ.get_litellm_allowed_project(),
+        log_event(token_hash=llm_key_id, action="delete_llm_key",
+                  project_id=CONFIG_OBJ.get_llm_allowed_project(),
                   user_id=uuid, user_email=email)
 
-    def get_litellm_keys(self, cookie: str, offset: int = 0, limit: int = 200) -> list:
+    def get_llm_keys(self, cookie: str, offset: int = 0, limit: int = 200) -> list:
         """
-        Get LiteLLM keys for a user by querying LiteLLM API directly
+        Get LLM keys for a user by querying LLM proxy API directly
         @param cookie Vouch cookie
         @param offset offset
         @param limit limit
-        @return list of LiteLLM key records from LiteLLM
+        @return list of LLM key records
         """
         from fabric_cm.credmgr.external_apis.core_api import CoreApi
         core_api = CoreApi(api_server=CONFIG_OBJ.get_core_api_url(), cookie=cookie,
@@ -673,27 +680,27 @@ class OAuthCredMgr:
                            cookie_domain=CONFIG_OBJ.get_vouch_cookie_domain_name())
         uuid, email = core_api.get_user_id_and_email()
 
-        litellm_api = LiteLLMApi(api_server=CONFIG_OBJ.get_litellm_url(),
-                                 master_key=CONFIG_OBJ.get_litellm_api_key())
+        llm_api = LiteLLMApi(api_server=CONFIG_OBJ.get_llm_url(),
+                                 master_key=CONFIG_OBJ.get_llm_api_key())
 
-        return litellm_api.list_keys(user_id=uuid)
+        return llm_api.list_keys(user_id=uuid)
 
-    def get_litellm_models(self) -> dict:
+    def get_llm_models(self) -> dict:
         """
-        Get available LiteLLM models and the LiteLLM API URL.
+        Get available LLM models and the LLM API URL.
         @return dict with 'api_host' and 'models' list
         """
-        litellm_api = LiteLLMApi(api_server=CONFIG_OBJ.get_litellm_url(),
-                                 master_key=CONFIG_OBJ.get_litellm_api_key())
+        llm_api = LiteLLMApi(api_server=CONFIG_OBJ.get_llm_url(),
+                                 master_key=CONFIG_OBJ.get_llm_api_key())
 
-        models = litellm_api.list_models()
+        models = llm_api.list_models()
         model_list = []
         for m in models:
             model_id = m.get('id', '')
             model_list.append({'modelId': model_id})
 
         return {
-            'api_host': CONFIG_OBJ.get_litellm_url(),
+            'api_host': CONFIG_OBJ.get_llm_url(),
             'models': model_list
         }
 
