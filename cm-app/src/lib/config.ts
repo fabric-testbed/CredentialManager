@@ -14,6 +14,11 @@ export const apiConfig = {
     beta: "fabric-service-beta",
     production: "fabric-service",
   },
+  llmProjectName: {
+    alpha: "FABRIC-LLM",
+    beta: "FABRIC-LLM",
+    production: "FABRIC-LLM",
+  },
 } as const;
 
 export type Environment = "alpha" | "beta" | "production";
@@ -32,4 +37,8 @@ export function getCoreApiUrl(): string {
 
 export function getCredentialManagerApiUrl(): string {
   return apiConfig.credentialManagerApiUrl[getEnvironment()];
+}
+
+export function getLlmProjectName(): string {
+  return apiConfig.llmProjectName[getEnvironment()];
 }

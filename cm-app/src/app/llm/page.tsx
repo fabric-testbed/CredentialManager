@@ -24,6 +24,7 @@ import {
   deleteLLMKey,
   getLLMModels,
 } from "@/services/credential-manager-service";
+import { getLlmProjectName } from "@/lib/config";
 
 interface LLMKey {
   key_alias?: string;
@@ -339,20 +340,21 @@ export default function LLMTokensPage() {
     <div className="container mx-auto min-h-[80vh] mt-8 mb-8 px-4">
       <div className="bg-fabric-primary/10 border border-fabric-primary/30 text-fabric-dark rounded p-4 mb-2 mt-4">
         Manage your LLM tokens for accessing FABRIC AI services. You must be a
-        member of the FABRIC-LLM project to create tokens.
+        member of the <strong>{getLlmProjectName()}</strong> project to create tokens.
       </div>
 
       <h3 className="text-xl font-semibold my-3">Create LLM Token</h3>
 
       <div className="grid grid-cols-12 gap-4 items-end">
         <div className="col-span-3">
-          <Label htmlFor="key-name">Key Name (optional)</Label>
+          <Label htmlFor="key-name">Key Name <span className="text-fabric-danger">*</span></Label>
           <Input
             id="key-name"
             type="text"
             placeholder="e.g., my-notebook-key"
             value={keyName}
             onChange={(e) => setKeyName(e.target.value)}
+            required
           />
         </div>
         <div className="col-span-3">
@@ -382,7 +384,7 @@ export default function LLMTokensPage() {
         <div className="col-span-4 flex flex-wrap justify-end gap-2">
           <Button
             variant="outline"
-            disabled={createSuccess}
+            disabled={createSuccess || !keyName.trim()}
             onClick={(e) => handleCreateKey(e, "none")}
             className="border-fabric-success text-fabric-success hover:bg-fabric-success/10"
           >
@@ -390,7 +392,7 @@ export default function LLMTokensPage() {
           </Button>
           <Button
             variant="outline"
-            disabled={createSuccess}
+            disabled={createSuccess || !keyName.trim()}
             onClick={(e) => handleCreateKey(e, "chatbox")}
             className="border-fabric-primary text-fabric-primary hover:bg-fabric-primary/10"
           >
@@ -398,7 +400,7 @@ export default function LLMTokensPage() {
           </Button>
           <Button
             variant="outline"
-            disabled={createSuccess}
+            disabled={createSuccess || !keyName.trim()}
             onClick={(e) => handleCreateKey(e, "claude")}
             className="border-fabric-dark text-fabric-dark hover:bg-fabric-dark/10"
           >
