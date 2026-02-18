@@ -40,7 +40,7 @@ from fabric_cm.credmgr.swagger_server.response.constants import HTTP_METHOD_POST
     TOKENS_CREATE_CLI_URL, TOKENS_CREATE_LLM_URL, TOKENS_DELETE_LLM_URL, TOKENS_LLM_KEYS_URL, TOKENS_LLM_MODELS_URL
 from fabric_cm.credmgr.logging import LOG
 from fabric_cm.credmgr.swagger_server.response.cors_response import cors_200, cors_500, cors_400
-from fabric_cm.credmgr.swagger_server.response.decorators import login_required, login_or_token_required
+from fabric_cm.credmgr.swagger_server.response.decorators import login_required, login_or_token_required, vouch_authorize
 from urllib.parse import urlparse, urlencode, urlunparse, parse_qs
 
 from flask import request, redirect
@@ -394,10 +394,14 @@ def _validate_localhost_redirect(redirect_uri: str) -> bool:
             parsed.port is not None)
 
 
-@login_required
 def tokens_create_cli_get(project_id: str, project_name: str, scope: str = None, lifetime: int = 4,
-                          comment: str = None, redirect_uri: str = None, claims: dict = None):  # noqa: E501
+                          comment: str = None, redirect_uri: str = None):  # noqa: E501
     """Generate tokens for a CLI user and redirect with token data
+
+    Unlike other endpoints this does NOT use @login_required because
+    vouch's publicAccess:true means nginx never returns 401 to trigger
+    the login redirect. Instead we check auth manually and redirect to
+    the vouch login page ourselves when the user is not logged in.
 
     :param project_id: Project Id
     :param project_name: Project identified by name
@@ -405,7 +409,6 @@ def tokens_create_cli_get(project_id: str, project_name: str, scope: str = None,
     :param lifetime: Lifetime of the token requested in hours
     :param comment: Comment
     :param redirect_uri: Localhost URI to redirect to with token data
-    :param claims: claims
     :rtype: Redirect 302
     """
     received_counter.labels(HTTP_METHOD_GET, TOKENS_CREATE_CLI_URL).inc()
@@ -414,6 +417,18 @@ def tokens_create_cli_get(project_id: str, project_name: str, scope: str = None,
             failure_counter.labels(HTTP_METHOD_GET, TOKENS_CREATE_CLI_URL).inc()
             return cors_400(details="redirect_uri is required and must point to localhost "
                                     "(e.g. http://localhost:12345/callback)")
+
+        # Check authentication manually
+        claims = vouch_authorize()
+        if claims is None:
+            # User is not logged in — redirect to vouch login, which will
+            # redirect back to this URL after CILogon auth completes.
+            scheme = request.headers.get('X-Forwarded-Proto', 'https')
+            host = request.headers.get('Host', request.host)
+            original_url = f"{scheme}://{host}{request.full_path}"
+            login_url = f"{scheme}://{host}/login?url={original_url}"
+            LOG.info(f"CLI create: user not logged in, redirecting to login")
+            return redirect(login_url, code=302)
 
         credmgr = OAuthCredMgr()
         remote_addr = connexion.request.remote_addr
