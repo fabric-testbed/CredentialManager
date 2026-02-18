@@ -504,6 +504,8 @@ class OAuthCredMgr:
         """
         Ensure user exists in LiteLLM and is a member of the configured team.
         Creates user if not found, adds to team if not already a member.
+        Best-effort: logs warnings on failure but does not block key generation,
+        as users may have already been set up via the LiteLLM UI.
         @param litellm_api LiteLLMApi instance
         @param uuid FABRIC user UUID
         @param email User's email
@@ -513,9 +515,12 @@ class OAuthCredMgr:
             litellm_api.get_user_info(user_id=uuid)
             LOG.info(f"LiteLLM user {uuid} already exists")
         except LiteLLMApiError:
-            LOG.info(f"Creating LiteLLM user {uuid} ({email})")
-            litellm_api.create_user(user_id=uuid, user_email=email,
-                                    max_budget=CONFIG_OBJ.get_litellm_default_max_budget())
+            try:
+                LOG.info(f"Creating LiteLLM user {uuid} ({email})")
+                litellm_api.create_user(user_id=uuid, user_email=email,
+                                        max_budget=CONFIG_OBJ.get_litellm_default_max_budget())
+            except LiteLLMApiError as e:
+                LOG.warning(f"Could not create LiteLLM user {uuid}: {e}")
 
         # Step 2: Add user to team (LiteLLM handles idempotency)
         team_id = CONFIG_OBJ.get_litellm_team_id()
@@ -524,7 +529,6 @@ class OAuthCredMgr:
             litellm_api.add_user_to_team(team_id=team_id, user_id=uuid,
                                          max_budget_in_team=CONFIG_OBJ.get_litellm_default_max_budget())
         except LiteLLMApiError as e:
-            # User may already be in the team — log and continue
             LOG.warning(f"Could not add user {uuid} to team {team_id}: {e}")
 
     def create_litellm_key(self, cookie: str, key_name: str = None, comment: str = None) -> dict:
