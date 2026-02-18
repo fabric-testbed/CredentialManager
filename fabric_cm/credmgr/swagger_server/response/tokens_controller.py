@@ -43,7 +43,7 @@ from fabric_cm.credmgr.swagger_server.response.cors_response import cors_200, co
 from fabric_cm.credmgr.swagger_server.response.decorators import login_required, login_or_token_required, vouch_authorize
 from urllib.parse import quote, urlparse, urlencode, urlunparse, parse_qs
 
-from flask import request, redirect
+from flask import request, redirect, make_response
 
 @login_required
 def tokens_create_post(project_id: str, project_name: str, scope: str = None, lifetime: int = 4, comment: str = None,
@@ -479,6 +479,7 @@ def tokens_create_cli_get(project_id: str = None, project_name: str = None, scop
                                           user_email=claims.get(OAuthCredMgr.EMAIL))
 
         # Build redirect URL with token data as query params
+        import base64 as _base64
         parsed = urlparse(redirect_uri)
         params = {
             "id_token": token_dict.get("id_token", ""),
@@ -497,9 +498,86 @@ def tokens_create_cli_get(project_id: str = None, project_name: str = None, scop
             parsed.params, urlencode(params), parsed.fragment
         ))
 
-        LOG.info("CLI token created, redirecting to localhost callback")
+        # Build a base64-encoded authorization code for manual paste fallback
+        auth_code = _base64.urlsafe_b64encode(
+            _json.dumps(params).encode()
+        ).decode()
+
+        LOG.info("CLI token created, serving delivery page")
         success_counter.labels(HTTP_METHOD_GET, TOKENS_CREATE_CLI_URL).inc()
-        resp = redirect(redirect_url, code=302)
+
+        # Return an HTML page that tries JS fetch to localhost first,
+        # falls back to showing a copyable authorization code (remote VM case)
+        html = f"""<!DOCTYPE html>
+<html>
+<head><title>FABRIC CLI Token</title>
+<style>
+  body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+         max-width: 600px; margin: 60px auto; padding: 0 20px; color: #333; }}
+  h2 {{ color: #2563eb; }}
+  .spinner {{ display: inline-block; width: 20px; height: 20px; border: 3px solid #e5e7eb;
+              border-top-color: #2563eb; border-radius: 50%;
+              animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 8px; }}
+  @keyframes spin {{ to {{ transform: rotate(360deg); }} }}
+  #status {{ margin: 20px 0; padding: 16px; border-radius: 8px; background: #f0f9ff; }}
+  #fallback {{ display: none; margin: 20px 0; }}
+  .code-box {{ background: #1e293b; color: #e2e8f0; padding: 12px 16px; border-radius: 6px;
+               font-family: monospace; font-size: 13px; word-break: break-all;
+               max-height: 120px; overflow-y: auto; cursor: pointer; position: relative; }}
+  .code-box:hover {{ background: #334155; }}
+  .copy-btn {{ background: #2563eb; color: white; border: none; padding: 8px 20px;
+               border-radius: 6px; cursor: pointer; font-size: 14px; margin-top: 10px; }}
+  .copy-btn:hover {{ background: #1d4ed8; }}
+  .success {{ color: #16a34a; font-weight: 600; }}
+  .instructions {{ background: #fefce8; padding: 12px 16px; border-radius: 6px;
+                   border-left: 4px solid #eab308; margin-top: 16px; }}
+</style>
+</head>
+<body>
+  <h2>FABRIC Token Created</h2>
+  <div id="status"><span class="spinner"></span> Sending token to CLI...</div>
+  <div id="fallback">
+    <p>Could not reach the CLI automatically. This usually means you are running
+       the CLI on a different machine (e.g. a remote VM).</p>
+    <p><strong>Copy the code below and paste it into the CLI prompt:</strong></p>
+    <div class="code-box" id="code" onclick="copyCode()" title="Click to copy">{auth_code}</div>
+    <button class="copy-btn" onclick="copyCode()">Copy Authorization Code</button>
+    <span id="copied" style="display:none; margin-left:10px;" class="success">Copied!</span>
+    <div class="instructions">
+      <strong>In your terminal, paste this code when prompted and press Enter.</strong>
+    </div>
+  </div>
+  <div id="done" style="display:none;">
+    <p class="success">Token sent to CLI successfully! You can close this window.</p>
+  </div>
+<script>
+const CALLBACK_URL = {_json.dumps(redirect_url)};
+function copyCode() {{
+  var code = document.getElementById('code').textContent;
+  navigator.clipboard.writeText(code).then(function() {{
+    document.getElementById('copied').style.display = 'inline';
+    setTimeout(function() {{ document.getElementById('copied').style.display = 'none'; }}, 2000);
+  }});
+}}
+// Try to send token to the local CLI callback server
+fetch(CALLBACK_URL, {{ mode: 'no-cors' }})
+  .then(function() {{
+    // no-cors means we can't read the response, but if it didn't throw,
+    // the request likely reached the server
+    document.getElementById('status').style.display = 'none';
+    document.getElementById('done').style.display = 'block';
+  }})
+  .catch(function() {{
+    // Fetch failed — localhost unreachable (remote VM scenario)
+    document.getElementById('status').style.display = 'none';
+    document.getElementById('fallback').style.display = 'block';
+  }});
+</script>
+</body>
+</html>"""
+
+        resp = make_response(html, 200)
+        resp.headers['Content-Type'] = 'text/html'
         # Clear the params cookie
         resp.set_cookie(COOKIE_NAME, '', max_age=0, httponly=True, samesite='Lax')
         return resp
