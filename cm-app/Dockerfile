@@ -2,8 +2,8 @@ FROM node:22 AS builder
 LABEL maintainer="Komal Thareja"
 
 WORKDIR /app
-COPY package.json package-lock.json* ./
-RUN npm ci
+COPY package.json ./
+RUN npm install
 COPY . .
 RUN npm run build
 
