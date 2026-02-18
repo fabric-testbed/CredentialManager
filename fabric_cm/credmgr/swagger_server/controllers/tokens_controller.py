@@ -156,6 +156,30 @@ def tokens_validate_post(body):  # noqa: E501
     return rc.tokens_validate_post(body)
 
 
+def tokens_create_cli_get(project_id=None, project_name=None, scope=None, lifetime=4, comment=None,
+                          redirect_uri=None):  # noqa: E501
+    """Generate tokens for a CLI user and redirect with tokens
+
+    Request to generate tokens for a user via CLI login flow  # noqa: E501
+
+    :param project_id: Project identified by universally unique identifier
+    :type project_id: str
+    :param project_name: Project identified by name
+    :type project_name: str
+    :param scope: Scope for which token is requested
+    :type scope: str
+    :param lifetime: Lifetime of the token requested in hours
+    :type lifetime: int
+    :param comment: Comment
+    :type comment: str
+    :param redirect_uri: Localhost URI to redirect to with token data
+    :type redirect_uri: str
+
+    :rtype: Redirect 302
+    """
+    return rc.tokens_create_cli_get(project_id, project_name, scope, lifetime, comment, redirect_uri)
+
+
 def tokens_create_llm_post(key_name=None, comment=None, duration=30):  # noqa: E501
     """Create an LLM token
 

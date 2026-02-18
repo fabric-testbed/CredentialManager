@@ -37,11 +37,13 @@ from fabric_cm.credmgr.swagger_server.models.token_post import TokenPost
 from fabric_cm.credmgr.swagger_server.response.constants import HTTP_METHOD_POST, TOKENS_REVOKE_URL, \
     TOKENS_REFRESH_URL, TOKENS_CREATE_URL, TOKENS_REVOKES_URL, HTTP_METHOD_GET, TOKENS_REVOKE_LIST_URL, \
     TOKENS_VALIDATE_URL, TOKENS_DELETE_URL, TOKENS_DELETE_TOKEN_HASH_URL, HTTP_METHOD_DELETE, \
-    TOKENS_CREATE_LLM_URL, TOKENS_DELETE_LLM_URL, TOKENS_LLM_KEYS_URL, TOKENS_LLM_MODELS_URL
+    TOKENS_CREATE_CLI_URL, TOKENS_CREATE_LLM_URL, TOKENS_DELETE_LLM_URL, TOKENS_LLM_KEYS_URL, TOKENS_LLM_MODELS_URL
 from fabric_cm.credmgr.logging import LOG
 from fabric_cm.credmgr.swagger_server.response.cors_response import cors_200, cors_500, cors_400
 from fabric_cm.credmgr.swagger_server.response.decorators import login_required, login_or_token_required
-from flask import request
+from urllib.parse import urlparse, urlencode, urlunparse, parse_qs
+
+from flask import request, redirect
 
 @login_required
 def tokens_create_post(project_id: str, project_name: str, scope: str = None, lifetime: int = 4, comment: str = None,
@@ -379,6 +381,78 @@ def tokens_validate_post(body: TokenPost):  # noqa: E501
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_POST, TOKENS_VALIDATE_URL).inc()
+        return cors_500(details=str(ex))
+
+
+def _validate_localhost_redirect(redirect_uri: str) -> bool:
+    """Validate that redirect_uri points to localhost."""
+    if not redirect_uri:
+        return False
+    parsed = urlparse(redirect_uri)
+    return (parsed.scheme == "http" and
+            parsed.hostname in ("localhost", "127.0.0.1") and
+            parsed.port is not None)
+
+
+@login_required
+def tokens_create_cli_get(project_id: str, project_name: str, scope: str = None, lifetime: int = 4,
+                          comment: str = None, redirect_uri: str = None, claims: dict = None):  # noqa: E501
+    """Generate tokens for a CLI user and redirect with token data
+
+    :param project_id: Project Id
+    :param project_name: Project identified by name
+    :param scope: Scope for which token is requested
+    :param lifetime: Lifetime of the token requested in hours
+    :param comment: Comment
+    :param redirect_uri: Localhost URI to redirect to with token data
+    :param claims: claims
+    :rtype: Redirect 302
+    """
+    received_counter.labels(HTTP_METHOD_GET, TOKENS_CREATE_CLI_URL).inc()
+    try:
+        if not redirect_uri or not _validate_localhost_redirect(redirect_uri):
+            failure_counter.labels(HTTP_METHOD_GET, TOKENS_CREATE_CLI_URL).inc()
+            return cors_400(details="redirect_uri is required and must point to localhost "
+                                    "(e.g. http://localhost:12345/callback)")
+
+        credmgr = OAuthCredMgr()
+        remote_addr = connexion.request.remote_addr
+        if connexion.request.headers.get('X-Real-IP') is not None:
+            remote_addr = connexion.request.headers.get('X-Real-IP')
+        token_dict = credmgr.create_token(ci_logon_id_token=claims.get(OAuthCredMgr.ID_TOKEN),
+                                          refresh_token=claims.get(OAuthCredMgr.REFRESH_TOKEN),
+                                          cookie=claims.get(OAuthCredMgr.COOKIE),
+                                          project_id=project_id, project_name=project_name,
+                                          scope=scope, lifetime=lifetime,
+                                          comment=comment, remote_addr=remote_addr,
+                                          user_email=claims.get(OAuthCredMgr.EMAIL))
+
+        # Build redirect URL with token data as query params
+        parsed = urlparse(redirect_uri)
+        params = {
+            "id_token": token_dict.get("id_token", ""),
+            "refresh_token": token_dict.get("refresh_token", ""),
+            "token_hash": token_dict.get("token_hash", ""),
+            "created_at": token_dict.get("created_at", ""),
+            "expires_at": token_dict.get("expires_at", ""),
+            "state": token_dict.get("state", ""),
+        }
+        # Preserve any existing query params in redirect_uri
+        existing_params = parse_qs(parsed.query)
+        for k, v in existing_params.items():
+            if k not in params:
+                params[k] = v[0]
+        redirect_url = urlunparse((
+            parsed.scheme, parsed.netloc, parsed.path,
+            parsed.params, urlencode(params), parsed.fragment
+        ))
+
+        LOG.info(f"CLI token created, redirecting to localhost callback")
+        success_counter.labels(HTTP_METHOD_GET, TOKENS_CREATE_CLI_URL).inc()
+        return redirect(redirect_url, code=302)
+    except Exception as ex:
+        LOG.exception(ex)
+        failure_counter.labels(HTTP_METHOD_GET, TOKENS_CREATE_CLI_URL).inc()
         return cors_500(details=str(ex))
 
 
