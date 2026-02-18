@@ -41,7 +41,7 @@ from fabric_cm.credmgr.swagger_server.response.constants import HTTP_METHOD_POST
 from fabric_cm.credmgr.logging import LOG
 from fabric_cm.credmgr.swagger_server.response.cors_response import cors_200, cors_500, cors_400
 from fabric_cm.credmgr.swagger_server.response.decorators import login_required, login_or_token_required, vouch_authorize
-from urllib.parse import urlparse, urlencode, urlunparse, parse_qs
+from urllib.parse import quote, urlparse, urlencode, urlunparse, parse_qs
 
 from flask import request, redirect
 
@@ -421,13 +421,15 @@ def tokens_create_cli_get(project_id: str, project_name: str, scope: str = None,
         # Check authentication manually
         claims = vouch_authorize()
         if claims is None:
-            # User is not logged in — redirect to vouch login, which will
-            # redirect back to this URL after CILogon auth completes.
+            # User is not logged in — redirect to /cli-login which passes
+            # the url param through to vouch (unlike /login which hardcodes it).
+            # After CILogon auth, vouch redirects the browser back to our
+            # original create_cli URL with the cookie now set.
             scheme = request.headers.get('X-Forwarded-Proto', 'https')
             host = request.headers.get('Host', request.host)
             original_url = f"{scheme}://{host}{request.full_path}"
-            login_url = f"{scheme}://{host}/login?url={original_url}"
-            LOG.info(f"CLI create: user not logged in, redirecting to login")
+            login_url = f"{scheme}://{host}/cli-login?url={quote(original_url, safe='')}"
+            LOG.info(f"CLI create: user not logged in, redirecting to cli-login")
             return redirect(login_url, code=302)
 
         credmgr = OAuthCredMgr()
