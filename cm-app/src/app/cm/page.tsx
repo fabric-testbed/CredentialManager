@@ -48,6 +48,7 @@ import { getEnvironment } from "@/lib/config";
 interface Project {
   uuid: string;
   name: string;
+  active: boolean;
   memberships: { is_token_holder: boolean };
 }
 
@@ -159,7 +160,8 @@ export default function CredentialManagerPage() {
         const userId = localStorage.getItem("cmUserID");
         if (!userId) return;
         const { data: res } = await getProjects(userId);
-        const loadedProjects: Project[] = res.results;
+        const allProjects: Project[] = res.results;
+        const loadedProjects = allProjects.filter((p) => p.active);
         setProjects(loadedProjects);
         if (loadedProjects.length > 0) {
           const first = loadedProjects[0];
@@ -349,7 +351,15 @@ export default function CredentialManagerPage() {
 
           {/* Project selector */}
           <div className="mb-4">
-            <Label htmlFor="project-select">Select Project</Label>
+            <Label htmlFor="project-select">
+              Select Project
+              <span className="ml-1 text-xs text-muted-foreground font-normal">
+                (only active projects are shown — if your project is missing, verify it is active on{" "}
+                <a href={portalLink} target="_blank" rel="noreferrer" className="underline text-fabric-primary">
+                  FABRIC Portal
+                </a>)
+              </span>
+            </Label>
             <select
               id="project-select"
               className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
