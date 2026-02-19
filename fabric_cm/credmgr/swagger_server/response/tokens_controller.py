@@ -508,6 +508,7 @@ def tokens_create_cli_get(project_id: str = None, project_name: str = None, scop
         # Use sanitized components (safe_scheme, safe_netloc, safe_path) instead of
         # raw redirect_uri to avoid untrusted URL redirection (CodeQL security finding)
         import base64 as _base64
+        import zlib as _zlib
         params = {
             "id_token": token_dict.get("id_token", ""),
             "refresh_token": token_dict.get("refresh_token", ""),
@@ -523,7 +524,7 @@ def tokens_create_cli_get(project_id: str = None, project_name: str = None, scop
 
         # Build a base64-encoded authorization code for manual paste fallback
         auth_code = _base64.urlsafe_b64encode(
-            _json.dumps(params).encode()
+            _zlib.compress(_json.dumps(params).encode(), 9)
         ).decode()
 
         LOG.info("CLI token created, serving delivery page")
