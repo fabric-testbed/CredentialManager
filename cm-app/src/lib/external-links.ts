@@ -8,6 +8,9 @@ export const externalLinks = {
     "https://learn.fabric-testbed.net/knowledge-base/fabric-user-roles-and-project-permissions/#managing-projects-in-the-real-world",
   learnArticleLonglivedTokens:
     "https://learn.fabric-testbed.net/knowledge-base/obtaining-and-using-fabric-api-tokens/#creating-long-lived-api-tokens",
+  chatbox: "https://chatboxai.app/",
+  claudeCode:
+    "https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview",
 } as const;
 
 export const portalLinkMap = {

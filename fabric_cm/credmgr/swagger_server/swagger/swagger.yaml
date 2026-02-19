@@ -773,6 +773,14 @@ paths:
           type: integer
           format: int32
           default: 30
+      - name: models
+        in: query
+        description: Comma-separated list of model IDs to restrict the key to
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
       responses:
         "200":
           description: OK

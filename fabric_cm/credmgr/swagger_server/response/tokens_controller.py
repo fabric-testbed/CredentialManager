@@ -605,7 +605,8 @@ fetch(CALLBACK_URL, {{ mode: 'no-cors' }})
 
 @login_required
 def tokens_create_llm_post(key_name: str = None, comment: str = None,
-                            duration: int = 30, claims: dict = None):  # noqa: E501
+                            duration: int = 30, models: str = None,
+                            claims: dict = None):  # noqa: E501
     """Create an LLM token
 
     Request to create an LLM token for an user  # noqa: E501
@@ -616,6 +617,8 @@ def tokens_create_llm_post(key_name: str = None, comment: str = None,
     :type comment: str
     :param duration: Token duration in days (1-30, default 30)
     :type duration: int
+    :param models: Comma-separated list of model IDs to restrict the key to
+    :type models: str
     :param claims: claims
     :type claims: dict
 
@@ -623,10 +626,13 @@ def tokens_create_llm_post(key_name: str = None, comment: str = None,
     """
     received_counter.labels(HTTP_METHOD_POST, TOKENS_CREATE_LLM_URL).inc()
     try:
+        models_list = None
+        if models:
+            models_list = [m.strip() for m in models.split(',') if m.strip()]
         credmgr = OAuthCredMgr()
         result = credmgr.create_llm_key(cookie=claims.get(OAuthCredMgr.COOKIE),
                                          key_name=key_name, comment=comment,
-                                         duration_days=duration)
+                                         duration_days=duration, models=models_list)
         response_data = Status200OkNoContentData()
         response_data.details = result
         response = Status200OkNoContent()

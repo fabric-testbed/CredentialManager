@@ -180,7 +180,7 @@ def tokens_create_cli_get(project_id=None, project_name=None, scope=None, lifeti
     return rc.tokens_create_cli_get(project_id, project_name, scope, lifetime, comment, redirect_uri)
 
 
-def tokens_create_llm_post(key_name=None, comment=None, duration=30):  # noqa: E501
+def tokens_create_llm_post(key_name=None, comment=None, duration=30, models=None):  # noqa: E501
     """Create an LLM token
 
     Request to create an LLM token for an user  # noqa: E501
@@ -191,10 +191,12 @@ def tokens_create_llm_post(key_name=None, comment=None, duration=30):  # noqa: E
     :type comment: str
     :param duration: Token duration in days (1-30, default 30)
     :type duration: int
+    :param models: Comma-separated list of model IDs to restrict the key to
+    :type models: str
 
     :rtype: Status200OkNoContent
     """
-    return rc.tokens_create_llm_post(key_name=key_name, comment=comment, duration=duration)
+    return rc.tokens_create_llm_post(key_name=key_name, comment=comment, duration=duration, models=models)
 
 
 def tokens_delete_llm_delete(llm_key_id):  # noqa: E501

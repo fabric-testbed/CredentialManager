@@ -71,7 +71,8 @@ export function validateToken(token: string) {
 export function createLLMKey(
   keyName: string | null,
   comment: string | null,
-  duration: number
+  duration: number,
+  models: string | null = null
 ) {
   let url = getApiEndpoint() + "/create_llm?";
   if (keyName) {
@@ -81,7 +82,10 @@ export function createLLMKey(
     url += "comment=" + encodeURIComponent(comment) + "&";
   }
   if (duration) {
-    url += "duration=" + encodeURIComponent(duration);
+    url += "duration=" + encodeURIComponent(duration) + "&";
+  }
+  if (models) {
+    url += "models=" + encodeURIComponent(models);
   }
   return http.post(url);
 }

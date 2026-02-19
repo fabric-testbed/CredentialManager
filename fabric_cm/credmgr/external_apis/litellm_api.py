@@ -133,7 +133,8 @@ class LiteLLMApi:
 
     def generate_key(self, user_id: str, user_email: str, team_id: str = None,
                      key_alias: str = None, duration: str = None,
-                     max_budget: float = None, metadata: dict = None) -> dict:
+                     max_budget: float = None, metadata: dict = None,
+                     models: list = None) -> dict:
         """
         Generate a new LiteLLM API key
         @param user_id FABRIC user UUID
@@ -160,6 +161,8 @@ class LiteLLMApi:
             payload['duration'] = duration
         if max_budget is not None:
             payload['max_budget'] = max_budget
+        if models is not None:
+            payload['models'] = models
 
         LOG.debug(f"LiteLLM generate_key request: {url}")
         response = self.session.post(url, json=payload)

@@ -10,6 +10,22 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
+} from "@/components/ui/collapsible";
+import {
   Table,
   TableHeader,
   TableBody,
@@ -67,18 +83,18 @@ function getErrorMessage(error: unknown, fallbackMessage: string): string {
   return fallbackMessage;
 }
 
-function getTokenStateVariant(state: string) {
-  if (state === "Revoked" || state === "Expired") return "destructive";
-  if (state === "Valid" || state === "Refreshed") return "default";
-  return "secondary";
-}
-
 function getTokenStateBg(state: string): string {
   if (state === "Revoked" || state === "Expired")
     return "bg-fabric-danger text-white";
   if (state === "Valid" || state === "Refreshed")
     return "bg-fabric-success text-white";
   return "bg-fabric-primary text-white";
+}
+
+function getTokenStateVariant(state: string) {
+  if (state === "Revoked" || state === "Expired") return "destructive";
+  if (state === "Valid" || state === "Refreshed") return "default";
+  return "secondary";
 }
 
 async function copyToClipboard(text: string): Promise<boolean> {
@@ -119,8 +135,12 @@ export default function CredentialManagerPage() {
   const [tokenComment, setTokenComment] = useState("Created via GUI");
   const [showFullPageSpinner, setShowFullPageSpinner] = useState(false);
   const [spinnerMessage, setSpinnerMessage] = useState("");
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [hashCopied, setHashCopied] = useState<string | null>(null);
 
   const portalLink = portalLinkMap[getEnvironment()];
+
+  const isCommentValid = tokenComment.length >= 10 && tokenComment.length <= 100;
 
   const listTokens = useCallback(async (projectId: string) => {
     try {
@@ -192,8 +212,7 @@ export default function CredentialManagerPage() {
     }
   };
 
-  const handleRevokeToken = async (e: React.MouseEvent, tokenHash: string) => {
-    e.preventDefault();
+  const handleRevokeToken = async (tokenHash: string) => {
     try {
       await revokeToken("identity", tokenHash);
       listTokens(selectedProjectId);
@@ -225,6 +244,14 @@ export default function CredentialManagerPage() {
     e.preventDefault();
     const success = await copyToClipboard(createTokenResult);
     if (success) setCreateCopySuccess(true);
+  };
+
+  const handleCopyHash = async (hash: string) => {
+    const success = await copyToClipboard(hash);
+    if (success) {
+      setHashCopied(hash);
+      setTimeout(() => setHashCopied(null), 2000);
+    }
   };
 
   const handleDownloadToken = (e: React.MouseEvent) => {
@@ -339,11 +366,11 @@ export default function CredentialManagerPage() {
 
           {/* Token holder info */}
           <div
-            className={`rounded p-4 my-2 ${
-              !isTokenHolder
+            className={`rounded p-4 my-2 text-fabric-dark ${
+              isTokenHolder
                 ? "bg-fabric-success/10 border border-fabric-success/30"
-                : "bg-fabric-success/10 border border-fabric-success/30"
-            } text-fabric-dark`}
+                : "bg-fabric-warning/10 border border-fabric-warning/30"
+            }`}
           >
             {!isTokenHolder ? (
               <span>
@@ -386,9 +413,11 @@ export default function CredentialManagerPage() {
                 <Input
                   id="lifetime"
                   type="number"
+                  min={1}
+                  max={selectLifetimeUnit === "hours" ? 1512 : selectLifetimeUnit === "days" ? 63 : 9}
                   disabled={!isTokenHolder}
                   value={inputLifetime}
-                  onChange={(e) => setInputLifetime(parseInt(e.target.value) || 0)}
+                  onChange={(e) => setInputLifetime(parseInt(e.target.value) || 1)}
                 />
               </div>
               <div className="col-span-2">
@@ -406,10 +435,17 @@ export default function CredentialManagerPage() {
                 </select>
               </div>
               <div className="col-span-3">
-                <Label htmlFor="comment">Comment (10 - 100 characters)</Label>
+                <Label htmlFor="comment">
+                  Comment
+                  <span className={`ml-1 text-xs ${isCommentValid ? "text-muted-foreground" : "text-fabric-danger"}`}>
+                    ({tokenComment.length}/100, min 10)
+                  </span>
+                </Label>
                 <Input
                   id="comment"
                   type="text"
+                  minLength={10}
+                  maxLength={100}
                   value={tokenComment}
                   onChange={(e) => setTokenComment(e.target.value)}
                 />
@@ -432,9 +468,8 @@ export default function CredentialManagerPage() {
               <div className="col-span-2 flex justify-end">
                 <Button
                   type="submit"
-                  variant="outline"
-                  disabled={createSuccess}
-                  className="border-fabric-success text-fabric-success hover:bg-fabric-success/10"
+                  disabled={createSuccess || !isCommentValid}
+                  className="bg-fabric-success hover:bg-fabric-success/90 text-white"
                 >
                   Create Token
                 </Button>
@@ -471,6 +506,11 @@ export default function CredentialManagerPage() {
                     rows={6}
                     readOnly
                   />
+                  {createCopySuccess && (
+                    <Alert className="bg-fabric-success/10 border-fabric-success/30 mt-2">
+                      <AlertDescription>Copied to clipboard successfully!</AlertDescription>
+                    </Alert>
+                  )}
                 </CardContent>
               </Card>
               <div className="bg-fabric-warning/10 border border-fabric-warning/30 text-fabric-dark rounded p-4 mb-2 mt-2 flex items-center justify-between">
@@ -495,12 +535,6 @@ export default function CredentialManagerPage() {
             </div>
           )}
 
-          {createCopySuccess && (
-            <Alert className="bg-fabric-success/10 border-fabric-success/30 mt-2">
-              <AlertDescription>Copied to clipboard successfully!</AlertDescription>
-            </Alert>
-          )}
-
           {/* Token list */}
           <div className="mt-3">
             {listSuccess && tokenList.length > 0 ? (
@@ -520,8 +554,19 @@ export default function CredentialManagerPage() {
                   <TableBody>
                     {tokenList.map((token, index) => (
                       <TableRow key={index}>
-                        <TableCell className="max-w-[200px] truncate font-mono text-xs">
-                          {token.token_hash}
+                        <TableCell className="max-w-[200px]">
+                          <button
+                            type="button"
+                            onClick={() => handleCopyHash(token.token_hash)}
+                            className="truncate block max-w-full font-mono text-xs text-left hover:text-fabric-primary cursor-pointer"
+                            title="Click to copy full hash"
+                          >
+                            {hashCopied === token.token_hash ? (
+                              <span className="text-fabric-success">Copied!</span>
+                            ) : (
+                              token.token_hash
+                            )}
+                          </button>
                         </TableCell>
                         <TableCell>{token.comment}</TableCell>
                         <TableCell>{toLocaleTime(token.created_at)}</TableCell>
@@ -536,17 +581,36 @@ export default function CredentialManagerPage() {
                         </TableCell>
                         <TableCell>{token.created_from}</TableCell>
                         <TableCell>
-                          {token.state !== "Revoked" && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="border-fabric-danger text-fabric-danger hover:bg-fabric-danger/10"
-                              onClick={(e) =>
-                                handleRevokeToken(e, token.token_hash)
-                              }
-                            >
-                              Revoke
-                            </Button>
+                          {token.state !== "Revoked" && token.state !== "Expired" && (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="border-fabric-danger text-fabric-danger hover:bg-fabric-danger/10"
+                                >
+                                  Revoke
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Revoke Token</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to revoke this token? Any applications
+                                    using this token will lose access. This action cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleRevokeToken(token.token_hash)}
+                                    className="bg-destructive text-white hover:bg-destructive/90"
+                                  >
+                                    Revoke
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                           )}
                         </TableCell>
                       </TableRow>
@@ -561,58 +625,85 @@ export default function CredentialManagerPage() {
             )}
           </div>
 
-          {/* Validate token section */}
-          <h3 className="text-xl font-semibold my-3">
-            Validate Identity Token
-          </h3>
-          <Card>
-            <CardHeader className="bg-muted/50 py-3 px-4">
-              Paste the token to validate:
-            </CardHeader>
-            <CardContent className="pt-4">
-              <Textarea
-                rows={3}
-                id="validateTokenTextArea"
-                value={validateTokenValue}
-                onChange={(e) => {
-                  setValidateTokenValue(e.target.value);
-                  setIsTokenValid(false);
-                }}
-              />
-            </CardContent>
-          </Card>
+          {/* Advanced: Validate token */}
+          <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen} className="mt-6">
+            <CollapsibleTrigger asChild>
+              <button
+                type="button"
+                className="flex items-center gap-2 text-lg font-semibold cursor-pointer hover:text-fabric-primary transition-colors"
+              >
+                <svg
+                  className={`h-4 w-4 transition-transform ${advancedOpen ? "rotate-90" : ""}`}
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="m9 18 6-6-6-6"/>
+                </svg>
+                Advanced
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="mt-3">
+                <h4 className="text-base font-medium mb-2">Validate Identity Token</h4>
+                <Card>
+                  <CardHeader className="bg-muted/50 py-3 px-4">
+                    Paste the token to validate:
+                  </CardHeader>
+                  <CardContent className="pt-4">
+                    <Textarea
+                      rows={3}
+                      id="validateTokenTextArea"
+                      value={validateTokenValue}
+                      onChange={(e) => {
+                        setValidateTokenValue(e.target.value);
+                        setValidateSuccess(false);
+                        setIsTokenValid(false);
+                      }}
+                    />
+                  </CardContent>
+                </Card>
 
-          {validateSuccess && isTokenValid && (
-            <>
-              <Alert className="bg-fabric-success/10 border-fabric-success/30 mt-2">
-                <AlertDescription>{tokenMsg}</AlertDescription>
-              </Alert>
-              <div className="mt-2">
-                <Label>Decoded Token:</Label>
-                <Textarea
-                  rows={6}
-                  value={JSON.stringify(decodedToken, undefined, 4)}
-                  readOnly
-                />
+                {validateSuccess && isTokenValid && (
+                  <>
+                    <Alert className="bg-fabric-success/10 border-fabric-success/30 mt-2">
+                      <AlertDescription>{tokenMsg}</AlertDescription>
+                    </Alert>
+                    <div className="mt-2">
+                      <Label>Decoded Token:</Label>
+                      <Textarea
+                        rows={6}
+                        value={JSON.stringify(decodedToken, undefined, 4)}
+                        readOnly
+                        className="font-mono text-sm"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {validateSuccess &&
+                  !isTokenValid &&
+                  validateTokenValue !== "" && (
+                    <Alert variant="destructive" className="mt-2">
+                      <AlertDescription>Token is invalid!</AlertDescription>
+                    </Alert>
+                  )}
+
+                <Button
+                  variant="outline"
+                  className="mt-3 border-fabric-primary text-fabric-primary hover:bg-fabric-primary/10"
+                  onClick={handleValidateToken}
+                  disabled={!validateTokenValue.trim()}
+                >
+                  Validate Token
+                </Button>
               </div>
-            </>
-          )}
-
-          {validateSuccess &&
-            !isTokenValid &&
-            validateTokenValue !== "" && (
-              <Alert variant="destructive" className="mt-2">
-                <AlertDescription>Token is invalid!</AlertDescription>
-              </Alert>
-            )}
-
-          <Button
-            variant="outline"
-            className="mt-3 border-fabric-primary text-fabric-primary hover:bg-fabric-primary/10"
-            onClick={handleValidateToken}
-          >
-            Validate Token
-          </Button>
+            </CollapsibleContent>
+          </Collapsible>
         </div>
       )}
     </div>

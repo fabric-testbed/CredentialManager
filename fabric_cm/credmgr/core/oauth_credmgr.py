@@ -532,7 +532,7 @@ class OAuthCredMgr:
             LOG.warning(f"Could not add user {uuid} to team {team_id}: {e}")
 
     def create_llm_key(self, cookie: str, key_name: str = None, comment: str = None,
-                       duration_days: int = 30) -> dict:
+                       duration_days: int = 30, models: list = None) -> dict:
         """
         Create an LLM API key for the user.
         Full workflow: verify FABRIC project membership → ensure LLM user → add to team → generate key.
@@ -589,7 +589,8 @@ class OAuthCredMgr:
         # Generate the key with team_id so it's associated with the team
         result = llm_api.generate_key(user_id=uuid, user_email=email, team_id=team_id,
                                           key_alias=key_name, duration=duration,
-                                          max_budget=max_budget, metadata=metadata)
+                                          max_budget=max_budget, metadata=metadata,
+                                          models=models)
 
         api_key = result.get('key')
         llm_key_id = result.get('token')
@@ -668,11 +669,12 @@ class OAuthCredMgr:
 
     def get_llm_keys(self, cookie: str, offset: int = 0, limit: int = 200) -> list:
         """
-        Get LLM keys for a user by querying LLM proxy API directly
+        Get LLM keys for a user by querying LLM proxy API directly.
+        Expired keys are automatically deleted before returning the list.
         @param cookie Vouch cookie
         @param offset offset
         @param limit limit
-        @return list of LLM key records
+        @return list of active (non-expired) LLM key records
         """
         from fabric_cm.credmgr.external_apis.core_api import CoreApi
         core_api = CoreApi(api_server=CONFIG_OBJ.get_core_api_url(), cookie=cookie,
@@ -683,7 +685,36 @@ class OAuthCredMgr:
         llm_api = LiteLLMApi(api_server=CONFIG_OBJ.get_llm_url(),
                                  master_key=CONFIG_OBJ.get_llm_api_key())
 
-        return llm_api.list_keys(user_id=uuid)
+        keys = llm_api.list_keys(user_id=uuid)
+
+        # Delete expired keys automatically
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc)
+        active_keys = []
+        for key in keys:
+            expires_str = key.get('expires')
+            if expires_str:
+                try:
+                    expires_dt = datetime.fromisoformat(expires_str.replace('Z', '+00:00'))
+                    if expires_dt < now:
+                        key_id = key.get('token')
+                        if key_id:
+                            try:
+                                llm_api.delete_key(key_id=key_id)
+                                try:
+                                    DB_OBJ.remove_llm_key(llm_key_id=key_id)
+                                except Exception:
+                                    pass
+                                LOG.info(f"Deleted expired LLM key {key_id} for user {uuid}")
+                            except Exception as ex:
+                                LOG.warning(f"Failed to delete expired LLM key {key_id}: {ex}")
+                                active_keys.append(key)
+                        continue
+                except (ValueError, TypeError) as ex:
+                    LOG.warning(f"Failed to parse expires field '{expires_str}': {ex}")
+            active_keys.append(key)
+
+        return active_keys
 
     def get_llm_models(self) -> dict:
         """
