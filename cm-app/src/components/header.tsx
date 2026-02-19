@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { featureFlags } from "@/lib/config";
 
 interface HeaderProps {
   cmUserStatus: string;
@@ -50,17 +51,19 @@ export default function Header({ cmUserStatus }: HeaderProps) {
           >
             FABRIC Tokens
           </Link>
-          <Link
-            href="/llm"
-            className={cn(
-              "px-3 py-1 text-sm rounded no-underline",
-              pathname === "/llm"
-                ? "bg-fabric-primary text-white"
-                : "border border-fabric-primary text-fabric-primary hover:bg-fabric-primary/10"
-            )}
-          >
-            LLM Tokens
-          </Link>
+          {featureFlags.llmTokens && (
+            <Link
+              href="/llm"
+              className={cn(
+                "px-3 py-1 text-sm rounded no-underline",
+                pathname === "/llm"
+                  ? "bg-fabric-primary text-white"
+                  : "border border-fabric-primary text-fabric-primary hover:bg-fabric-primary/10"
+              )}
+            >
+              LLM Tokens
+            </Link>
+          )}
         </div>
       )}
 

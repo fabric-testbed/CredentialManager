@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -37,7 +38,7 @@ import {
   deleteLLMKey,
   getLLMModels,
 } from "@/services/credential-manager-service";
-import { getLlmProjectName } from "@/lib/config";
+import { getLlmProjectName, featureFlags } from "@/lib/config";
 
 interface LLMKey {
   key_alias?: string;
@@ -119,6 +120,14 @@ async function copyToClipboard(text: string): Promise<boolean> {
 }
 
 export default function LLMTokensPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!featureFlags.llmTokens) {
+      router.replace("/");
+    }
+  }, [router]);
+
   const [keys, setKeys] = useState<LLMKey[]>([]);
   const [createdKey, setCreatedKey] = useState<CreatedKeyData | null>(null);
   const [createSuccess, setCreateSuccess] = useState(false);
@@ -349,6 +358,10 @@ export default function LLMTokensPage() {
         : selectedModels.length === 0
           ? "None selected"
           : `${selectedModels.length} of ${availableModels.length} selected`;
+
+  if (!featureFlags.llmTokens) {
+    return null;
+  }
 
   if (showFullPageSpinner) {
     return (

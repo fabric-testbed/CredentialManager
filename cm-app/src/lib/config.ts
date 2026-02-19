@@ -42,3 +42,8 @@ export function getCredentialManagerApiUrl(): string {
 export function getLlmProjectName(): string {
   return apiConfig.llmProjectName[getEnvironment()];
 }
+
+// Feature flags — set to true to enable
+export const featureFlags = {
+  llmTokens: false,
+} as const;
