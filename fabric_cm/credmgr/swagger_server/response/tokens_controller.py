@@ -463,8 +463,7 @@ def tokens_create_cli_get(project_id: str = None, project_name: str = None, scop
             host = request.headers.get('Host', request.host)
             trusted_domain = CONFIG_OBJ.get_vouch_cookie_domain_name()
             if trusted_domain and not host.endswith(trusted_domain):
-                LOG.warning(f"CLI create: Host header '{host}' does not match trusted domain "
-                            f"'{trusted_domain}', rejecting request")
+                LOG.warning(f"CLI create: Host header '{host}' failed trusted domain validation, rejecting request")
                 failure_counter.labels(HTTP_METHOD_GET, TOKENS_CREATE_CLI_URL).inc()
                 return cors_400(details="Invalid Host header")
             # Build redirect using only the validated, fixed paths
