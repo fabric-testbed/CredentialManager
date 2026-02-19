@@ -42,6 +42,8 @@ facility-operators-role = facility-operators
 allowed-scopes = cf, mf, all
 max-llt-count-per-project = 5
 llt-role-suffix = tk
+# Public base URL of this credential manager instance (used for safe redirects)
+base-url = https://cm.fabric-testbed.net
 
 [logging]
 logger = credmgr
@@ -104,3 +106,11 @@ db-user = fabric
 db-password = fabric
 db-name = credmgr
 db-host = credmgr-db:5432
+
+[llm]
+llm-url = https://ai.fabric-testbed.net
+llm-api-key = <MASTER_KEY>
+llm-allowed-project = FABRIC-LLM
+llm-team-id = <LLM_TEAM_ID>
+llm-default-max-budget = 10.0
+llm-default-duration = 30d

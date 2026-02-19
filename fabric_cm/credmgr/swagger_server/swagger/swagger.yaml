@@ -154,6 +154,100 @@ paths:
               schema:
                 $ref: '#/components/schemas/status_500_internal_server_error'
       x-openapi-router-controller: fabric_cm.credmgr.swagger_server.controllers.tokens_controller
+  /tokens/create_cli:
+    get:
+      tags:
+      - tokens
+      summary: Generate tokens for a CLI user and redirect with tokens
+      description: |
+        Request to generate tokens for a user via CLI login flow.
+        After token creation, redirects to the specified redirect_uri with
+        token data as query parameters. The redirect_uri must point to
+        localhost (http://localhost:* or http://127.0.0.1:*).
+      operationId: tokens_create_cli_get
+      parameters:
+      - name: project_id
+        in: query
+        description: Project identified by universally unique identifier
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+      - name: project_name
+        in: query
+        description: Project identified by name
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+      - name: scope
+        in: query
+        description: Scope for which token is requested
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+          default: all
+      - name: lifetime
+        in: query
+        description: Lifetime of the token requested in hours
+        required: false
+        style: form
+        explode: true
+        schema:
+          maximum: 1512
+          type: integer
+          default: 4
+      - name: comment
+        in: query
+        description: Comment
+        required: false
+        style: form
+        explode: true
+        schema:
+          maxLength: 100
+          minLength: 10
+          type: string
+          default: Create Token via CLI
+      - name: redirect_uri
+        in: query
+        description: Localhost URI to redirect to with token data (e.g. http://localhost:12345/callback)
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+      responses:
+        "302":
+          description: Redirect to redirect_uri with token data as query parameters
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_400_bad_request'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_401_unauthorized'
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_403_forbidden'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_500_internal_server_error'
+      x-openapi-router-controller: fabric_cm.credmgr.swagger_server.controllers.tokens_controller
   /tokens/refresh:
     post:
       tags:
@@ -633,6 +727,251 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/status_404_not_found'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_500_internal_server_error'
+      x-openapi-router-controller: fabric_cm.credmgr.swagger_server.controllers.tokens_controller
+  /tokens/create_llm:
+    post:
+      tags:
+      - tokens
+      summary: Create an LLM token
+      description: |
+        Request to create an LLM token for an user
+      operationId: tokens_create_llm_post
+      parameters:
+      - name: key_name
+        in: query
+        description: Human-readable name for the key
+        required: false
+        style: form
+        explode: true
+        schema:
+          maxLength: 100
+          type: string
+      - name: comment
+        in: query
+        description: Comment
+        required: false
+        style: form
+        explode: true
+        schema:
+          maxLength: 100
+          type: string
+      - name: duration
+        in: query
+        description: Token duration in days (1-30, default 30)
+        required: false
+        style: form
+        explode: true
+        schema:
+          maximum: 30
+          minimum: 1
+          type: integer
+          format: int32
+          default: 30
+      - name: models
+        in: query
+        description: Comma-separated list of model IDs to restrict the key to
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_200_ok_no_content'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_400_bad_request'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_401_unauthorized'
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_403_forbidden'
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_404_not_found'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_500_internal_server_error'
+      x-openapi-router-controller: fabric_cm.credmgr.swagger_server.controllers.tokens_controller
+  /tokens/delete_llm/{llm_key_id}:
+    delete:
+      tags:
+      - tokens
+      summary: Delete an LLM token
+      description: |
+        Request to delete an LLM token
+      operationId: tokens_delete_llm_delete
+      parameters:
+      - name: llm_key_id
+        in: path
+        description: LLM key identifier
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_200_ok_no_content'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_400_bad_request'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_401_unauthorized'
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_403_forbidden'
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_404_not_found'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_500_internal_server_error'
+      x-openapi-router-controller: fabric_cm.credmgr.swagger_server.controllers.tokens_controller
+  /tokens/llm_keys:
+    get:
+      tags:
+      - tokens
+      summary: Get LLM tokens for a user
+      description: |
+        Get LLM tokens for a user
+      operationId: tokens_llm_keys_get
+      parameters:
+      - name: limit
+        in: query
+        description: maximum number of results to return per page (1 or more)
+        required: false
+        style: form
+        explode: true
+        schema:
+          maximum: 200
+          minimum: 1
+          type: integer
+          format: int32
+          default: 200
+      - name: offset
+        in: query
+        description: number of items to skip before starting to collect the result
+          set
+        required: false
+        style: form
+        explode: true
+        schema:
+          minimum: 0
+          type: integer
+          format: int32
+          default: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_200_ok_no_content'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_400_bad_request'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_401_unauthorized'
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_403_forbidden'
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_404_not_found'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_500_internal_server_error'
+      x-openapi-router-controller: fabric_cm.credmgr.swagger_server.controllers.tokens_controller
+  /tokens/llm_models:
+    get:
+      tags:
+      - tokens
+      summary: Get available LLM models
+      description: |
+        Get available LLM models and API host information
+      operationId: tokens_llm_models_get
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_200_ok_no_content'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_400_bad_request'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_401_unauthorized'
         "500":
           description: Internal Server Error
           content:

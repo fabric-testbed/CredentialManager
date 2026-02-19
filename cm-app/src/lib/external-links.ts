@@ -1,0 +1,20 @@
+export const externalLinks = {
+  portalLinkAlpha: "https://alpha-4.fabric-testbed.net/",
+  portalLinkBeta: "https://beta-4.fabric-testbed.net/",
+  portalLinkProduction: "https://portal.fabric-testbed.net/",
+  learnArticleFabricTokens:
+    "https://learn.fabric-testbed.net/knowledge-base/obtaining-and-using-fabric-api-tokens/",
+  learnArticleStarterQuestions:
+    "https://learn.fabric-testbed.net/knowledge-base/fabric-user-roles-and-project-permissions/#managing-projects-in-the-real-world",
+  learnArticleLonglivedTokens:
+    "https://learn.fabric-testbed.net/knowledge-base/obtaining-and-using-fabric-api-tokens/#creating-long-lived-api-tokens",
+  chatbox: "https://chatboxai.app/",
+  claudeCode:
+    "https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview",
+} as const;
+
+export const portalLinkMap = {
+  alpha: externalLinks.portalLinkAlpha,
+  beta: externalLinks.portalLinkBeta,
+  production: externalLinks.portalLinkProduction,
+} as const;

@@ -27,7 +27,7 @@ import threading
 from datetime import datetime
 from typing import List
 
-from fabric_cm.db import Base, Tokens
+from fabric_cm.db import Base, Tokens, LlmKeys
 from sqlalchemy import create_engine, desc
 from sqlalchemy.orm import scoped_session, sessionmaker
 
@@ -202,3 +202,75 @@ class DbApi:
             if d[k] is None:
                 d.pop(k)
         return d
+
+    def add_llm_key(self, *, user_id: str, user_email: str, llm_key_id: str,
+                    llm_key_name: str, api_key_hash: str,
+                    created_at: datetime, expires_at: datetime = None, comment: str = None):
+        """
+        Add an LLM key record
+        @param user_id User ID (FABRIC UUID)
+        @param user_email User Email
+        @param llm_key_id Key identifier from LLM proxy
+        @param llm_key_name Human-readable key alias
+        @param api_key_hash SHA256 hash of the API key
+        @param created_at Creation time
+        @param expires_at Expiration time
+        @param comment Comment
+        """
+        session = self.get_session()
+        try:
+            key_obj = LlmKeys(user_id=user_id, user_email=user_email, llm_key_id=llm_key_id,
+                               llm_key_name=llm_key_name, api_key_hash=api_key_hash,
+                               created_at=created_at, expires_at=expires_at, comment=comment)
+            session.add(key_obj)
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            self.logger.error(f"Exception occurred: {e}", stack_info=True)
+            raise e
+
+    def get_llm_keys(self, *, user_email: str = None, llm_key_id: str = None,
+                     offset: int = 0, limit: int = 200) -> list:
+        """
+        Get LLM keys
+        @param user_email User's email
+        @param llm_key_id LLM key identifier
+        @param offset offset
+        @param limit limit
+        @return list of LLM key records
+        """
+        result = []
+        session = self.get_session()
+        try:
+            filter_dict = {}
+            if user_email is not None:
+                filter_dict['user_email'] = user_email
+            if llm_key_id is not None:
+                filter_dict['llm_key_id'] = llm_key_id
+
+            rows = session.query(LlmKeys).filter_by(**filter_dict)
+            rows = rows.order_by(desc(LlmKeys.created_at))
+
+            if offset is not None and limit is not None:
+                rows = rows.offset(offset).limit(limit)
+
+            for row in rows.all():
+                result.append(self.__generate_dict_from_row(row=row))
+        except Exception as e:
+            self.logger.error(f"Exception occurred: {e}", stack_info=True)
+            raise e
+        return result
+
+    def remove_llm_key(self, *, llm_key_id: str):
+        """
+        Remove an LLM key record
+        @param llm_key_id LLM key identifier
+        """
+        session = self.get_session()
+        try:
+            session.query(LlmKeys).filter_by(llm_key_id=llm_key_id).delete()
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            self.logger.error(f"Exception occurred: {e}", stack_info=True)
+            raise e

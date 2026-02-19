@@ -39,6 +39,7 @@ class Config:
     SECTION_CORE_API = 'core-api'
     SECTION_VOUCH = 'vouch'
     SECTION_DATABASE = 'database'
+    SECTION_LLM = 'llm'
 
     # Runtime parameters
     REST_PORT = 'rest-port'
@@ -52,6 +53,7 @@ class Config:
     MAX_LLT_CNT_PER_PROJECT = 'max-llt-count-per-project'
     FACILITY_OPERATOR_ROLE = 'facility-operators-role'
     LLT_ROLE_SUFFIX = 'llt-role-suffix'
+    BASE_URL = 'base-url'
 
     # Logging Parameters
     LOGGER = 'logger'
@@ -92,6 +94,14 @@ class Config:
     # Project Registry Parameters
     CORE_API_URL = 'core-api-url'
     SSL_VERIFY = 'ssl_verify'
+
+    # LLM Parameters
+    LLM_URL = 'llm-url'
+    LLM_API_KEY = 'llm-api-key'
+    LLM_ALLOWED_PROJECT = 'llm-allowed-project'
+    LLM_TEAM_ID = 'llm-team-id'
+    LLM_DEFAULT_MAX_BUDGET = 'llm-default-max-budget'
+    LLM_DEFAULT_DURATION = 'llm-default-duration'
 
     # Vouch Parameters
     VOUCH = 'vouch'
@@ -140,6 +150,10 @@ class Config:
 
     def get_token_life_time(self) -> int:
         return int(self._get_config_from_section(self.SECTION_RUNTIME, self.TOKEN_LIFETIME))
+
+    def get_base_url(self) -> str:
+        """Return the public base URL of the credential manager (e.g. https://cm.fabric-testbed.net)."""
+        return self._get_config_from_section(self.SECTION_RUNTIME, self.BASE_URL).rstrip('/')
 
     def get_logger_name(self) -> str:
         return self._get_config_from_section(self.SECTION_LOGGING, self.LOGGER)
@@ -273,3 +287,21 @@ class Config:
 
     def get_llt_role_suffix(self) -> str:
         return self._get_config_from_section(self.SECTION_RUNTIME, self.LLT_ROLE_SUFFIX)
+
+    def get_llm_url(self) -> str:
+        return self._get_config_from_section(self.SECTION_LLM, self.LLM_URL)
+
+    def get_llm_api_key(self) -> str:
+        return self._get_config_from_section(self.SECTION_LLM, self.LLM_API_KEY)
+
+    def get_llm_allowed_project(self) -> str:
+        return self._get_config_from_section(self.SECTION_LLM, self.LLM_ALLOWED_PROJECT)
+
+    def get_llm_team_id(self) -> str:
+        return self._get_config_from_section(self.SECTION_LLM, self.LLM_TEAM_ID)
+
+    def get_llm_default_max_budget(self) -> float:
+        return float(self._get_config_from_section(self.SECTION_LLM, self.LLM_DEFAULT_MAX_BUDGET))
+
+    def get_llm_default_duration(self) -> str:
+        return self._get_config_from_section(self.SECTION_LLM, self.LLM_DEFAULT_DURATION)

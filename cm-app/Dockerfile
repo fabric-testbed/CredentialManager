@@ -1,17 +1,21 @@
-FROM node:lts
-MAINTAINER Komal Thareja
+FROM node:22 AS builder
+LABEL maintainer="Komal Thareja"
 
-VOLUME /code
-WORKDIR /code
+WORKDIR /app
+COPY package.json ./
+RUN npm install
+COPY . .
+RUN npm run build
 
-COPY ./package.json ./
-COPY ./src ./src
-COPY ./public ./public
-COPY ./docker-entrypoint.sh ./
+FROM node:22-slim AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+ENV PORT=3000
 
-WORKDIR /
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
 
 EXPOSE 3000
 
-ENTRYPOINT ["/code/docker-entrypoint.sh"]
-CMD ["run_server"]
+CMD ["node", "server.js"]

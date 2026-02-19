@@ -46,3 +46,19 @@ class Tokens(Base):
     created_from = Column(String, nullable=False)
     created_at = Column(TIMESTAMP(timezone=True), nullable=True)
     expires_at = Column(TIMESTAMP(timezone=True), nullable=True)
+
+
+class LlmKeys(Base):
+    """
+    Represents LLM API Keys Database Table
+    """
+    __tablename__ = 'LlmKeys'
+    id = Column(Integer, Sequence('llm_key_id_seq', start=1, increment=1), autoincrement=True, primary_key=True)
+    user_id = Column(String, nullable=False, index=True)
+    user_email = Column(String, nullable=False, index=True)
+    llm_key_id = Column(String, nullable=False, unique=True, index=True)
+    llm_key_name = Column(String, nullable=True)
+    api_key_hash = Column(String, nullable=False, index=True)
+    created_at = Column(TIMESTAMP(timezone=True), nullable=True)
+    expires_at = Column(TIMESTAMP(timezone=True), nullable=True)
+    comment = Column(String, nullable=True)

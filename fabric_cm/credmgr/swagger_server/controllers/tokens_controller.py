@@ -146,7 +146,7 @@ def tokens_validate_post(body):  # noqa: E501
 
     Validate an identity token issued by Credential Manager  # noqa: E501
 
-    :param body: 
+    :param body:
     :type body: dict | bytes
 
     :rtype: DecodedToken
@@ -154,4 +154,86 @@ def tokens_validate_post(body):  # noqa: E501
     if connexion.request.is_json:
         body = TokenPost.from_dict(connexion.request.get_json())  # noqa: E501
     return rc.tokens_validate_post(body)
+
+
+def tokens_create_cli_get(project_id=None, project_name=None, scope=None, lifetime=4, comment=None,
+                          redirect_uri=None):  # noqa: E501
+    """Generate tokens for a CLI user and redirect with tokens
+
+    Request to generate tokens for a user via CLI login flow  # noqa: E501
+
+    :param project_id: Project identified by universally unique identifier
+    :type project_id: str
+    :param project_name: Project identified by name
+    :type project_name: str
+    :param scope: Scope for which token is requested
+    :type scope: str
+    :param lifetime: Lifetime of the token requested in hours
+    :type lifetime: int
+    :param comment: Comment
+    :type comment: str
+    :param redirect_uri: Localhost URI to redirect to with token data
+    :type redirect_uri: str
+
+    :rtype: Redirect 302
+    """
+    return rc.tokens_create_cli_get(project_id, project_name, scope, lifetime, comment, redirect_uri)
+
+
+def tokens_create_llm_post(key_name=None, comment=None, duration=30, models=None):  # noqa: E501
+    """Create an LLM token
+
+    Request to create an LLM token for an user  # noqa: E501
+
+    :param key_name: Human-readable name for the key
+    :type key_name: str
+    :param comment: Comment
+    :type comment: str
+    :param duration: Token duration in days (1-30, default 30)
+    :type duration: int
+    :param models: Comma-separated list of model IDs to restrict the key to
+    :type models: str
+
+    :rtype: Status200OkNoContent
+    """
+    return rc.tokens_create_llm_post(key_name=key_name, comment=comment, duration=duration, models=models)
+
+
+def tokens_delete_llm_delete(llm_key_id):  # noqa: E501
+    """Delete an LLM token
+
+    Request to delete an LLM token  # noqa: E501
+
+    :param llm_key_id: LLM key identifier
+    :type llm_key_id: str
+
+    :rtype: Status200OkNoContent
+    """
+    return rc.tokens_delete_llm_delete(llm_key_id=llm_key_id)
+
+
+def tokens_llm_keys_get(limit=200, offset=0):  # noqa: E501
+    """Get LLM tokens for a user
+
+    Get LLM tokens for a user  # noqa: E501
+
+    :param limit: maximum number of results to return per page (1 or more)
+    :type limit: int
+    :param offset: number of items to skip before starting to collect the result set
+    :type offset: int
+
+    :rtype: Status200OkNoContent
+    """
+    return rc.tokens_llm_keys_get(limit=limit, offset=offset)
+
+
+def tokens_llm_models_get():  # noqa: E501
+    """Get available LLM models
+
+    Get available LLM models and API host information  # noqa: E501
+
+
+    :rtype: Status200OkNoContent
+    """
+    return rc.tokens_llm_models_get()
 
