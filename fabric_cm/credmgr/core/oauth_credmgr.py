@@ -29,7 +29,6 @@ Module responsible for handling Credmgr REST API logic
 import base64
 import enum
 import hashlib
-import hmac
 from datetime import datetime, timezone, timedelta
 from enum import Enum
 from typing import List, Dict, Any, Tuple
@@ -129,16 +128,19 @@ class OAuthCredMgr:
     @staticmethod
     def __generate_token_hash(*, token: str) -> str:
         """
-        Generate HMAC-SHA256 fingerprint for a high-entropy token.
+        Generate a PBKDF2-HMAC-SHA256 fingerprint for a high-entropy token.
 
-        Uses a server-side secret (vouch secret) as the HMAC key so that
-        database contents alone cannot be used to verify guessed tokens.
+        Uses a server-side secret (vouch secret) as a fixed salt so the output
+        is deterministic and can be used as a database lookup key. The iteration
+        count adds computational cost, making offline brute-force impractical
+        even if the database is compromised.
 
         @param token token string
-        @return hex digest of the HMAC-SHA256
+        @return hex digest of the PBKDF2-HMAC-SHA256 derivation
         """
-        secret = CONFIG_OBJ.get_vouch_secret().encode('utf-8')
-        return hmac.new(secret, token.encode('utf-8'), hashlib.sha256).hexdigest()
+        salt = CONFIG_OBJ.get_vouch_secret().encode('utf-8')
+        dk = hashlib.pbkdf2_hmac('sha256', token.encode('utf-8'), salt, iterations=100_000)
+        return dk.hex()
 
     def __generate_token_and_save_info(self, ci_logon_id_token: str, scope: str, remote_addr: str,
                                        comment: str = None, cookie: str = None, lifetime: int = 4,
