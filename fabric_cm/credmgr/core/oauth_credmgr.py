@@ -29,6 +29,7 @@ Module responsible for handling Credmgr REST API logic
 import base64
 import enum
 import hashlib
+import hmac
 from datetime import datetime, timezone, timedelta
 from enum import Enum
 from typing import List, Dict, Any, Tuple
@@ -126,20 +127,18 @@ class OAuthCredMgr:
         self.log = LOG
 
     @staticmethod
-    def __generate_sha256(*, token: str):
+    def __generate_token_hash(*, token: str) -> str:
         """
-        Generate SHA 256 fingerprint for a high-entropy token.
+        Generate HMAC-SHA256 fingerprint for a high-entropy token.
 
-        Note: SHA-256 is appropriate here because this hashes randomly-generated,
-        high-entropy tokens (not passwords) to produce a lookup key / fingerprint.
-        Password-style KDFs (bcrypt/PBKDF2) are unnecessary and impractical for
-        this use case — tokens are not susceptible to dictionary attacks.
+        Uses a server-side secret (vouch secret) as the HMAC key so that
+        database contents alone cannot be used to verify guessed tokens.
 
         @param token token string
+        @return hex digest of the HMAC-SHA256
         """
-        sha256_hash = hashlib.sha256()
-        sha256_hash.update(token.encode('utf-8'))  # lgtm[py/weak-sensitive-data-hashing]
-        return sha256_hash.hexdigest()
+        secret = CONFIG_OBJ.get_vouch_secret().encode('utf-8')
+        return hmac.new(secret, token.encode('utf-8'), hashlib.sha256).hexdigest()
 
     def __generate_token_and_save_info(self, ci_logon_id_token: str, scope: str, remote_addr: str,
                                        comment: str = None, cookie: str = None, lifetime: int = 4,
@@ -191,7 +190,7 @@ class OAuthCredMgr:
                                          pass_phrase=pass_phrase)
 
             # Generate SHA256 hash
-            token_hash = self.__generate_sha256(token=token)
+            token_hash = self.__generate_token_hash(token=token)
 
             state = TokenState.Valid
             action = "create"
@@ -598,7 +597,7 @@ class OAuthCredMgr:
         if api_key is None or llm_key_id is None:
             raise OAuthCredMgrError("LLM proxy did not return expected key data")
 
-        api_key_hash = self.__generate_sha256(token=api_key)
+        api_key_hash = self.__generate_token_hash(token=api_key)
         created_at = datetime.now(timezone.utc)
 
         expires_at = None
@@ -767,7 +766,7 @@ class OAuthCredMgr:
                                 audience=CONFIG_OBJ.get_oauth_client_id())
 
             # Check if the Token is Revoked
-            token_hash = self.__generate_sha256(token=token)
+            token_hash = self.__generate_token_hash(token=token)
             token_found_in_db = self.get_tokens(token_hash=token_hash)
             if token_found_in_db is None or len(token_found_in_db) == 0:
                 raise OAuthCredMgrError(http_error_code=NOT_FOUND, message="Token not found!")
