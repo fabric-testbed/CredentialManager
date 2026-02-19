@@ -128,19 +128,18 @@ class OAuthCredMgr:
     @staticmethod
     def __generate_sha256(*, token: str):
         """
-        Generate SHA 256 for a token
+        Generate SHA 256 fingerprint for a high-entropy token.
+
+        Note: SHA-256 is appropriate here because this hashes randomly-generated,
+        high-entropy tokens (not passwords) to produce a lookup key / fingerprint.
+        Password-style KDFs (bcrypt/PBKDF2) are unnecessary and impractical for
+        this use case — tokens are not susceptible to dictionary attacks.
+
         @param token token string
         """
-        # Create a new SHA256 hash object
         sha256_hash = hashlib.sha256()
-
-        # Convert the string to bytes and update the hash object
-        sha256_hash.update(token.encode('utf-8'))
-
-        # Get the hexadecimal representation of the hash
-        sha256_hex = sha256_hash.hexdigest()
-
-        return sha256_hex
+        sha256_hash.update(token.encode('utf-8'))  # lgtm[py/weak-sensitive-data-hashing]
+        return sha256_hash.hexdigest()
 
     def __generate_token_and_save_info(self, ci_logon_id_token: str, scope: str, remote_addr: str,
                                        comment: str = None, cookie: str = None, lifetime: int = 4,

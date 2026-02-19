@@ -42,6 +42,8 @@ facility-operators-role = facility-operators
 allowed-scopes = cf, mf, all
 max-llt-count-per-project = 5
 llt-role-suffix = tk
+# Public base URL of this credential manager instance (used for safe redirects)
+base-url = https://cm.fabric-testbed.net
 
 [logging]
 logger = credmgr

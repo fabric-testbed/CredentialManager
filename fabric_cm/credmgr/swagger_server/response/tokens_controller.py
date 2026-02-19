@@ -456,20 +456,10 @@ def tokens_create_cli_get(project_id: str = None, project_name: str = None, scop
         if claims is None:
             # Phase 1: not logged in — save params in a cookie, then redirect
             # to vouch login with a simple URL (just this endpoint, no params).
-            # Validate scheme and host to prevent open-redirect via header injection
-            scheme = request.headers.get('X-Forwarded-Proto', 'https')
-            if scheme not in ('http', 'https'):
-                scheme = 'https'
-            host = request.headers.get('Host', request.host)
-            trusted_domain = CONFIG_OBJ.get_vouch_cookie_domain_name()
-            if trusted_domain and not host.endswith(trusted_domain):
-                LOG.warning(f"CLI create: Host header '{host}' does not match trusted domain "
-                            f"'{trusted_domain}', rejecting request")
-                failure_counter.labels(HTTP_METHOD_GET, TOKENS_CREATE_CLI_URL).inc()
-                return cors_400(details="Invalid Host header")
-            # Build redirect using only the validated, fixed paths
-            return_url = f"{scheme}://{host}/credmgr/tokens/create_cli"
-            login_url = f"{scheme}://{host}/cli-login?url={quote(return_url, safe='')}"
+            # Use trusted base URL from config to prevent open-redirect via header injection
+            base_url = CONFIG_OBJ.get_base_url()
+            return_url = f"{base_url}/credmgr/tokens/create_cli"
+            login_url = f"{base_url}/cli-login?url={quote(return_url, safe='')}"
 
             # Save the original params so we can restore them after login
             cli_params = _json.dumps({
