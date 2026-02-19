@@ -475,11 +475,12 @@ def tokens_create_cli_get(project_id: str = None, project_name: str = None, scop
                                cookie_name=CONFIG_OBJ.get_vouch_cookie_name(),
                                cookie_domain=CONFIG_OBJ.get_vouch_cookie_domain_name())
             projects = core_api.get_user_projects()
-            if not projects:
+            active_projects = [p for p in projects if p.get("active", False)]
+            if not active_projects:
                 failure_counter.labels(HTTP_METHOD_GET, TOKENS_CREATE_CLI_URL).inc()
-                return cors_400(details="No projects found for this user")
-            project_id = projects[0].get("uuid")
-            LOG.info(f"CLI create: no project specified, using first project: {project_id}")
+                return cors_400(details="No active projects found for this user")
+            project_id = active_projects[0].get("uuid")
+            LOG.info(f"CLI create: no project specified, using first active project: {project_id}")
 
         credmgr = OAuthCredMgr()
         remote_addr = connexion.request.remote_addr
