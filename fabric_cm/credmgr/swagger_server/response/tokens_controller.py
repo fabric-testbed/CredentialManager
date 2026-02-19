@@ -385,14 +385,23 @@ def tokens_validate_post(body: TokenPost):  # noqa: E501
         return cors_500(details=str(ex))
 
 
-def _validate_localhost_redirect(redirect_uri: str) -> bool:
-    """Validate that redirect_uri points to localhost."""
+def _validate_localhost_redirect(redirect_uri: str):
+    """Validate that redirect_uri points to localhost and return sanitized components.
+
+    Returns a tuple (scheme, netloc, path) built from validated parts, or None if invalid.
+    This reconstructs the URL from validated components to avoid passing raw user input through.
+    """
     if not redirect_uri:
-        return False
+        return None
     parsed = urlparse(redirect_uri)
-    return (parsed.scheme == "http" and
+    if (parsed.scheme == "http" and
             parsed.hostname in ("localhost", "127.0.0.1") and
-            parsed.port is not None)
+            parsed.port is not None):
+        # Reconstruct from validated parts only — breaks taint chain for static analysis
+        safe_netloc = f"{parsed.hostname}:{parsed.port}"
+        safe_path = parsed.path if parsed.path else "/"
+        return ("http", safe_netloc, safe_path)
+    return None
 
 
 def tokens_create_cli_get(project_id: str = None, project_name: str = None, scope: str = None,
@@ -435,19 +444,30 @@ def tokens_create_cli_get(project_id: str = None, project_name: str = None, scop
             except Exception:
                 LOG.warning("CLI create: failed to parse cli params cookie")
 
-        if not redirect_uri or not _validate_localhost_redirect(redirect_uri):
+        validated_redirect = _validate_localhost_redirect(redirect_uri)
+        if not validated_redirect:
             failure_counter.labels(HTTP_METHOD_GET, TOKENS_CREATE_CLI_URL).inc()
             return cors_400(details="redirect_uri is required and must point to localhost "
                                     "(e.g. http://localhost:12345/callback)")
+        safe_scheme, safe_netloc, safe_path = validated_redirect
 
         # Check authentication
         claims = vouch_authorize()
         if claims is None:
             # Phase 1: not logged in — save params in a cookie, then redirect
             # to vouch login with a simple URL (just this endpoint, no params).
+            # Validate scheme and host to prevent open-redirect via header injection
             scheme = request.headers.get('X-Forwarded-Proto', 'https')
+            if scheme not in ('http', 'https'):
+                scheme = 'https'
             host = request.headers.get('Host', request.host)
-            # Simple return URL — just the endpoint path, no query params
+            trusted_domain = CONFIG_OBJ.get_vouch_cookie_domain_name()
+            if trusted_domain and not host.endswith(trusted_domain):
+                LOG.warning(f"CLI create: Host header '{host}' does not match trusted domain "
+                            f"'{trusted_domain}', rejecting request")
+                failure_counter.labels(HTTP_METHOD_GET, TOKENS_CREATE_CLI_URL).inc()
+                return cors_400(details="Invalid Host header")
+            # Build redirect using only the validated, fixed paths
             return_url = f"{scheme}://{host}/credmgr/tokens/create_cli"
             login_url = f"{scheme}://{host}/cli-login?url={quote(return_url, safe='')}"
 
@@ -495,8 +515,9 @@ def tokens_create_cli_get(project_id: str = None, project_name: str = None, scop
                                           user_email=claims.get(OAuthCredMgr.EMAIL))
 
         # Build redirect URL with token data as query params
+        # Use sanitized components (safe_scheme, safe_netloc, safe_path) instead of
+        # raw redirect_uri to avoid untrusted URL redirection (CodeQL security finding)
         import base64 as _base64
-        parsed = urlparse(redirect_uri)
         params = {
             "id_token": token_dict.get("id_token", ""),
             "refresh_token": token_dict.get("refresh_token", ""),
@@ -505,13 +526,9 @@ def tokens_create_cli_get(project_id: str = None, project_name: str = None, scop
             "expires_at": token_dict.get("expires_at", ""),
             "state": token_dict.get("state", ""),
         }
-        existing_params = parse_qs(parsed.query)
-        for k, v in existing_params.items():
-            if k not in params:
-                params[k] = v[0]
         redirect_url = urlunparse((
-            parsed.scheme, parsed.netloc, parsed.path,
-            parsed.params, urlencode(params), parsed.fragment
+            safe_scheme, safe_netloc, safe_path,
+            '', urlencode(params), ''
         ))
 
         # Build a base64-encoded authorization code for manual paste fallback
