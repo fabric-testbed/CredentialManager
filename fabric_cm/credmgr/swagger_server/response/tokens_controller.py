@@ -40,6 +40,7 @@ from fabric_cm.credmgr.swagger_server.response.constants import HTTP_METHOD_POST
     TOKENS_CREATE_CLI_URL, TOKENS_CREATE_LLM_URL, TOKENS_DELETE_LLM_URL, TOKENS_LLM_KEYS_URL, TOKENS_LLM_MODELS_URL
 from fabric_cm.credmgr.logging import LOG
 from fabric_cm.credmgr.swagger_server.response.cors_response import cors_200, cors_500, cors_400
+from fabric_cm.credmgr.config import CONFIG_OBJ
 from fabric_cm.credmgr.swagger_server.response.decorators import login_required, login_or_token_required, vouch_authorize
 from urllib.parse import quote, urlparse, urlencode, urlunparse, parse_qs
 
@@ -466,6 +467,20 @@ def tokens_create_cli_get(project_id: str = None, project_name: str = None, scop
             return resp
 
         # Phase 2: logged in — create token and redirect to CLI callback
+        # If no project specified, pick the user's first project
+        if not project_id and not project_name:
+            from fabric_cm.credmgr.external_apis.core_api import CoreApi
+            core_api = CoreApi(api_server=CONFIG_OBJ.get_core_api_url(),
+                               cookie=claims.get(OAuthCredMgr.COOKIE),
+                               cookie_name=CONFIG_OBJ.get_vouch_cookie_name(),
+                               cookie_domain=CONFIG_OBJ.get_vouch_cookie_domain_name())
+            projects = core_api.get_user_projects()
+            if not projects:
+                failure_counter.labels(HTTP_METHOD_GET, TOKENS_CREATE_CLI_URL).inc()
+                return cors_400(details="No projects found for this user")
+            project_id = projects[0].get("uuid")
+            LOG.info(f"CLI create: no project specified, using first project: {project_id}")
+
         credmgr = OAuthCredMgr()
         remote_addr = connexion.request.remote_addr
         if connexion.request.headers.get('X-Real-IP') is not None:
