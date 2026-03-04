@@ -9,7 +9,7 @@ export const apiConfig = {
     beta: "https://beta-2.fabric-testbed.net/credmgr/tokens",
     production: "https://cm.fabric-testbed.net/credmgr/tokens",
   },
-  cephApiUrl: {
+  storageApiUrl: {
     alpha: "https://ceph-mgr.fabric-testbed.net",
     beta: "https://ceph-mgr.fabric-testbed.net",
     production: "https://ceph-mgr.fabric-testbed.net",
@@ -24,7 +24,7 @@ export const apiConfig = {
     beta: "FABRIC-LLM",
     production: "FABRIC-LLM",
   },
-  cephStorageProject: {
+  storageProject: {
     alpha: "FABRIC-Storage",
     beta: "FABRIC-Storage",
     production: "FABRIC-Storage",
@@ -53,16 +53,16 @@ export function getLlmProjectName(): string {
   return apiConfig.llmProjectName[getEnvironment()];
 }
 
-export function getCephApiUrl(): string {
-  return apiConfig.cephApiUrl[getEnvironment()];
+export function getStorageApiUrl(): string {
+  return apiConfig.storageApiUrl[getEnvironment()];
 }
 
-export function getCephStorageProject(): string {
-  return apiConfig.cephStorageProject[getEnvironment()];
+export function getStorageProject(): string {
+  return apiConfig.storageProject[getEnvironment()];
 }
 
 // Feature flags — set to true to enable
 export const featureFlags = {
   llmTokens: false,
-  cephStorage: true,
+  storage: true,
 } as const;

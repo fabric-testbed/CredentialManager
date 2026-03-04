@@ -1,8 +1,8 @@
 import axios from "axios";
 
-function cephApi(token: string) {
+function storageApi(token: string) {
   return axios.create({
-    baseURL: "/api/ceph",
+    baseURL: "/api/storage",
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
@@ -13,7 +13,7 @@ function cephApi(token: string) {
 // Cluster Info
 
 export function getClusterInfo(token: string) {
-  return cephApi(token).get("/cluster/info");
+  return storageApi(token).get("/cluster/info");
 }
 
 // Subvolume Groups
@@ -24,7 +24,7 @@ export function listSubvolumeGroups(
   volName: string,
   info = false
 ) {
-  return cephApi(token).get(
+  return storageApi(token).get(
     `/cephfs/subvolume/group/${volName}?cluster=${cluster}&info=${info}`
   );
 }
@@ -40,7 +40,7 @@ export function listSubvolumes(
 ) {
   let url = `/cephfs/subvolume/${volName}?cluster=${cluster}&info=${info}`;
   if (groupName) url += `&group_name=${encodeURIComponent(groupName)}`;
-  return cephApi(token).get(url);
+  return storageApi(token).get(url);
 }
 
 export function createOrResizeSubvolume(
@@ -54,7 +54,7 @@ export function createOrResizeSubvolume(
     mode?: string;
   }
 ) {
-  return cephApi(token).put(
+  return storageApi(token).put(
     `/cephfs/subvolume/${volName}?cluster=${cluster}`,
     body
   );
@@ -69,7 +69,7 @@ export function getSubvolumeInfo(
 ) {
   let url = `/cephfs/subvolume/${volName}/info?cluster=${cluster}&subvol_name=${encodeURIComponent(subvolName)}`;
   if (groupName) url += `&group_name=${encodeURIComponent(groupName)}`;
-  return cephApi(token).get(url);
+  return storageApi(token).get(url);
 }
 
 export function deleteSubvolume(
@@ -82,13 +82,13 @@ export function deleteSubvolume(
 ) {
   let url = `/cephfs/subvolume/${volName}?cluster=${cluster}&subvol_name=${encodeURIComponent(subvolName)}&force=${force}`;
   if (groupName) url += `&group_name=${encodeURIComponent(groupName)}`;
-  return cephApi(token).delete(url);
+  return storageApi(token).delete(url);
 }
 
 // CephX Users
 
 export function listCephUsers(token: string, cluster: string) {
-  return cephApi(token).get(`/cluster/user?cluster=${cluster}`);
+  return storageApi(token).get(`/cluster/user?cluster=${cluster}`);
 }
 
 export function applyUserCaps(
@@ -106,7 +106,7 @@ export function applyUserCaps(
     merge_strategy?: string;
   }
 ) {
-  return cephApi(token).post(`/cluster/user?cluster=${cluster}`, body);
+  return storageApi(token).post(`/cluster/user?cluster=${cluster}`, body);
 }
 
 export function overwriteUserCaps(
@@ -117,7 +117,7 @@ export function overwriteUserCaps(
     capabilities: Array<{ entity: string; cap: string }>;
   }
 ) {
-  return cephApi(token).put(`/cluster/user?cluster=${cluster}`, body);
+  return storageApi(token).put(`/cluster/user?cluster=${cluster}`, body);
 }
 
 export function exportUserKeyrings(
@@ -125,7 +125,7 @@ export function exportUserKeyrings(
   cluster: string,
   entities: string[]
 ) {
-  return cephApi(token).post(`/cluster/user/export?cluster=${cluster}`, {
+  return storageApi(token).post(`/cluster/user/export?cluster=${cluster}`, {
     entities,
   });
 }
@@ -135,7 +135,7 @@ export function deleteCephUser(
   cluster: string,
   entity: string
 ) {
-  return cephApi(token).delete(
+  return storageApi(token).delete(
     `/cluster/user/${encodeURIComponent(entity)}?cluster=${cluster}`
   );
 }
@@ -143,7 +143,7 @@ export function deleteCephUser(
 // S3 Users
 
 export function listS3Users(token: string, cluster: string) {
-  return cephApi(token).get(`/s3/user?cluster=${cluster}`);
+  return storageApi(token).get(`/s3/user?cluster=${cluster}`);
 }
 
 export function createS3User(
@@ -151,7 +151,7 @@ export function createS3User(
   cluster: string,
   body: { uid: string; display_name: string; email?: string }
 ) {
-  return cephApi(token).post(`/s3/user?cluster=${cluster}`, body);
+  return storageApi(token).post(`/s3/user?cluster=${cluster}`, body);
 }
 
 export function deleteS3User(
@@ -159,7 +159,7 @@ export function deleteS3User(
   cluster: string,
   uid: string
 ) {
-  return cephApi(token).delete(
+  return storageApi(token).delete(
     `/s3/user/${encodeURIComponent(uid)}?cluster=${cluster}`
   );
 }
@@ -169,7 +169,7 @@ export function getS3UserKeys(
   cluster: string,
   uid: string
 ) {
-  return cephApi(token).get(
+  return storageApi(token).get(
     `/s3/user/${encodeURIComponent(uid)}/key?cluster=${cluster}`
   );
 }
@@ -179,7 +179,7 @@ export function createS3Key(
   cluster: string,
   uid: string
 ) {
-  return cephApi(token).post(
+  return storageApi(token).post(
     `/s3/user/${encodeURIComponent(uid)}/key?cluster=${cluster}`,
     {}
   );
@@ -191,7 +191,7 @@ export function deleteS3Key(
   uid: string,
   accessKey: string
 ) {
-  return cephApi(token).delete(
+  return storageApi(token).delete(
     `/s3/user/${encodeURIComponent(uid)}/key?cluster=${cluster}&access_key=${encodeURIComponent(accessKey)}`
   );
 }

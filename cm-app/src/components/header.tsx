@@ -64,17 +64,17 @@ export default function Header({ cmUserStatus }: HeaderProps) {
               LLM Tokens
             </Link>
           )}
-          {featureFlags.cephStorage && (
+          {featureFlags.storage && (
             <Link
-              href="/ceph"
+              href="/storage"
               className={cn(
                 "px-3 py-1 text-sm rounded no-underline",
-                pathname === "/ceph"
+                pathname === "/storage"
                   ? "bg-fabric-primary text-white"
                   : "border border-fabric-primary text-fabric-primary hover:bg-fabric-primary/10"
               )}
             >
-              Ceph Storage
+              Storage
             </Link>
           )}
         </div>

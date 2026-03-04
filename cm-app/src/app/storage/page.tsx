@@ -31,7 +31,7 @@ import SpinnerFullPage from "@/components/spinner-full-page";
 import { useUserStatus } from "@/hooks/use-user-status";
 import { getPerson } from "@/services/core-api-service";
 import { createIdToken } from "@/services/credential-manager-service";
-import { getCephStorageProject } from "@/lib/config";
+import { getStorageProject } from "@/lib/config";
 import {
   getClusterInfo,
   listSubvolumeGroups,
@@ -48,7 +48,7 @@ import {
   getS3UserKeys,
   createS3Key,
   deleteS3Key,
-} from "@/services/ceph-service";
+} from "@/services/storage-service";
 import {
   Copy,
   Download,
@@ -64,10 +64,12 @@ import {
 // Types
 
 interface ClusterInfo {
-  name: string;
+  cluster: string;
   fsid: string;
+  mons: Array<{ name: string; v2: string | null; v1: string | null }>;
   mon_host: string;
-  s3_endpoints?: Record<string, string>;
+  ceph_conf_minimal: string;
+  error: string | null;
 }
 
 interface SubvolumeInfo {
@@ -158,13 +160,13 @@ const DEFAULT_CAPS_TEMPLATE = [
   { entity: "osd", cap: "allow rw tag cephfs metadata={fs}" },
 ];
 
-export default function CephPage() {
+export default function StoragePage() {
   const { cmUserStatus } = useUserStatus();
 
   // Auth & role state
   const [isOperator, setIsOperator] = useState(false);
   const [roleLoaded, setRoleLoaded] = useState(false);
-  const [cephToken, setCephToken] = useState("");
+  const [storageToken, setStorageToken] = useState("");
   const [tokenCreatedAt, setTokenCreatedAt] = useState(0);
   const [bastionLogin, setBastionLogin] = useState("");
 
@@ -215,12 +217,11 @@ export default function CephPage() {
   // Token management
   const ensureToken = useCallback(async (): Promise<string> => {
     const TOKEN_LIFETIME_MS = 30 * 60 * 1000;
-    if (cephToken && Date.now() - tokenCreatedAt < TOKEN_LIFETIME_MS) {
-      return cephToken;
+    if (storageToken && Date.now() - tokenCreatedAt < TOKEN_LIFETIME_MS) {
+      return storageToken;
     }
     try {
-      const projectName = getCephStorageProject();
-      // First get the project list to find the project UUID
+      const projectName = getStorageProject();
       const { getProjects } = await import("@/services/core-api-service");
       const userId = localStorage.getItem("cmUserID");
       if (!userId) throw new Error("Not logged in");
@@ -230,17 +231,16 @@ export default function CephPage() {
         (p: { name: string }) => p.name === projectName
       );
       if (!storageProject) {
-        // Try creating token with "all" scope on any project
         const activeProject = projects.find((p: { active: boolean }) => p.active);
         if (!activeProject) throw new Error("No active project found");
         const { data: res } = await createIdToken(
           activeProject.uuid,
           "all",
           1,
-          "ceph-gui-session"
+          "storage-gui-session"
         );
         const token = res.data[0].token;
-        setCephToken(token);
+        setStorageToken(token);
         setTokenCreatedAt(Date.now());
         return token;
       }
@@ -248,18 +248,18 @@ export default function CephPage() {
         storageProject.uuid,
         "all",
         1,
-        "ceph-gui-session"
+        "storage-gui-session"
       );
       const token = res.data[0].token;
-      setCephToken(token);
+      setStorageToken(token);
       setTokenCreatedAt(Date.now());
       return token;
     } catch (ex) {
-      const msg = getErrorMessage(ex, "Failed to create Ceph session token.");
+      const msg = getErrorMessage(ex, "Failed to create storage session token.");
       toast.error(msg);
       throw ex;
     }
-  }, [cephToken, tokenCreatedAt]);
+  }, [storageToken, tokenCreatedAt]);
 
   // Load role info
   useEffect(() => {
@@ -294,20 +294,14 @@ export default function CephPage() {
     async function loadClusters() {
       try {
         const token = await ensureToken();
-        const { data } = await getClusterInfo(token);
-        const clusterList: ClusterInfo[] = Array.isArray(data)
-          ? data
-          : data.data
-            ? Array.isArray(data.data)
-              ? data.data
-              : Object.entries(data.data).map(([name, info]) => ({
-                  name,
-                  ...(info as object),
-                }))
-            : [];
-        setClusters(clusterList);
-        if (clusterList.length > 0 && !selectedCluster) {
-          setSelectedCluster(clusterList[0].name);
+        const { data: response } = await getClusterInfo(token);
+        // API returns { data: [{ cluster, fsid, mons, mon_host, ... }], ... }
+        const items: ClusterInfo[] = (response.data || []).filter(
+          (item: ClusterInfo) => item.cluster && !item.error
+        );
+        setClusters(items);
+        if (items.length > 0 && !selectedCluster) {
+          setSelectedCluster(items[0].cluster);
         }
       } catch {
         // token error already toasted
@@ -335,8 +329,8 @@ export default function CephPage() {
   const loadGroups = useCallback(async () => {
     try {
       const token = await ensureToken();
-      const { data } = await listSubvolumeGroups(token, selectedCluster, DEFAULT_VOL);
-      const groupList: string[] = Array.isArray(data) ? data : data.data || [];
+      const { data: response } = await listSubvolumeGroups(token, selectedCluster, DEFAULT_VOL);
+      const groupList: string[] = Array.isArray(response.data) ? response.data : response.data || [];
       setGroups(groupList);
     } catch (ex) {
       toast.error(getErrorMessage(ex, "Failed to load subvolume groups."));
@@ -347,14 +341,14 @@ export default function CephPage() {
     async (group?: string) => {
       try {
         const token = await ensureToken();
-        const { data } = await listSubvolumes(
+        const { data: response } = await listSubvolumes(
           token,
           selectedCluster,
           DEFAULT_VOL,
           group || undefined,
           true
         );
-        const svList: SubvolumeInfo[] = Array.isArray(data) ? data : data.data || [];
+        const svList: SubvolumeInfo[] = Array.isArray(response.data) ? response.data : response.data || [];
         setSubvolumes(svList);
       } catch (ex) {
         toast.error(getErrorMessage(ex, "Failed to load subvolumes."));
@@ -442,7 +436,7 @@ export default function CephPage() {
     e.preventDefault();
     if (!capsEntity || !capsSubvol) return;
     setShowSpinner(true);
-    setSpinnerMessage("Applying CephX capabilities...");
+    setSpinnerMessage("Applying capabilities...");
     try {
       const token = await ensureToken();
       await applyUserCaps(token, selectedCluster, {
@@ -476,19 +470,25 @@ export default function CephPage() {
   const loadCephUsers = useCallback(async () => {
     try {
       const token = await ensureToken();
-      const { data } = await listCephUsers(token, selectedCluster);
-      const users: CephUser[] = Array.isArray(data) ? data : data.data || [];
+      const { data: response } = await listCephUsers(token, selectedCluster);
+      const users: CephUser[] = Array.isArray(response.data) ? response.data : response.data || [];
       setCephUsers(users);
     } catch (ex) {
-      toast.error(getErrorMessage(ex, "Failed to load CephX users."));
+      toast.error(getErrorMessage(ex, "Failed to load storage users."));
     }
   }, [selectedCluster, ensureToken]);
 
   const handleExportKeyring = async (entity: string) => {
     try {
       const token = await ensureToken();
-      const { data } = await exportUserKeyrings(token, selectedCluster, [entity]);
-      const keyring = typeof data === "string" ? data : data.data || JSON.stringify(data, null, 2);
+      const { data: response } = await exportUserKeyrings(token, selectedCluster, [entity]);
+      const keyring = typeof response === "string"
+        ? response
+        : response.data
+          ? typeof response.data === "string"
+            ? response.data
+            : JSON.stringify(response.data, null, 2)
+          : JSON.stringify(response, null, 2);
       await copyToClipboard(keyring);
     } catch (ex) {
       toast.error(getErrorMessage(ex, "Failed to export keyring."));
@@ -497,14 +497,14 @@ export default function CephPage() {
 
   const handleDeleteCephUser = async (entity: string) => {
     setShowSpinner(true);
-    setSpinnerMessage("Deleting CephX user...");
+    setSpinnerMessage("Deleting user...");
     try {
       const token = await ensureToken();
       await deleteCephUser(token, selectedCluster, entity);
       toast.success(`User "${entity}" deleted.`);
       loadCephUsers();
     } catch (ex) {
-      toast.error(getErrorMessage(ex, "Failed to delete CephX user."));
+      toast.error(getErrorMessage(ex, "Failed to delete user."));
     } finally {
       setShowSpinner(false);
       setSpinnerMessage("");
@@ -520,8 +520,8 @@ export default function CephPage() {
   const loadS3Users = useCallback(async () => {
     try {
       const token = await ensureToken();
-      const { data } = await listS3Users(token, selectedCluster);
-      const users: S3User[] = Array.isArray(data) ? data : data.data || [];
+      const { data: response } = await listS3Users(token, selectedCluster);
+      const users: S3User[] = Array.isArray(response.data) ? response.data : response.data || [];
       setS3Users(users);
     } catch (ex) {
       toast.error(getErrorMessage(ex, "Failed to load S3 users."));
@@ -576,8 +576,8 @@ export default function CephPage() {
     }
     try {
       const token = await ensureToken();
-      const { data } = await getS3UserKeys(token, selectedCluster, uid);
-      const keys = Array.isArray(data) ? data : data.data || [];
+      const { data: response } = await getS3UserKeys(token, selectedCluster, uid);
+      const keys = Array.isArray(response.data) ? response.data : response.data || [];
       setS3UserKeys((prev) => ({ ...prev, [uid]: keys }));
       setExpandedS3User(uid);
     } catch (ex) {
@@ -590,9 +590,8 @@ export default function CephPage() {
       const token = await ensureToken();
       await createS3Key(token, selectedCluster, uid);
       toast.success("S3 key created.");
-      // Reload keys
-      const { data } = await getS3UserKeys(token, selectedCluster, uid);
-      const keys = Array.isArray(data) ? data : data.data || [];
+      const { data: response } = await getS3UserKeys(token, selectedCluster, uid);
+      const keys = Array.isArray(response.data) ? response.data : response.data || [];
       setS3UserKeys((prev) => ({ ...prev, [uid]: keys }));
     } catch (ex) {
       toast.error(getErrorMessage(ex, "Failed to create S3 key."));
@@ -604,8 +603,8 @@ export default function CephPage() {
       const token = await ensureToken();
       await deleteS3Key(token, selectedCluster, uid, accessKey);
       toast.success("S3 key deleted.");
-      const { data } = await getS3UserKeys(token, selectedCluster, uid);
-      const keys = Array.isArray(data) ? data : data.data || [];
+      const { data: response } = await getS3UserKeys(token, selectedCluster, uid);
+      const keys = Array.isArray(response.data) ? response.data : response.data || [];
       setS3UserKeys((prev) => ({ ...prev, [uid]: keys }));
     } catch (ex) {
       toast.error(getErrorMessage(ex, "Failed to delete S3 key."));
@@ -622,8 +621,14 @@ export default function CephPage() {
 
       // Export keyring
       try {
-        const { data } = await exportUserKeyrings(token, selectedCluster, [entity]);
-        const keyring = typeof data === "string" ? data : data.data || "";
+        const { data: response } = await exportUserKeyrings(token, selectedCluster, [entity]);
+        const keyring = typeof response === "string"
+          ? response
+          : response.data
+            ? typeof response.data === "string"
+              ? response.data
+              : JSON.stringify(response.data, null, 2)
+            : "";
         setMyKeyring(keyring);
       } catch {
         setMyKeyring("");
@@ -631,8 +636,8 @@ export default function CephPage() {
 
       // Load S3 keys
       try {
-        const { data } = await getS3UserKeys(token, selectedCluster, bastionLogin);
-        const keys = Array.isArray(data) ? data : data.data || [];
+        const { data: response } = await getS3UserKeys(token, selectedCluster, bastionLogin);
+        const keys = Array.isArray(response.data) ? response.data : response.data || [];
         setMyS3Keys(keys);
       } catch {
         setMyS3Keys([]);
@@ -652,7 +657,7 @@ export default function CephPage() {
         />
         {cmUserStatus !== "" && (
           <div className="bg-fabric-warning/10 border border-fabric-warning/30 text-fabric-dark rounded p-4">
-            Please log in to access Ceph Storage management.
+            Please log in to access Storage management.
           </div>
         )}
       </div>
@@ -692,8 +697,8 @@ export default function CephPage() {
               onChange={(e) => setSelectedCluster(e.target.value)}
             >
               {clusters.map((c) => (
-                <option key={c.name} value={c.name}>
-                  {c.name}
+                <option key={c.cluster} value={c.cluster}>
+                  {c.cluster}
                 </option>
               ))}
             </select>
@@ -714,7 +719,7 @@ export default function CephPage() {
     return (
       <div className="container mx-auto min-h-[80vh] mt-8 mb-8 px-4">
         <h1 className="text-xl font-semibold text-fabric-dark mb-4">
-          Ceph Storage Management
+          Storage Management
         </h1>
         {clusterSelector}
 
@@ -958,7 +963,7 @@ export default function CephPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm">
-                  Apply CephX Capabilities
+                  Apply User Capabilities
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -1077,7 +1082,7 @@ export default function CephPage() {
                               <AlertDialogContent>
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>
-                                    Delete CephX User
+                                    Delete User
                                   </AlertDialogTitle>
                                   <AlertDialogDescription>
                                     Delete user &quot;{user.entity}&quot;? This
@@ -1106,7 +1111,7 @@ export default function CephPage() {
               </div>
             ) : (
               <div className="bg-fabric-primary/10 border border-fabric-primary/30 text-fabric-dark rounded p-4">
-                {userSearch ? "No matching users." : "No CephX users found."}
+                {userSearch ? "No matching users." : "No users found."}
               </div>
             )}
           </TabsContent>
@@ -1347,15 +1352,15 @@ export default function CephPage() {
   }
 
   // ===== NORMAL USER VIEW =====
-  const currentCluster = clusters.find((c) => c.name === selectedCluster);
+  const currentCluster = clusters.find((c) => c.cluster === selectedCluster);
   const monHost = currentCluster?.mon_host || "";
-  const s3Endpoints = currentCluster?.s3_endpoints || {};
+  const s3Endpoints: Record<string, string> = {};
   const userEntity = `client.${bastionLogin}`;
 
   return (
     <div className="container mx-auto min-h-[80vh] mt-8 mb-8 px-4">
       <h1 className="text-xl font-semibold text-fabric-dark mb-4">
-        My Ceph Storage Credentials
+        My Storage Credentials
       </h1>
       {clusterSelector}
 

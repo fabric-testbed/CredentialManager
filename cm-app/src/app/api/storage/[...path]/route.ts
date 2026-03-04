@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const CEPH_API_URL =
-  process.env.CEPH_API_URL || "https://ceph-mgr.fabric-testbed.net";
+const STORAGE_API_URL =
+  process.env.STORAGE_API_URL || "https://ceph-mgr.fabric-testbed.net";
 
 async function proxyRequest(
   req: NextRequest,
@@ -10,7 +10,7 @@ async function proxyRequest(
   const { path } = await params;
   const targetPath = path.join("/");
   const searchParams = req.nextUrl.searchParams.toString();
-  const url = `${CEPH_API_URL}/${targetPath}${searchParams ? "?" + searchParams : ""}`;
+  const url = `${STORAGE_API_URL}/${targetPath}${searchParams ? "?" + searchParams : ""}`;
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -48,9 +48,9 @@ async function proxyRequest(
       },
     });
   } catch (error) {
-    console.error("Ceph API proxy error:", error);
+    console.error("Storage API proxy error:", error);
     return NextResponse.json(
-      { detail: "Failed to connect to Ceph API" },
+      { detail: "Failed to connect to Storage API" },
       { status: 502 }
     );
   }
