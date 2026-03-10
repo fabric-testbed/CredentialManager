@@ -100,7 +100,7 @@ export function applyUserCaps(
     renders: Array<{
       fs_name: string;
       subvol_name: string;
-      group_name: string;
+      group_name?: string;
     }>;
     sync_across_clusters?: boolean;
     merge_strategy?: string;

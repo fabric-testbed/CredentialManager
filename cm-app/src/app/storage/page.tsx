@@ -473,7 +473,7 @@ export default function StoragePage() {
           {
             fs_name: DEFAULT_VOL,
             subvol_name: capsSubvol,
-            group_name: capsGroup || "default",
+            group_name: capsGroup || undefined,
           },
         ],
         sync_across_clusters: true,
