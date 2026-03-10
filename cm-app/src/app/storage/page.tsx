@@ -48,6 +48,7 @@ import {
   getS3UserKeys,
   createS3Key,
   deleteS3Key,
+  listProjectMembers,
 } from "@/services/storage-service";
 import {
   Copy,
@@ -93,6 +94,12 @@ interface S3User {
   email?: string;
   keys?: Array<{ access_key: string; secret_key: string }>;
   max_buckets?: number;
+}
+
+interface ProjectMember {
+  uuid: string;
+  bastion_login: string;
+  membership_types: string[];
 }
 
 // Utility
@@ -207,6 +214,12 @@ export default function StoragePage() {
     Record<string, Array<{ access_key: string; secret_key: string }>>
   >({});
 
+  // Project members state
+  const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
+
+  // Subvolume name mode
+  const [subvolNameMode, setSubvolNameMode] = useState<"user" | "custom">("user");
+
   // Normal user state
   const [myKeyring, setMyKeyring] = useState("");
   const [myS3Keys, setMyS3Keys] = useState<
@@ -312,6 +325,18 @@ export default function StoragePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roleLoaded, cmUserStatus]);
 
+  // Load project members (operator only)
+  const loadProjectMembers = useCallback(async () => {
+    try {
+      const token = await ensureToken();
+      const { data: response } = await listProjectMembers(token);
+      const members: ProjectMember[] = Array.isArray(response.data) ? response.data : response.data || [];
+      setProjectMembers(members);
+    } catch (ex) {
+      toast.error(getErrorMessage(ex, "Failed to load project members."));
+    }
+  }, [ensureToken]);
+
   // Load data when cluster changes
   useEffect(() => {
     if (!selectedCluster || !roleLoaded) return;
@@ -319,6 +344,7 @@ export default function StoragePage() {
       loadGroups();
       loadCephUsers();
       loadS3Users();
+      loadProjectMembers();
     } else {
       loadMyCredentials();
     }
@@ -738,12 +764,174 @@ export default function StoragePage() {
         </h1>
         {clusterSelector}
 
-        <Tabs defaultValue="subvolumes">
+        <Tabs defaultValue="cephx">
           <TabsList>
-            <TabsTrigger value="subvolumes">Subvolumes</TabsTrigger>
             <TabsTrigger value="cephx">CephX Users</TabsTrigger>
+            <TabsTrigger value="subvolumes">Subvolumes</TabsTrigger>
             <TabsTrigger value="s3">S3 Users</TabsTrigger>
           </TabsList>
+
+          {/* ===== CEPHX USERS TAB ===== */}
+          <TabsContent value="cephx" className="space-y-4">
+            {/* Apply CephX Caps */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">
+                  Apply User Capabilities
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form
+                  onSubmit={handleApplyCaps}
+                  className="flex items-end gap-3"
+                >
+                  <div>
+                    <Label>User Entity</Label>
+                    <select
+                      className="flex h-9 w-48 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
+                      value={capsEntity}
+                      onChange={(e) => setCapsEntity(e.target.value)}
+                    >
+                      <option value="">Select user...</option>
+                      {projectMembers.map((m) => (
+                        <option key={m.uuid} value={`client.${m.bastion_login}`}>
+                          client.{m.bastion_login}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <Label>Subvolume</Label>
+                    <Input
+                      placeholder="subvol-name"
+                      value={capsSubvol}
+                      onChange={(e) => setCapsSubvol(e.target.value)}
+                      className="w-48"
+                    />
+                  </div>
+                  <div>
+                    <Label>Group</Label>
+                    <select
+                      className="flex h-9 w-40 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
+                      value={capsGroup}
+                      onChange={(e) => setCapsGroup(e.target.value)}
+                    >
+                      <option value="">default</option>
+                      {groups.map((g) => (
+                        <option key={g} value={g}>
+                          {g}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <Button
+                    type="submit"
+                    disabled={!capsEntity || !capsSubvol}
+                    className="bg-fabric-primary hover:bg-fabric-primary/90 text-white"
+                  >
+                    Apply Caps
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+
+            <div className="flex items-center gap-3">
+              <div className="relative flex-1 max-w-sm">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search users..."
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={loadCephUsers}
+              >
+                <RefreshCw className="h-4 w-4 mr-1" /> Refresh
+              </Button>
+            </div>
+
+            {filteredCephUsers.length > 0 ? (
+              <div className="rounded-md border overflow-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Entity</TableHead>
+                      <TableHead>Capabilities</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredCephUsers.map((user) => (
+                      <TableRow key={user.entity}>
+                        <TableCell className="font-mono text-sm">
+                          {user.entity}
+                        </TableCell>
+                        <TableCell className="text-xs max-w-md truncate">
+                          {user.caps
+                            ? Object.entries(user.caps)
+                                .map(([k, v]) => `${k}: ${v}`)
+                                .join("; ")
+                            : "—"}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleExportKeyring(user.entity)}
+                            >
+                              <KeyRound className="h-3 w-3 mr-1" /> Export
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="border-fabric-danger text-fabric-danger"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>
+                                    Delete User
+                                  </AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Delete user &quot;{user.entity}&quot;? This
+                                    will revoke all access.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() =>
+                                      handleDeleteCephUser(user.entity)
+                                    }
+                                    className="bg-destructive text-white"
+                                  >
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <div className="bg-fabric-primary/10 border border-fabric-primary/30 text-fabric-dark rounded p-4">
+                {userSearch ? "No matching users." : "No users found."}
+              </div>
+            )}
+          </TabsContent>
 
           {/* ===== SUBVOLUMES TAB ===== */}
           <TabsContent value="subvolumes" className="space-y-4">
@@ -929,12 +1117,40 @@ export default function StoragePage() {
                 >
                   <div>
                     <Label>Name</Label>
-                    <Input
-                      placeholder="subvol-name"
-                      value={newSubvolName}
-                      onChange={(e) => setNewSubvolName(e.target.value)}
-                      className="w-48"
-                    />
+                    <div className="flex items-center gap-2">
+                      <select
+                        className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
+                        value={subvolNameMode}
+                        onChange={(e) => {
+                          setSubvolNameMode(e.target.value as "user" | "custom");
+                          setNewSubvolName("");
+                        }}
+                      >
+                        <option value="user">From User</option>
+                        <option value="custom">Custom</option>
+                      </select>
+                      {subvolNameMode === "user" ? (
+                        <select
+                          className="flex h-9 w-48 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
+                          value={newSubvolName}
+                          onChange={(e) => setNewSubvolName(e.target.value)}
+                        >
+                          <option value="">Select user...</option>
+                          {projectMembers.map((m) => (
+                            <option key={m.uuid} value={m.bastion_login}>
+                              {m.bastion_login}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <Input
+                          placeholder="subvol-name"
+                          value={newSubvolName}
+                          onChange={(e) => setNewSubvolName(e.target.value)}
+                          className="w-48"
+                        />
+                      )}
+                    </div>
                   </div>
                   <div>
                     <Label>Group</Label>
@@ -973,162 +1189,6 @@ export default function StoragePage() {
                 </form>
               </CardContent>
             </Card>
-
-            {/* Apply CephX Caps */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm">
-                  Apply User Capabilities
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <form
-                  onSubmit={handleApplyCaps}
-                  className="flex items-end gap-3"
-                >
-                  <div>
-                    <Label>User Entity</Label>
-                    <Input
-                      placeholder="client.username"
-                      value={capsEntity}
-                      onChange={(e) => setCapsEntity(e.target.value)}
-                      className="w-48"
-                    />
-                  </div>
-                  <div>
-                    <Label>Subvolume</Label>
-                    <Input
-                      placeholder="subvol-name"
-                      value={capsSubvol}
-                      onChange={(e) => setCapsSubvol(e.target.value)}
-                      className="w-48"
-                    />
-                  </div>
-                  <div>
-                    <Label>Group</Label>
-                    <select
-                      className="flex h-9 w-40 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
-                      value={capsGroup}
-                      onChange={(e) => setCapsGroup(e.target.value)}
-                    >
-                      <option value="">default</option>
-                      {groups.map((g) => (
-                        <option key={g} value={g}>
-                          {g}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <Button
-                    type="submit"
-                    disabled={!capsEntity || !capsSubvol}
-                    className="bg-fabric-primary hover:bg-fabric-primary/90 text-white"
-                  >
-                    Apply Caps
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* ===== CEPHX USERS TAB ===== */}
-          <TabsContent value="cephx" className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="relative flex-1 max-w-sm">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search users..."
-                  value={userSearch}
-                  onChange={(e) => setUserSearch(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={loadCephUsers}
-              >
-                <RefreshCw className="h-4 w-4 mr-1" /> Refresh
-              </Button>
-            </div>
-
-            {filteredCephUsers.length > 0 ? (
-              <div className="rounded-md border overflow-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Entity</TableHead>
-                      <TableHead>Capabilities</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredCephUsers.map((user) => (
-                      <TableRow key={user.entity}>
-                        <TableCell className="font-mono text-sm">
-                          {user.entity}
-                        </TableCell>
-                        <TableCell className="text-xs max-w-md truncate">
-                          {user.caps
-                            ? Object.entries(user.caps)
-                                .map(([k, v]) => `${k}: ${v}`)
-                                .join("; ")
-                            : "—"}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleExportKeyring(user.entity)}
-                            >
-                              <KeyRound className="h-3 w-3 mr-1" /> Export
-                            </Button>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="border-fabric-danger text-fabric-danger"
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>
-                                    Delete User
-                                  </AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Delete user &quot;{user.entity}&quot;? This
-                                    will revoke all access.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() =>
-                                      handleDeleteCephUser(user.entity)
-                                    }
-                                    className="bg-destructive text-white"
-                                  >
-                                    Delete
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            ) : (
-              <div className="bg-fabric-primary/10 border border-fabric-primary/30 text-fabric-dark rounded p-4">
-                {userSearch ? "No matching users." : "No users found."}
-              </div>
-            )}
           </TabsContent>
 
           {/* ===== S3 USERS TAB ===== */}

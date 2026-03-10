@@ -140,6 +140,12 @@ export function deleteCephUser(
   );
 }
 
+// Project Members
+
+export function listProjectMembers(token: string) {
+  return storageApi(token).get("/project/members");
+}
+
 // S3 Users
 
 export function listS3Users(token: string, cluster: string) {
