@@ -239,7 +239,7 @@ export default function StoragePage() {
           1,
           "storage-gui-session"
         );
-        const token = res.data[0].token;
+        const token = res.data[0].id_token;
         setStorageToken(token);
         setTokenCreatedAt(Date.now());
         return token;
@@ -250,7 +250,7 @@ export default function StoragePage() {
         1,
         "storage-gui-session"
       );
-      const token = res.data[0].token;
+      const token = res.data[0].id_token;
       setStorageToken(token);
       setTokenCreatedAt(Date.now());
       return token;
@@ -303,8 +303,9 @@ export default function StoragePage() {
         if (items.length > 0 && !selectedCluster) {
           setSelectedCluster(items[0].cluster);
         }
-      } catch {
-        // token error already toasted
+      } catch (ex) {
+        console.error("loadClusters error:", ex);
+        toast.error(getErrorMessage(ex, "Failed to load cluster information."));
       }
     }
     loadClusters();
