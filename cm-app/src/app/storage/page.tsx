@@ -472,7 +472,21 @@ export default function StoragePage() {
     try {
       const token = await ensureToken();
       const { data: response } = await listCephUsers(token, selectedCluster);
-      const users: CephUser[] = Array.isArray(response.data) ? response.data : response.data || [];
+      const rawUsers = Array.isArray(response.data) ? response.data : response.data || [];
+      // Map API shape (user_entity, capabilities[]) to frontend shape (entity, caps{})
+      const users: CephUser[] = rawUsers.map((u: Record<string, unknown>) => {
+        const caps: Record<string, string> = {};
+        const capabilities = (u.capabilities as Array<{ entity: string; cap: string } | null>) || [];
+        for (const c of capabilities) {
+          if (c && c.entity && c.cap) {
+            caps[c.entity] = caps[c.entity] ? `${caps[c.entity]}; ${c.cap}` : c.cap;
+          }
+        }
+        return {
+          entity: (u.user_entity as string) || (u.entity as string) || "",
+          caps: Object.keys(caps).length > 0 ? caps : undefined,
+        };
+      });
       setCephUsers(users);
     } catch (ex) {
       toast.error(getErrorMessage(ex, "Failed to load storage users."));
