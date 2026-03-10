@@ -513,7 +513,7 @@ export default function StoragePage() {
   };
 
   const filteredCephUsers = cephUsers.filter((u) =>
-    u.entity.toLowerCase().includes(userSearch.toLowerCase())
+    (u.entity || "").toLowerCase().includes(userSearch.toLowerCase())
   );
 
   // ----- Operator: S3 Users -----
