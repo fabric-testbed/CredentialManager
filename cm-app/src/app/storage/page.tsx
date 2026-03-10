@@ -375,7 +375,20 @@ export default function StoragePage() {
           group || undefined,
           true
         );
-        const svList: SubvolumeInfo[] = Array.isArray(response.data) ? response.data : response.data || [];
+        const rawList = Array.isArray(response.data) ? response.data : response.data || [];
+        // Normalize: Ceph Dashboard may nest info fields under an "info" key
+        const svList: SubvolumeInfo[] = rawList.map((item: Record<string, unknown>) => {
+          if (typeof item === "string") return { name: item };
+          const info = (item.info as Record<string, unknown>) || {};
+          return {
+            name: (item.name as string) || "",
+            group: (item.group_name as string) || (item.group as string) || undefined,
+            bytes_quota: info.bytes_quota ?? item.bytes_quota ?? undefined,
+            bytes_used: info.bytes_used ?? item.bytes_used ?? undefined,
+            state: (info.state as string) ?? (item.state as string) ?? undefined,
+            path: (info.path as string) ?? (item.path as string) ?? undefined,
+          };
+        });
         setSubvolumes(svList);
       } catch (ex) {
         toast.error(getErrorMessage(ex, "Failed to load subvolumes."));
