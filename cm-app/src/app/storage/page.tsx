@@ -351,7 +351,11 @@ export default function StoragePage() {
     try {
       const token = await ensureToken();
       const { data: response } = await listSubvolumeGroups(token, selectedCluster, DEFAULT_VOL);
-      const groupList: string[] = Array.isArray(response.data) ? response.data : response.data || [];
+      const rawGroups = Array.isArray(response.data) ? response.data : response.data || [];
+      // Normalize: Dashboard may return objects {name, info} instead of strings
+      const groupList: string[] = rawGroups.map((g: unknown) =>
+        typeof g === "string" ? g : (g as Record<string, unknown>).name as string || String(g)
+      );
       setGroups(groupList);
     } catch (ex) {
       toast.error(getErrorMessage(ex, "Failed to load subvolume groups."));
