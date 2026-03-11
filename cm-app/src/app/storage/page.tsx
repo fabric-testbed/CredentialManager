@@ -29,7 +29,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import SpinnerFullPage from "@/components/spinner-full-page";
 import { useUserStatus } from "@/hooks/use-user-status";
-import { getPerson } from "@/services/core-api-service";
+import { getPerson, getProjects } from "@/services/core-api-service";
 import { createIdToken } from "@/services/credential-manager-service";
 import { getStorageProject } from "@/lib/config";
 import {
@@ -84,6 +84,12 @@ interface ProjectMember {
   uuid: string;
   bastion_login: string;
   membership_types: string[];
+}
+
+interface Project {
+  uuid: string;
+  name: string;
+  active: boolean;
 }
 
 // Utility
@@ -183,6 +189,7 @@ export default function StoragePage() {
   const [capsEntity, setCapsEntity] = useState("");
   const [capsSubvol, setCapsSubvol] = useState("");
   const [capsGroup, setCapsGroup] = useState("");
+  const [capsTarget, setCapsTarget] = useState<"user" | "project">("user");
 
   // CephX users state
   const [cephUsers, setCephUsers] = useState<CephUser[]>([]);
@@ -191,8 +198,11 @@ export default function StoragePage() {
   // Project members state
   const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
 
-  // Subvolume name mode
-  const [subvolNameMode, setSubvolNameMode] = useState<"user" | "custom">("user");
+  // Projects state (for per-project subvolume creation)
+  const [projects, setProjects] = useState<Project[]>([]);
+
+  // Subvolume creation mode: per-user or per-project
+  const [subvolScope, setSubvolScope] = useState<"user" | "project">("user");
 
   // Normal user state
   const [myKeyring, setMyKeyring] = useState("");
@@ -306,6 +316,21 @@ export default function StoragePage() {
     }
   }, [ensureToken]);
 
+  // Load active projects (for per-project subvolume creation)
+  const loadProjects = useCallback(async () => {
+    try {
+      const userId = localStorage.getItem("cmUserID");
+      if (!userId) return;
+      const { data: projRes } = await getProjects(userId);
+      const allProjects: Project[] = (projRes.results || [])
+        .filter((p: Project) => p.active)
+        .sort((a: Project, b: Project) => a.name.localeCompare(b.name));
+      setProjects(allProjects);
+    } catch (ex) {
+      toast.error(getErrorMessage(ex, "Failed to load projects."));
+    }
+  }, []);
+
   // Load data when cluster changes
   useEffect(() => {
     if (!selectedCluster || !roleLoaded) return;
@@ -313,6 +338,7 @@ export default function StoragePage() {
       loadGroups();
       loadCephUsers();
       loadProjectMembers();
+      loadProjects();
     } else {
       loadMyCredentials();
     }
@@ -378,9 +404,11 @@ export default function StoragePage() {
     setSpinnerMessage("Creating subvolume...");
     try {
       const token = await ensureToken();
+      // Per-User: no group; Per-Project: group from dropdown
+      const groupName = subvolScope === "user" ? undefined : (newSubvolGroup || undefined);
       await createOrResizeSubvolume(token, selectedCluster, DEFAULT_VOL, {
         subvol_name: newSubvolName,
-        group_name: newSubvolGroup || undefined,
+        group_name: groupName,
         size: newSubvolSizeGiB * 1024 * 1024 * 1024,
         mode: "0777",
       });
@@ -439,28 +467,60 @@ export default function StoragePage() {
     }
   };
 
-  // Apply CephX caps
+  // Apply CephX caps (single user or entire project)
   const handleApplyCaps = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!capsEntity || !capsSubvol) return;
+    if (!capsSubvol) return;
     setShowSpinner(true);
-    setSpinnerMessage("Applying capabilities...");
+
+    // Determine which users to apply caps to
+    const logins: string[] = [];
+    if (capsTarget === "user") {
+      if (!capsEntity) return;
+      // capsEntity is "client.xxx" — extract the login
+      logins.push(capsEntity.replace(/^client\./, ""));
+    } else {
+      // Entire Project: apply to all project members
+      logins.push(...projectMembers.map((m) => m.bastion_login));
+    }
+
+    if (logins.length === 0) {
+      toast.error("No users to apply capabilities to.");
+      setShowSpinner(false);
+      return;
+    }
+
+    setSpinnerMessage(`Applying capabilities to ${logins.length} user(s)...`);
+    let ok = 0;
+    let fail = 0;
     try {
       const token = await ensureToken();
-      await applyUserCaps(token, selectedCluster, {
-        user_entity: capsEntity,
-        template_capabilities: DEFAULT_CAPS_TEMPLATE,
-        renders: [
-          {
-            fs_name: DEFAULT_VOL,
-            subvol_name: capsSubvol,
-            group_name: capsGroup || undefined,
-          },
-        ],
-        sync_across_clusters: true,
-        merge_strategy: "multi",
-      });
-      toast.success(`Capabilities applied to "${capsEntity}".`);
+      for (const login of logins) {
+        try {
+          await applyUserCaps(token, selectedCluster, {
+            user_entity: `client.${login}`,
+            template_capabilities: DEFAULT_CAPS_TEMPLATE,
+            renders: [
+              {
+                fs_name: DEFAULT_VOL,
+                subvol_name: capsSubvol,
+                group_name: capsGroup || undefined,
+              },
+            ],
+            sync_across_clusters: true,
+            merge_strategy: "multi",
+          });
+          ok++;
+        } catch (ex) {
+          fail++;
+          console.error(`Failed to apply caps for client.${login}:`, ex);
+        }
+      }
+      if (fail === 0) {
+        toast.success(`Capabilities applied to ${ok} user(s).`);
+      } else {
+        toast.warning(`Applied to ${ok} user(s), failed for ${fail}.`);
+      }
       setCapsEntity("");
       setCapsSubvol("");
       setCapsGroup("");
@@ -827,23 +887,29 @@ export default function StoragePage() {
               <CardContent>
                 <form
                   onSubmit={handleCreateSubvolume}
-                  className="flex items-end gap-3"
+                  className="space-y-3"
                 >
-                  <div>
-                    <Label>Name</Label>
-                    <div className="flex items-center gap-2">
+                  <div className="flex items-end gap-3">
+                    <div>
+                      <Label>Scope</Label>
                       <select
                         className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
-                        value={subvolNameMode}
+                        value={subvolScope}
                         onChange={(e) => {
-                          setSubvolNameMode(e.target.value as "user" | "custom");
+                          const scope = e.target.value as "user" | "project";
+                          setSubvolScope(scope);
                           setNewSubvolName("");
+                          setNewSubvolGroup("");
                         }}
                       >
-                        <option value="user">From User</option>
-                        <option value="custom">Custom</option>
+                        <option value="user">Per-User</option>
+                        <option value="project">Per-Project</option>
                       </select>
-                      {subvolNameMode === "user" ? (
+                    </div>
+
+                    {subvolScope === "user" ? (
+                      <div>
+                        <Label>User</Label>
                         <select
                           className="flex h-9 w-48 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
                           value={newSubvolName}
@@ -856,50 +922,66 @@ export default function StoragePage() {
                             </option>
                           ))}
                         </select>
-                      ) : (
-                        <Input
-                          placeholder="subvol-name"
-                          value={newSubvolName}
-                          onChange={(e) => setNewSubvolName(e.target.value)}
-                          className="w-48"
-                        />
-                      )}
+                      </div>
+                    ) : (
+                      <>
+                        <div>
+                          <Label>Project</Label>
+                          <select
+                            className="flex h-9 w-64 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
+                            value={newSubvolGroup}
+                            onChange={(e) => setNewSubvolGroup(e.target.value)}
+                          >
+                            <option value="">Select project...</option>
+                            {projects.map((p) => (
+                              <option key={p.uuid} value={p.uuid}>
+                                {p.name} ({p.uuid.slice(0, 8)}...)
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <Label>Subvolume Name</Label>
+                          <Input
+                            placeholder="subvol-name"
+                            value={newSubvolName}
+                            onChange={(e) => setNewSubvolName(e.target.value)}
+                            className="w-48"
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    <div>
+                      <Label>Size (GiB)</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={newSubvolSizeGiB}
+                        onChange={(e) =>
+                          setNewSubvolSizeGiB(parseInt(e.target.value) || 1)
+                        }
+                        className="w-24"
+                      />
                     </div>
-                  </div>
-                  <div>
-                    <Label>Group</Label>
-                    <select
-                      className="flex h-9 w-48 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
-                      value={newSubvolGroup}
-                      onChange={(e) => setNewSubvolGroup(e.target.value)}
+                    <Button
+                      type="submit"
+                      disabled={!newSubvolName || (subvolScope === "project" && !newSubvolGroup)}
+                      className="bg-fabric-success hover:bg-fabric-success/90 text-white"
                     >
-                      <option value="">default</option>
-                      {groups.map((g) => (
-                        <option key={g} value={g}>
-                          {g}
-                        </option>
-                      ))}
-                    </select>
+                      <Plus className="h-4 w-4 mr-1" /> Create
+                    </Button>
                   </div>
-                  <div>
-                    <Label>Size (GiB)</Label>
-                    <Input
-                      type="number"
-                      min={1}
-                      value={newSubvolSizeGiB}
-                      onChange={(e) =>
-                        setNewSubvolSizeGiB(parseInt(e.target.value) || 1)
-                      }
-                      className="w-24"
-                    />
-                  </div>
-                  <Button
-                    type="submit"
-                    disabled={!newSubvolName}
-                    className="bg-fabric-success hover:bg-fabric-success/90 text-white"
-                  >
-                    <Plus className="h-4 w-4 mr-1" /> Create
-                  </Button>
+                  {subvolScope === "user" && (
+                    <p className="text-xs text-muted-foreground">
+                      Per-User: subvolume name = bastion login, no group.
+                    </p>
+                  )}
+                  {subvolScope === "project" && (
+                    <p className="text-xs text-muted-foreground">
+                      Per-Project: group = project UUID, provide a subvolume name (e.g. slugified project name).
+                    </p>
+                  )}
                 </form>
               </CardContent>
             </Card>
@@ -917,60 +999,100 @@ export default function StoragePage() {
               <CardContent>
                 <form
                   onSubmit={handleApplyCaps}
-                  className="flex items-end gap-3"
+                  className="space-y-3"
                 >
-                  <div>
-                    <Label>User Entity</Label>
-                    <select
-                      className="flex h-9 w-48 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
-                      value={capsEntity}
-                      onChange={(e) => setCapsEntity(e.target.value)}
+                  <div className="flex items-end gap-3 flex-wrap">
+                    <div>
+                      <Label>Target</Label>
+                      <select
+                        className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
+                        value={capsTarget}
+                        onChange={(e) => {
+                          setCapsTarget(e.target.value as "user" | "project");
+                          setCapsEntity("");
+                        }}
+                      >
+                        <option value="user">Single User</option>
+                        <option value="project">Entire Project</option>
+                      </select>
+                    </div>
+
+                    {capsTarget === "user" && (
+                      <div>
+                        <Label>User Entity</Label>
+                        <select
+                          className="flex h-9 w-48 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
+                          value={capsEntity}
+                          onChange={(e) => setCapsEntity(e.target.value)}
+                        >
+                          <option value="">Select user...</option>
+                          {projectMembers.map((m) => (
+                            <option key={m.uuid} value={`client.${m.bastion_login}`}>
+                              client.{m.bastion_login}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    <div>
+                      <Label>Subvolume</Label>
+                      <select
+                        className="flex h-9 w-48 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
+                        value={capsSubvol}
+                        onChange={(e) => {
+                          const svName = e.target.value;
+                          setCapsSubvol(svName);
+                          // Auto-fill group from the selected subvolume
+                          const sv = subvolumes.find((s) => s.name === svName);
+                          setCapsGroup(sv?.group || "");
+                        }}
+                      >
+                        <option value="">Select subvolume...</option>
+                        {subvolumes.map((sv) => (
+                          <option key={`${sv.group || ""}-${sv.name}`} value={sv.name}>
+                            {sv.name}{sv.group ? ` (${sv.group})` : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <Label>Group</Label>
+                      <select
+                        className="flex h-9 w-40 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
+                        value={capsGroup}
+                        onChange={(e) => setCapsGroup(e.target.value)}
+                      >
+                        <option value="">None</option>
+                        {groups.map((g) => (
+                          <option key={g} value={g}>
+                            {g}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <Button
+                      type="submit"
+                      disabled={
+                        !capsSubvol ||
+                        (capsTarget === "user" && !capsEntity) ||
+                        (capsTarget === "project" && projectMembers.length === 0)
+                      }
+                      className="bg-fabric-primary hover:bg-fabric-primary/90 text-white"
                     >
-                      <option value="">Select user...</option>
-                      {projectMembers.map((m) => (
-                        <option key={m.uuid} value={`client.${m.bastion_login}`}>
-                          client.{m.bastion_login}
-                        </option>
-                      ))}
-                    </select>
+                      Apply Caps
+                    </Button>
                   </div>
-                  <div>
-                    <Label>Subvolume</Label>
-                    <select
-                      className="flex h-9 w-48 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
-                      value={capsSubvol}
-                      onChange={(e) => setCapsSubvol(e.target.value)}
-                    >
-                      <option value="">Select subvolume...</option>
-                      {subvolumes.map((sv) => (
-                        <option key={`${sv.group || ""}-${sv.name}`} value={sv.name}>
-                          {sv.name}{sv.group ? ` (${sv.group})` : ""}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <Label>Group</Label>
-                    <select
-                      className="flex h-9 w-40 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
-                      value={capsGroup}
-                      onChange={(e) => setCapsGroup(e.target.value)}
-                    >
-                      <option value="">default</option>
-                      {groups.map((g) => (
-                        <option key={g} value={g}>
-                          {g}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <Button
-                    type="submit"
-                    disabled={!capsEntity || !capsSubvol}
-                    className="bg-fabric-primary hover:bg-fabric-primary/90 text-white"
-                  >
-                    Apply Caps
-                  </Button>
+                  {capsTarget === "user" && (
+                    <p className="text-xs text-muted-foreground">
+                      Apply default capabilities to a single user for the selected subvolume.
+                    </p>
+                  )}
+                  {capsTarget === "project" && (
+                    <p className="text-xs text-muted-foreground">
+                      Apply default capabilities to all {projectMembers.length} project member(s) for the selected subvolume.
+                    </p>
+                  )}
                 </form>
               </CardContent>
             </Card>
