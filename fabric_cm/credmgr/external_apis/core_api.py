@@ -35,6 +35,29 @@ class CoreApi:
     """
     Class implements functionality to interface with Project Registry
     """
+
+    @staticmethod
+    def _extract_error_message(response) -> str:
+        """
+        Extract a meaningful error message from a Core API response.
+        If the response body is JSON with a 'message' or 'detail' field, return that.
+        Otherwise return a truncated text representation (avoids dumping raw HTML).
+        """
+        try:
+            body = response.json()
+            # Core API may return {"message": "..."} or {"detail": "..."}
+            for key in ("message", "detail", "errors"):
+                if key in body:
+                    return f"{body[key]}"
+            # Fall back to the full JSON if no known key
+            return f"{body}"
+        except Exception:
+            # Not JSON — likely an HTML error page from nginx/proxy
+            text = response.text.strip()
+            if len(text) > 256:
+                text = text[:256] + "...(truncated)"
+            return text
+
     def __init__(self, api_server: str, cookie: str, cookie_name: str, cookie_domain: str, token: str = None):
         self.api_server = api_server
         self.cookie = cookie
@@ -78,8 +101,8 @@ class CoreApi:
         url = f'{self.api_server}/whoami'
         response = self.session.get(url, verify=CONFIG_OBJ.is_core_api_ssl_verify())
         if response.status_code != 200:
-            raise CoreApiError(f"Core API error occurred status_code: {response.status_code} "
-                               f"message: {response.content}")
+            raise CoreApiError(f"Core API error occurred url: {url} status_code: {response.status_code} "
+                               f"message: {self._extract_error_message(response)}")
 
         LOG.debug(f"GET WHOAMI Response : {response.json()}")
         uuid = response.json().get("results")[0]["uuid"]
@@ -98,8 +121,8 @@ class CoreApi:
         response = self.session.get(url, verify=CONFIG_OBJ.is_core_api_ssl_verify())
 
         if response.status_code != 200:
-            raise CoreApiError(f"Core API error occurred status_code: {response.status_code} "
-                               f"message: {response.content}")
+            raise CoreApiError(f"Core API error occurred url: {url} status_code: {response.status_code} "
+                               f"message: {self._extract_error_message(response)}")
 
         LOG.debug(f"GET PEOPLE Response : {response.json()}")
 
@@ -114,8 +137,8 @@ class CoreApi:
         response = self.session.get(url, verify=CONFIG_OBJ.is_core_api_ssl_verify())
 
         if response.status_code != 200:
-            raise CoreApiError(f"Core API error occurred status_code: {response.status_code} "
-                               f"message: {response.content}")
+            raise CoreApiError(f"Core API error occurred url: {url} status_code: {response.status_code} "
+                               f"message: {self._extract_error_message(response)}")
 
         LOG.debug(f"GET Project Response : {response.json()}")
 
@@ -139,8 +162,8 @@ class CoreApi:
             response = self.session.get(url, verify=CONFIG_OBJ.is_core_api_ssl_verify())
 
             if response.status_code != 200:
-                raise CoreApiError(f"Core API error occurred status_code: {response.status_code} "
-                                   f"message: {response.content}")
+                raise CoreApiError(f"Core API error occurred url: {url} status_code: {response.status_code} "
+                                   f"message: {self._extract_error_message(response)}")
 
             LOG.debug(f"GET Project Response : {response.json()}")
 
