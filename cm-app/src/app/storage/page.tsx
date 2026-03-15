@@ -52,7 +52,9 @@ import {
   Plus,
   Search,
   KeyRound,
+  FolderDown,
 } from "lucide-react";
+import JSZip from "jszip";
 
 // Types
 
@@ -142,6 +144,191 @@ function downloadFile(filename: string, content: string, mime = "text/plain") {
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ---- Keyring parsing & bundle generation (mirrors CephFsUtils from fablib) ----
+
+interface ParsedKeyring {
+  entity: string;   // e.g. "client.alice"
+  user: string;     // e.g. "alice"
+  secret: string;   // base64 key
+  fsPaths: Array<{ fsname: string; path: string }>;
+}
+
+function parseKeyring(text: string): ParsedKeyring {
+  // Unescape JSON-encoded strings
+  let raw = text;
+  try { raw = JSON.parse(text); } catch { /* not JSON, use as-is */ }
+
+  const mEnt = raw.match(/\[(client\.[^\]]+)\]/);
+  if (!mEnt) throw new Error("Could not find [client.<name>] stanza in keyring");
+  const entity = mEnt[1];
+  const user = entity.split(".").slice(1).join(".");
+
+  const mKey = raw.match(/^\s*key\s*=\s*([A-Za-z0-9+/=]+)\s*$/m);
+  if (!mKey) throw new Error("Could not find 'key =' line in keyring");
+  const secret = mKey[1];
+
+  // Parse MDS caps
+  const mCaps = raw.match(/caps\s+mds\s*=\s*"([^"]+)"/);
+  const fsPaths: Array<{ fsname: string; path: string }> = [];
+  if (mCaps) {
+    const clauses = mCaps[1].split(",").map((c) => c.trim()).filter(Boolean);
+    const seenFs: string[] = [];
+    for (const cl of clauses) {
+      const mfs = cl.match(/fsname=([^,\s]+)/);
+      if (mfs && !seenFs.includes(mfs[1])) seenFs.push(mfs[1]);
+    }
+    const defaultFs = seenFs.length === 1 ? seenFs[0] : null;
+    const seen = new Set<string>();
+    for (const cl of clauses) {
+      const mfs = cl.match(/fsname=([^,\s]+)/);
+      const mp = cl.match(/path=([^,\s]+)/);
+      if (!mp) continue;
+      const fsn = mfs ? mfs[1] : defaultFs;
+      if (!fsn) continue;
+      const key = `${fsn}:${mp[1]}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        fsPaths.push({ fsname: fsn, path: mp[1] });
+      }
+    }
+  }
+  return { entity, user, secret, fsPaths };
+}
+
+function slugFromPath(p: string): string {
+  return p.replace(/^\/+/, "").replace(/[^A-Za-z0-9._-]+/g, "_") || "root";
+}
+
+function generateMountScript(
+  cluster: string,
+  entity: string,
+  user: string,
+  fsPaths: Array<{ fsname: string; path: string }>,
+  mountRoot: string = "/mnt/cephfs"
+): string {
+  const blocks = fsPaths.map(({ fsname, path }) => {
+    const slug = slugFromPath(path);
+    const mnt = `$MNT_BASE/$CLUSTER/$USER_NAME/${slug}`;
+    return `
+# --- ${fsname}:${path} ---
+echo "Preparing mountpoint: ${mnt}"
+sudo mkdir -p "${mnt}"
+
+if mountpoint -q "${mnt}"; then
+  current_src="$(findmnt -n -o SOURCE --target "${mnt}" 2>/dev/null || true)"
+  echo "Already mounted at ${mnt} (SOURCE=\${current_src:-unknown}). Skipping."
+else
+  sudo chown "\${owner_uid}:\${owner_gid}" "${mnt}" || true
+  sudo chmod 755 "${mnt}" || true
+
+  echo "Mounting (fs=) fs=${fsname} path=${path} -> ${mnt}"
+  set +e
+  sudo mount -t ceph ":${path}" "${mnt}" -o name="$USER_NAME",secretfile="$SECRET_TGT",conf="$CONF_TGT",fs="${fsname}",_netdev,noatime
+  rc=$?
+  set -e
+  if [[ $rc -eq 22 ]]; then
+    echo "fs= not accepted (EINVAL). Retrying with mds_namespace=${fsname} ..."
+    sudo mount -t ceph ":${path}" "${mnt}" -o name="$USER_NAME",secretfile="$SECRET_TGT",conf="$CONF_TGT",mds_namespace="${fsname}",_netdev,noatime
+    rc=$?
+  fi
+  if [[ $rc -ne 0 ]]; then
+    echo "ERROR: mount failed with rc=$rc for ${mnt}"
+    exit $rc
+  fi
+  sudo chown -R "\${owner_uid}:\${owner_gid}" "${mnt}" || true
+fi
+`;
+  });
+
+  return `#!/usr/bin/env bash
+set -euo pipefail
+
+here="$(cd "$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
+CLUSTER="${cluster}"
+ENTITY="${entity}"
+USER_NAME="${user}"
+MNT_BASE="\${MNT_BASE:-${mountRoot}}"
+
+echo "Using cluster: $CLUSTER"
+echo "Bundle dir:   $here"
+echo "Mount base:   $MNT_BASE"
+
+if [[ "$CLUSTER" == "ceph" || -z "$CLUSTER" ]]; then
+  CONF_TGT="/etc/ceph/ceph.conf"
+  KEYRING_TGT="/etc/ceph/ceph.client.$USER_NAME.keyring"
+  SECRET_TGT="/etc/ceph/ceph.client.$USER_NAME.secret"
+else
+  CONF_TGT="/etc/ceph/\${CLUSTER}.conf"
+  KEYRING_TGT="/etc/ceph/\${CLUSTER}.client.$USER_NAME.keyring"
+  SECRET_TGT="/etc/ceph/\${CLUSTER}.client.$USER_NAME.secret"
+fi
+
+copy_if_changed() {
+  local src="$1" dst="$2" mode="$3"
+  if [[ ! -f "$dst" ]] || ! cmp -s "$src" "$dst"; then
+    sudo install -m "$mode" -D "$src" "$dst"
+  fi
+}
+
+sudo mkdir -p /etc/ceph
+copy_if_changed "$here/ceph.conf" "$CONF_TGT" 644
+copy_if_changed "$here/ceph.client.$USER_NAME.keyring" "$KEYRING_TGT" 600
+copy_if_changed "$here/ceph.client.$USER_NAME.secret" "$SECRET_TGT" 600
+
+owner_uid="\${SUDO_UID:-}"
+owner_gid="\${SUDO_GID:-}"
+if [[ -z "$owner_uid" || -z "$owner_gid" ]]; then
+  owner_uid="$(stat -c %u "$here")"
+  owner_gid="$(stat -c %g "$here")"
+fi
+
+sudo mkdir -p "$MNT_BASE/$CLUSTER/$USER_NAME"
+if ! mountpoint -q "$MNT_BASE/$CLUSTER/$USER_NAME"; then
+  sudo chown "\${owner_uid}:\${owner_gid}" "$MNT_BASE/$CLUSTER/$USER_NAME" || true
+  sudo chmod 755 "$MNT_BASE/$CLUSTER/$USER_NAME" || true
+fi
+${blocks.join("")}
+echo "All mounts attempted."
+echo "To unmount:"
+echo "  sudo umount -l $MNT_BASE/$CLUSTER/$USER_NAME/*"
+`;
+}
+
+async function generateAndDownloadBundle(
+  cluster: string,
+  cephConfText: string,
+  keyringText: string,
+) {
+  const parsed = parseKeyring(keyringText);
+  const { entity, user, secret, fsPaths } = parsed;
+
+  const zip = new JSZip();
+  const folder = zip.folder(cluster)!;
+
+  // ceph.conf
+  folder.file("ceph.conf", cephConfText);
+
+  // keyring
+  folder.file(`ceph.client.${user}.keyring`, keyringText);
+
+  // secret
+  folder.file(`ceph.client.${user}.secret`, secret + "\n");
+
+  // mount script (only if MDS caps paths were found)
+  if (fsPaths.length > 0) {
+    const script = generateMountScript(cluster, entity, user, fsPaths);
+    folder.file(`mount_${user}.sh`, script, { unixPermissions: "750" });
+  }
+
+  const blob = await zip.generateAsync({ type: "blob", platform: "UNIX" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `ceph-bundle-${user}-${cluster}.zip`;
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -636,20 +823,51 @@ export default function StoragePage() {
     }
   }, [selectedCluster, ensureToken]);
 
+  // Extract keyring text from export API response
+  const extractKeyring = (response: Record<string, unknown>, entity: string): string => {
+    // Shape: { clusters: { cluster: { entity: keyring_text } }, ... }
+    const clustersMap = response.clusters as Record<string, Record<string, string>> | undefined;
+    if (clustersMap?.[selectedCluster]?.[entity]) {
+      return clustersMap[selectedCluster][entity];
+    }
+    // Fallback: response.data could be a string or object
+    if (typeof response === "string") return response;
+    if (response.data) {
+      if (typeof response.data === "string") return response.data;
+      return JSON.stringify(response.data, null, 2);
+    }
+    return JSON.stringify(response, null, 2);
+  };
+
   const handleExportKeyring = async (entity: string) => {
     try {
       const token = await ensureToken();
       const { data: response } = await exportUserKeyrings(token, selectedCluster, [entity]);
-      const keyring = typeof response === "string"
-        ? response
-        : response.data
-          ? typeof response.data === "string"
-            ? response.data
-            : JSON.stringify(response.data, null, 2)
-          : JSON.stringify(response, null, 2);
+      const keyring = extractKeyring(response, entity);
       await copyToClipboard(keyring);
     } catch (ex) {
       toast.error(getErrorMessage(ex, "Failed to export keyring."));
+    }
+  };
+
+  const handleDownloadBundle = async (entity: string) => {
+    try {
+      const token = await ensureToken();
+      const { data: response } = await exportUserKeyrings(token, selectedCluster, [entity]);
+      const keyring = extractKeyring(response, entity);
+
+      // Get ceph.conf from cluster info
+      const currentCluster = clusters.find((c) => c.cluster === selectedCluster);
+      const cephConf = currentCluster?.ceph_conf_minimal;
+      if (!cephConf) {
+        toast.error("Cluster config (ceph.conf) not available.");
+        return;
+      }
+
+      await generateAndDownloadBundle(selectedCluster, cephConf, keyring);
+      toast.success(`Bundle downloaded for ${entity}.`);
+    } catch (ex) {
+      toast.error(getErrorMessage(ex, "Failed to generate bundle."));
     }
   };
 
@@ -1231,8 +1449,17 @@ export default function StoragePage() {
                               variant="outline"
                               size="sm"
                               onClick={() => handleExportKeyring(user.entity)}
+                              title="Copy keyring to clipboard"
                             >
                               <KeyRound className="h-3 w-3 mr-1" /> Export
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDownloadBundle(user.entity)}
+                              title="Download ceph.conf, keyring, secret, and mount script as a zip"
+                            >
+                              <FolderDown className="h-3 w-3 mr-1" /> Bundle
                             </Button>
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
@@ -1336,6 +1563,26 @@ export default function StoragePage() {
                     }
                   >
                     <Download className="h-3 w-3 mr-1" /> Download Keyring
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      try {
+                        const cc = clusters.find((c) => c.cluster === selectedCluster);
+                        if (!cc?.ceph_conf_minimal) {
+                          toast.error("Cluster config not available.");
+                          return;
+                        }
+                        await generateAndDownloadBundle(selectedCluster, cc.ceph_conf_minimal, myKeyring);
+                        toast.success("Bundle downloaded.");
+                      } catch (ex) {
+                        toast.error(getErrorMessage(ex, "Failed to generate bundle."));
+                      }
+                    }}
+                    title="Download ceph.conf, keyring, secret, and mount script as a zip"
+                  >
+                    <FolderDown className="h-3 w-3 mr-1" /> Download Bundle
                   </Button>
                 </div>
 
