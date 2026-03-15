@@ -179,6 +179,7 @@ export default function StoragePage() {
   const [groups, setGroups] = useState<string[]>([]);
   const [selectedGroup, setSelectedGroup] = useState("");
   const [subvolumes, setSubvolumes] = useState<SubvolumeInfo[]>([]);
+  const [allSubvolumes, setAllSubvolumes] = useState<SubvolumeInfo[]>([]);
   const [newSubvolName, setNewSubvolName] = useState("");
   const [newSubvolGroup, setNewSubvolGroup] = useState("");
   const [newSubvolSizeGiB, setNewSubvolSizeGiB] = useState(10);
@@ -203,6 +204,17 @@ export default function StoragePage() {
 
   // Subvolume creation mode: per-user or per-project
   const [subvolScope, setSubvolScope] = useState<"user" | "project">("user");
+
+  // Build a lookup from project UUID → project name
+  const projectNameMap = new Map(projects.map((p) => [p.uuid, p.name]));
+
+  // Format a group identifier for display: show project name if available
+  const formatGroupName = (groupId: string | undefined): string => {
+    if (!groupId) return "—";
+    const projectName = projectNameMap.get(groupId);
+    if (projectName) return `${projectName} (${groupId.slice(0, 8)}...)`;
+    return groupId;
+  };
 
   // Normal user state
   const [myKeyring, setMyKeyring] = useState("");
@@ -362,37 +374,90 @@ export default function StoragePage() {
     }
   }, [selectedCluster, ensureToken]);
 
+  // Parse raw subvolume API response into SubvolumeInfo[]
+  const parseSubvolumes = (rawList: unknown[]): SubvolumeInfo[] => {
+    return rawList.map((item: unknown) => {
+      if (typeof item === "string") return { name: item } as SubvolumeInfo;
+      const obj = item as Record<string, unknown>;
+      const info = (obj.info as Record<string, unknown>) || {};
+      return {
+        name: (obj.name as string) || "",
+        group: (obj.group_name as string) || (obj.group as string) || undefined,
+        bytes_quota: (info.bytes_quota ?? obj.bytes_quota ?? undefined) as number | string | undefined,
+        bytes_used: (info.bytes_used ?? obj.bytes_used ?? undefined) as number | undefined,
+        state: (info.state as string) ?? (obj.state as string) ?? undefined,
+        path: (info.path as string) ?? (obj.path as string) ?? undefined,
+      } as SubvolumeInfo;
+    });
+  };
+
   const loadSubvolumes = useCallback(
     async (group?: string) => {
       try {
         const token = await ensureToken();
-        const { data: response } = await listSubvolumes(
-          token,
-          selectedCluster,
-          DEFAULT_VOL,
-          group || undefined,
-          true
-        );
-        const rawList = Array.isArray(response.data) ? response.data : response.data || [];
-        // Normalize: Ceph Dashboard may nest info fields under an "info" key
-        const svList: SubvolumeInfo[] = rawList.map((item: Record<string, unknown>) => {
-          if (typeof item === "string") return { name: item };
-          const info = (item.info as Record<string, unknown>) || {};
-          return {
-            name: (item.name as string) || "",
-            group: (item.group_name as string) || (item.group as string) || undefined,
-            bytes_quota: info.bytes_quota ?? item.bytes_quota ?? undefined,
-            bytes_used: info.bytes_used ?? item.bytes_used ?? undefined,
-            state: (info.state as string) ?? (item.state as string) ?? undefined,
-            path: (info.path as string) ?? (item.path as string) ?? undefined,
-          };
-        });
-        setSubvolumes(svList);
+
+        if (group) {
+          // Load subvolumes for a specific group
+          const { data: response } = await listSubvolumes(
+            token, selectedCluster, DEFAULT_VOL, group, true
+          );
+          const rawList = Array.isArray(response.data) ? response.data : response.data || [];
+          setSubvolumes(parseSubvolumes(rawList));
+        } else {
+          // "All groups": fetch default (no-group) + each known group in parallel
+          const fetches = [
+            listSubvolumes(token, selectedCluster, DEFAULT_VOL, undefined, true),
+            ...groups.map((g) =>
+              listSubvolumes(token, selectedCluster, DEFAULT_VOL, g, true)
+            ),
+          ];
+          const results = await Promise.allSettled(fetches);
+          const merged: SubvolumeInfo[] = [];
+          for (const result of results) {
+            if (result.status === "fulfilled") {
+              const rawList = Array.isArray(result.value.data.data)
+                ? result.value.data.data
+                : result.value.data.data || [];
+              merged.push(...parseSubvolumes(rawList));
+            }
+          }
+          setSubvolumes(merged);
+          setAllSubvolumes(merged);
+        }
       } catch (ex) {
         toast.error(getErrorMessage(ex, "Failed to load subvolumes."));
       }
     },
-    [selectedCluster, ensureToken]
+    [selectedCluster, ensureToken, groups]
+  );
+
+  // Load all subvolumes across all groups (for CephX caps dropdown)
+  const loadAllSubvolumes = useCallback(
+    async () => {
+      try {
+        const token = await ensureToken();
+        const fetches = [
+          listSubvolumes(token, selectedCluster, DEFAULT_VOL, undefined, true),
+          ...groups.map((g) =>
+            listSubvolumes(token, selectedCluster, DEFAULT_VOL, g, true)
+          ),
+        ];
+        const results = await Promise.allSettled(fetches);
+        const merged: SubvolumeInfo[] = [];
+        for (const result of results) {
+          if (result.status === "fulfilled") {
+            const rawList = Array.isArray(result.value.data.data)
+              ? result.value.data.data
+              : result.value.data.data || [];
+            merged.push(...parseSubvolumes(rawList));
+          }
+        }
+        setAllSubvolumes(merged);
+      } catch (ex) {
+        toast.error(getErrorMessage(ex, "Failed to load all subvolumes."));
+      }
+    },
+    [selectedCluster, ensureToken, groups]
   );
 
   useEffect(() => {
@@ -400,6 +465,13 @@ export default function StoragePage() {
       loadSubvolumes(selectedGroup || undefined);
     }
   }, [selectedGroup, selectedCluster, isOperator, loadSubvolumes]);
+
+  // Keep allSubvolumes updated when groups are loaded
+  useEffect(() => {
+    if (selectedCluster && isOperator && groups.length > 0) {
+      loadAllSubvolumes();
+    }
+  }, [selectedCluster, isOperator, groups, loadAllSubvolumes]);
 
   const handleCreateSubvolume = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -726,7 +798,7 @@ export default function StoragePage() {
                   <option value="">All groups</option>
                   {groups.map((g) => (
                     <option key={g} value={g}>
-                      {g}
+                      {formatGroupName(g)}
                     </option>
                   ))}
                 </select>
@@ -764,7 +836,7 @@ export default function StoragePage() {
                         <TableCell className="font-mono text-sm">
                           {sv.name}
                         </TableCell>
-                        <TableCell>{sv.group || "—"}</TableCell>
+                        <TableCell>{formatGroupName(sv.group)}</TableCell>
                         <TableCell>{formatBytes(sv.bytes_quota)}</TableCell>
                         <TableCell>{formatBytes(sv.bytes_used)}</TableCell>
                         <TableCell>
@@ -816,7 +888,7 @@ export default function StoragePage() {
                                   </AlertDialogTitle>
                                   <AlertDialogDescription>
                                     Delete subvolume &quot;{sv.name}&quot;
-                                    {sv.group ? ` from group "${sv.group}"` : ""}
+                                    {sv.group ? ` from group "${formatGroupName(sv.group)}"` : ""}
                                     ? This cannot be undone.
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
@@ -1042,20 +1114,30 @@ export default function StoragePage() {
                     <div>
                       <Label>Subvolume</Label>
                       <select
-                        className="flex h-9 w-48 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
-                        value={capsSubvol}
+                        className="flex h-9 w-64 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
+                        value={capsSubvol ? `${capsGroup || ""}::${capsSubvol}` : ""}
                         onChange={(e) => {
-                          const svName = e.target.value;
-                          setCapsSubvol(svName);
-                          // Auto-fill group from the selected subvolume
-                          const sv = subvolumes.find((s) => s.name === svName);
-                          setCapsGroup(sv?.group || "");
+                          const val = e.target.value;
+                          if (!val) {
+                            setCapsSubvol("");
+                            setCapsGroup("");
+                            return;
+                          }
+                          // Value format: "group::name"
+                          const sepIdx = val.indexOf("::");
+                          const grp = val.slice(0, sepIdx);
+                          const name = val.slice(sepIdx + 2);
+                          setCapsSubvol(name);
+                          setCapsGroup(grp);
                         }}
                       >
                         <option value="">Select subvolume...</option>
-                        {subvolumes.map((sv) => (
-                          <option key={`${sv.group || ""}-${sv.name}`} value={sv.name}>
-                            {sv.name}{sv.group ? ` (${sv.group})` : ""}
+                        {allSubvolumes.map((sv) => (
+                          <option
+                            key={`${sv.group || ""}-${sv.name}`}
+                            value={`${sv.group || ""}::${sv.name}`}
+                          >
+                            {sv.name}{sv.group ? ` [${formatGroupName(sv.group)}]` : ""}
                           </option>
                         ))}
                       </select>
@@ -1063,14 +1145,14 @@ export default function StoragePage() {
                     <div>
                       <Label>Group</Label>
                       <select
-                        className="flex h-9 w-40 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
+                        className="flex h-9 w-48 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
                         value={capsGroup}
                         onChange={(e) => setCapsGroup(e.target.value)}
                       >
                         <option value="">None</option>
                         {groups.map((g) => (
                           <option key={g} value={g}>
-                            {g}
+                            {formatGroupName(g)}
                           </option>
                         ))}
                       </select>
