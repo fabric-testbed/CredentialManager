@@ -44,6 +44,7 @@ import {
   deleteCephUser,
   listProjectMembers,
 } from "@/services/storage-service";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Copy,
   Download,
@@ -383,6 +384,10 @@ export default function StoragePage() {
   const [cephUsers, setCephUsers] = useState<CephUser[]>([]);
   const [userSearch, setUserSearch] = useState("");
 
+  // Multi-select state
+  const [selectedSubvolumes, setSelectedSubvolumes] = useState<Set<string>>(new Set());
+  const [selectedCephUsers, setSelectedCephUsers] = useState<Set<string>>(new Set());
+
   // Project members state
   const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
 
@@ -660,6 +665,126 @@ export default function StoragePage() {
     }
   }, [selectedCluster, isOperator, groups, loadAllSubvolumes]);
 
+  const filteredCephUsers = cephUsers.filter((u) =>
+    (u.entity || "").toLowerCase().includes(userSearch.toLowerCase())
+  );
+
+  // Clear subvolume selection when data changes
+  useEffect(() => {
+    setSelectedSubvolumes(new Set());
+  }, [selectedGroup, selectedCluster, subvolumes]);
+
+  // Clear CephX user selection when data changes
+  useEffect(() => {
+    setSelectedCephUsers(new Set());
+  }, [selectedCluster, cephUsers]);
+
+  // Subvolume selection helpers
+  const subvolKey = (sv: SubvolumeInfo) => `${sv.group || ""}::${sv.name}`;
+
+  const toggleSubvolume = (key: string) => {
+    setSelectedSubvolumes((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const toggleAllSubvolumes = () => {
+    if (selectedSubvolumes.size === subvolumes.length) {
+      setSelectedSubvolumes(new Set());
+    } else {
+      setSelectedSubvolumes(new Set(subvolumes.map(subvolKey)));
+    }
+  };
+
+  // CephX user selection helpers
+  const toggleCephUser = (entity: string) => {
+    setSelectedCephUsers((prev) => {
+      const next = new Set(prev);
+      if (next.has(entity)) next.delete(entity);
+      else next.add(entity);
+      return next;
+    });
+  };
+
+  const toggleAllCephUsers = () => {
+    if (selectedCephUsers.size === filteredCephUsers.length) {
+      setSelectedCephUsers(new Set());
+    } else {
+      setSelectedCephUsers(new Set(filteredCephUsers.map((u) => u.entity)));
+    }
+  };
+
+  // Batch delete handlers
+  const handleBatchDeleteSubvolumes = async () => {
+    if (selectedSubvolumes.size === 0) return;
+    setShowSpinner(true);
+    setSpinnerMessage(`Deleting ${selectedSubvolumes.size} subvolume(s)...`);
+    let ok = 0;
+    let fail = 0;
+    try {
+      const token = await ensureToken();
+      for (const key of selectedSubvolumes) {
+        const sepIdx = key.indexOf("::");
+        const group = key.slice(0, sepIdx) || undefined;
+        const name = key.slice(sepIdx + 2);
+        try {
+          await deleteSubvolume(token, selectedCluster, DEFAULT_VOL, name, group);
+          ok++;
+        } catch (ex) {
+          fail++;
+          console.error(`Failed to delete subvolume ${name}:`, ex);
+        }
+      }
+      if (fail === 0) {
+        toast.success(`Deleted ${ok} subvolume(s).`);
+      } else {
+        toast.warning(`Deleted ${ok} subvolume(s), failed for ${fail}.`);
+      }
+      setSelectedSubvolumes(new Set());
+      loadSubvolumes(selectedGroup || undefined);
+    } catch (ex) {
+      toast.error(getErrorMessage(ex, "Batch delete failed."));
+    } finally {
+      setShowSpinner(false);
+      setSpinnerMessage("");
+    }
+  };
+
+  const handleBatchDeleteCephUsers = async () => {
+    if (selectedCephUsers.size === 0) return;
+    setShowSpinner(true);
+    setSpinnerMessage(`Deleting ${selectedCephUsers.size} user(s)...`);
+    let ok = 0;
+    let fail = 0;
+    try {
+      const token = await ensureToken();
+      for (const entity of selectedCephUsers) {
+        try {
+          await deleteCephUser(token, selectedCluster, entity);
+          ok++;
+        } catch (ex) {
+          fail++;
+          console.error(`Failed to delete user ${entity}:`, ex);
+        }
+      }
+      if (fail === 0) {
+        toast.success(`Deleted ${ok} user(s).`);
+      } else {
+        toast.warning(`Deleted ${ok} user(s), failed for ${fail}.`);
+      }
+      setSelectedCephUsers(new Set());
+      loadCephUsers();
+    } catch (ex) {
+      toast.error(getErrorMessage(ex, "Batch delete failed."));
+    } finally {
+      setShowSpinner(false);
+      setSpinnerMessage("");
+    }
+  };
+
   const handleCreateSubvolume = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newSubvolName) return;
@@ -887,10 +1012,6 @@ export default function StoragePage() {
     }
   };
 
-  const filteredCephUsers = cephUsers.filter((u) =>
-    (u.entity || "").toLowerCase().includes(userSearch.toLowerCase())
-  );
-
   // ----- Normal User: My Credentials -----
 
   const loadMyCredentials = useCallback(async () => {
@@ -1034,12 +1155,79 @@ export default function StoragePage() {
               </Button>
             </div>
 
+            {/* Batch action bar for subvolumes */}
+            {selectedSubvolumes.size > 0 && (
+              <div className="flex items-center gap-3 rounded-md border bg-muted/50 px-4 py-2">
+                <span className="text-sm font-medium">
+                  {selectedSubvolumes.size} selected
+                </span>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-fabric-danger text-fabric-danger"
+                    >
+                      <Trash2 className="h-3 w-3 mr-1" /> Delete Selected
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete {selectedSubvolumes.size} Subvolume(s)</AlertDialogTitle>
+                      <AlertDialogDescription asChild>
+                        <div>
+                          <p>This will permanently delete the following subvolumes:</p>
+                          <ul className="mt-2 max-h-40 overflow-auto text-xs font-mono list-disc pl-4">
+                            {[...selectedSubvolumes].map((key) => {
+                              const sepIdx = key.indexOf("::");
+                              const name = key.slice(sepIdx + 2);
+                              return <li key={key}>{name}</li>;
+                            })}
+                          </ul>
+                        </div>
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleBatchDeleteSubvolumes}
+                        className="bg-destructive text-white"
+                      >
+                        Delete {selectedSubvolumes.size} Subvolume(s)
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedSubvolumes(new Set())}
+                >
+                  Clear Selection
+                </Button>
+              </div>
+            )}
+
             {/* Subvolume table */}
             {subvolumes.length > 0 ? (
               <div className="rounded-md border overflow-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead>
+                        <Checkbox
+                          checked={
+                            subvolumes.length > 0 &&
+                            selectedSubvolumes.size === subvolumes.length
+                          }
+                          data-indeterminate={
+                            selectedSubvolumes.size > 0 &&
+                            selectedSubvolumes.size < subvolumes.length
+                          }
+                          onCheckedChange={toggleAllSubvolumes}
+                          aria-label="Select all subvolumes"
+                        />
+                      </TableHead>
                       <TableHead>Name</TableHead>
                       <TableHead>Group</TableHead>
                       <TableHead>Quota</TableHead>
@@ -1049,8 +1237,17 @@ export default function StoragePage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {subvolumes.map((sv) => (
-                      <TableRow key={`${sv.group || ""}-${sv.name}`}>
+                    {subvolumes.map((sv) => {
+                      const key = subvolKey(sv);
+                      return (
+                      <TableRow key={`${sv.group || ""}-${sv.name}`} data-state={selectedSubvolumes.has(key) ? "selected" : undefined}>
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedSubvolumes.has(key)}
+                            onCheckedChange={() => toggleSubvolume(key)}
+                            aria-label={`Select ${sv.name}`}
+                          />
+                        </TableCell>
                         <TableCell className="font-mono text-sm">
                           {sv.name}
                         </TableCell>
@@ -1124,7 +1321,8 @@ export default function StoragePage() {
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))}
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
@@ -1420,11 +1618,76 @@ export default function StoragePage() {
               </Button>
             </div>
 
+            {/* Batch action bar for CephX users */}
+            {selectedCephUsers.size > 0 && (
+              <div className="flex items-center gap-3 rounded-md border bg-muted/50 px-4 py-2">
+                <span className="text-sm font-medium">
+                  {selectedCephUsers.size} selected
+                </span>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-fabric-danger text-fabric-danger"
+                    >
+                      <Trash2 className="h-3 w-3 mr-1" /> Delete Selected
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete {selectedCephUsers.size} User(s)</AlertDialogTitle>
+                      <AlertDialogDescription asChild>
+                        <div>
+                          <p>This will permanently delete the following users and revoke all their access:</p>
+                          <ul className="mt-2 max-h-40 overflow-auto text-xs font-mono list-disc pl-4">
+                            {[...selectedCephUsers].map((entity) => (
+                              <li key={entity}>{entity}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleBatchDeleteCephUsers}
+                        className="bg-destructive text-white"
+                      >
+                        Delete {selectedCephUsers.size} User(s)
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedCephUsers(new Set())}
+                >
+                  Clear Selection
+                </Button>
+              </div>
+            )}
+
             {filteredCephUsers.length > 0 ? (
               <div className="rounded-md border overflow-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead>
+                        <Checkbox
+                          checked={
+                            filteredCephUsers.length > 0 &&
+                            selectedCephUsers.size === filteredCephUsers.length
+                          }
+                          data-indeterminate={
+                            selectedCephUsers.size > 0 &&
+                            selectedCephUsers.size < filteredCephUsers.length
+                          }
+                          onCheckedChange={toggleAllCephUsers}
+                          aria-label="Select all users"
+                        />
+                      </TableHead>
                       <TableHead>Entity</TableHead>
                       <TableHead>Capabilities</TableHead>
                       <TableHead>Actions</TableHead>
@@ -1432,7 +1695,14 @@ export default function StoragePage() {
                   </TableHeader>
                   <TableBody>
                     {filteredCephUsers.map((user) => (
-                      <TableRow key={user.entity}>
+                      <TableRow key={user.entity} data-state={selectedCephUsers.has(user.entity) ? "selected" : undefined}>
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedCephUsers.has(user.entity)}
+                            onCheckedChange={() => toggleCephUser(user.entity)}
+                            aria-label={`Select ${user.entity}`}
+                          />
+                        </TableCell>
                         <TableCell className="font-mono text-sm">
                           {user.entity}
                         </TableCell>
