@@ -1037,13 +1037,7 @@ export default function StoragePage() {
       // Export keyring
       try {
         const { data: response } = await exportUserKeyrings(token, selectedCluster, [entity]);
-        const keyring = typeof response === "string"
-          ? response
-          : response.data
-            ? typeof response.data === "string"
-              ? response.data
-              : JSON.stringify(response.data, null, 2)
-            : "";
+        const keyring = extractKeyring(response, entity);
         setMyKeyring(keyring);
       } catch {
         setMyKeyring("");
