@@ -969,13 +969,8 @@ export default function StoragePage() {
     if (clustersMap?.[selectedCluster]?.[entity]) {
       return clustersMap[selectedCluster][entity];
     }
-    // Fallback: response.data could be a string or object
-    if (typeof response === "string") return response;
-    if (response.data) {
-      if (typeof response.data === "string") return response.data;
-      return JSON.stringify(response.data, null, 2);
-    }
-    return JSON.stringify(response, null, 2);
+    // No keyring found for this entity on this cluster
+    return "";
   };
 
   const handleExportKeyring = async (entity: string) => {
@@ -1030,6 +1025,7 @@ export default function StoragePage() {
 
   const loadMyCredentials = useCallback(async () => {
     if (!bastionLogin || !selectedCluster) return;
+    setMyKeyring("");
     try {
       const token = await ensureToken();
       const entity = `client.${bastionLogin}`;
@@ -1037,13 +1033,7 @@ export default function StoragePage() {
       // Export keyring
       try {
         const { data: response } = await exportUserKeyrings(token, selectedCluster, [entity]);
-        const keyring = typeof response === "string"
-          ? response
-          : response.data
-            ? typeof response.data === "string"
-              ? response.data
-              : JSON.stringify(response.data, null, 2)
-            : "";
+        const keyring = extractKeyring(response, entity);
         setMyKeyring(keyring);
       } catch {
         setMyKeyring("");
