@@ -142,8 +142,14 @@ export function deleteCephUser(
 
 // Project Members
 
-export function listProjectMembers(token: string) {
-  return storageApi(token).get("/project/members");
+export function listProjectMembers(
+  token: string,
+  offset = 0,
+  limit = 200
+) {
+  return storageApi(token).get(
+    `/project/members?offset=${offset}&limit=${limit}`
+  );
 }
 
 // S3 Users

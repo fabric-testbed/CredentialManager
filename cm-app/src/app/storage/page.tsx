@@ -508,13 +508,27 @@ export default function StoragePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roleLoaded, cmUserStatus]);
 
-  // Load project members (operator only)
+  // Load project members (operator only) — fetches all pages
   const loadProjectMembers = useCallback(async () => {
     try {
       const token = await ensureToken();
-      const { data: response } = await listProjectMembers(token);
-      const members: ProjectMember[] = Array.isArray(response.data) ? response.data : response.data || [];
-      setProjectMembers(members);
+      const PAGE_SIZE = 200;
+      let offset = 0;
+      let allMembers: ProjectMember[] = [];
+      let total = Infinity;
+
+      while (offset < total) {
+        const { data: response } = await listProjectMembers(token, offset, PAGE_SIZE);
+        const members: ProjectMember[] = Array.isArray(response.data)
+          ? response.data
+          : response.data || [];
+        allMembers = allMembers.concat(members);
+        total = response.total ?? members.length;
+        offset += PAGE_SIZE;
+        // Safety: if page returned nothing, stop
+        if (members.length === 0) break;
+      }
+      setProjectMembers(allMembers);
     } catch (ex) {
       toast.error(getErrorMessage(ex, "Failed to load project members."));
     }
