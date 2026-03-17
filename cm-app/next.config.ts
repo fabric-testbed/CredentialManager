@@ -3,15 +3,9 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   output: "standalone",
 
-  // Prevent webpack from using eval() for source maps in development.
-  // This avoids CSP violations when a restrictive Content-Security-Policy
-  // is active (e.g. from a browser extension or upstream proxy).
-  webpack: (config, { dev }) => {
-    if (dev) {
-      config.devtool = "cheap-module-source-map";
-    }
-    return config;
-  },
+  // Next.js 16 uses Turbopack by default; empty config silences the
+  // "no turbopack config" error while keeping the build working.
+  turbopack: {},
 
   async headers() {
     return [
