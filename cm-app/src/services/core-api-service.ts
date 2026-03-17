@@ -14,3 +14,7 @@ export function getProjects(userID: string) {
     `${getApiEndpoint()}/projects?offset=0&limit=200&person_uuid=${userID}`
   );
 }
+
+export function getPerson(uuid: string) {
+  return http.get(`${getApiEndpoint()}/people/${uuid}?as_self=true`);
+}

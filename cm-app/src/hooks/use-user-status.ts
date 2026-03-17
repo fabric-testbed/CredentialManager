@@ -27,14 +27,12 @@ export function useUserStatus() {
 }
 
 export function UserStatusProvider({ children }: { children: ReactNode }) {
-  const [cmUserStatus, setCmUserStatus] = useState<UserStatus>(() => {
-    if (typeof window === "undefined") return "";
-    return (localStorage.getItem("cmUserStatus") as UserStatus) || "";
-  });
+  const [cmUserStatus, setCmUserStatus] = useState<UserStatus>("");
 
   const checkEnrollment = useCallback(async () => {
-    if (localStorage.getItem("cmUserStatus")) {
-      setCmUserStatus(localStorage.getItem("cmUserStatus") as UserStatus);
+    const cached = localStorage.getItem("cmUserStatus") as UserStatus;
+    if (cached) {
+      setCmUserStatus(cached);
       return;
     }
 
