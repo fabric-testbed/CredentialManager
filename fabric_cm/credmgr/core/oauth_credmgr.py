@@ -577,6 +577,33 @@ class OAuthCredMgr:
         # Ensure user exists in LLM proxy and is part of the team
         self._ensure_llm_user_and_team(llm_api, uuid, email)
 
+        # Enforce max active LLM keys per user (limit: 10)
+        max_llm_keys = 10
+        try:
+            existing_keys = llm_api.list_keys(user_id=uuid)
+            # Filter out expired keys
+            from datetime import datetime, timezone
+            now = datetime.now(timezone.utc)
+            active_count = 0
+            for k in existing_keys:
+                expires_str = k.get('expires')
+                if expires_str:
+                    try:
+                        expires_dt = datetime.fromisoformat(expires_str.replace('Z', '+00:00'))
+                        if expires_dt < now:
+                            continue
+                    except (ValueError, TypeError):
+                        pass
+                active_count += 1
+            if active_count >= max_llm_keys:
+                raise OAuthCredMgrError(
+                    f"User {email} already has {active_count} active LLM keys "
+                    f"(maximum {max_llm_keys}). Please delete unused keys first.")
+        except OAuthCredMgrError:
+            raise
+        except Exception as ex:
+            LOG.warning(f"Could not check existing LLM key count for {uuid}: {ex}")
+
         max_duration = int(CONFIG_OBJ.get_llm_default_duration().rstrip('d'))
         if duration_days is None or duration_days < 1:
             duration_days = max_duration
@@ -628,12 +655,13 @@ class OAuthCredMgr:
             'comment': comment
         }
 
-    def delete_llm_key(self, llm_key_id: str, user_email: str, cookie: str):
+    def delete_llm_key(self, llm_key_id: str, user_email: str, cookie: str = None, token: str = None):
         """
         Delete an LLM API key
         @param llm_key_id LLM key identifier
         @param user_email User's email
-        @param cookie Vouch cookie
+        @param cookie Vouch cookie (browser auth)
+        @param token FABRIC id_token (Bearer auth — alternative to cookie)
         """
         llm_api = LiteLLMApi(api_server=CONFIG_OBJ.get_llm_url(),
                                  master_key=CONFIG_OBJ.get_llm_api_key())
@@ -650,7 +678,8 @@ class OAuthCredMgr:
         from fabric_cm.credmgr.external_apis.core_api import CoreApi
         core_api = CoreApi(api_server=CONFIG_OBJ.get_core_api_url(), cookie=cookie,
                            cookie_name=CONFIG_OBJ.get_vouch_cookie_name(),
-                           cookie_domain=CONFIG_OBJ.get_vouch_cookie_domain_name())
+                           cookie_domain=CONFIG_OBJ.get_vouch_cookie_domain_name(),
+                           token=token)
         uuid, email = core_api.get_user_id_and_email()
 
         if key_owner != uuid:
@@ -669,11 +698,12 @@ class OAuthCredMgr:
                   project_id=CONFIG_OBJ.get_llm_allowed_project(),
                   user_id=uuid, user_email=email)
 
-    def get_llm_keys(self, cookie: str, offset: int = 0, limit: int = 200) -> list:
+    def get_llm_keys(self, cookie: str = None, token: str = None, offset: int = 0, limit: int = 200) -> list:
         """
         Get LLM keys for a user by querying LLM proxy API directly.
         Expired keys are automatically deleted before returning the list.
         @param cookie Vouch cookie
+        @param token Bearer token (alternative to cookie)
         @param offset offset
         @param limit limit
         @return list of active (non-expired) LLM key records
@@ -681,7 +711,8 @@ class OAuthCredMgr:
         from fabric_cm.credmgr.external_apis.core_api import CoreApi
         core_api = CoreApi(api_server=CONFIG_OBJ.get_core_api_url(), cookie=cookie,
                            cookie_name=CONFIG_OBJ.get_vouch_cookie_name(),
-                           cookie_domain=CONFIG_OBJ.get_vouch_cookie_domain_name())
+                           cookie_domain=CONFIG_OBJ.get_vouch_cookie_domain_name(),
+                           token=token)
         uuid, email = core_api.get_user_id_and_email()
 
         llm_api = LiteLLMApi(api_server=CONFIG_OBJ.get_llm_url(),

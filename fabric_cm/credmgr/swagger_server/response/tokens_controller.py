@@ -661,7 +661,7 @@ def tokens_create_llm_post(key_name: str = None, comment: str = None,
         return cors_500(details=str(ex))
 
 
-@login_required
+@login_or_token_required
 def tokens_delete_llm_delete(llm_key_id: str, claims: dict = None):  # noqa: E501
     """Delete an LLM token
 
@@ -677,9 +677,11 @@ def tokens_delete_llm_delete(llm_key_id: str, claims: dict = None):  # noqa: E50
     received_counter.labels(HTTP_METHOD_DELETE, TOKENS_DELETE_LLM_URL).inc()
     try:
         credmgr = OAuthCredMgr()
+        cookie = claims.get(OAuthCredMgr.COOKIE)
+        token = claims.get("id_token") if not cookie else None
         credmgr.delete_llm_key(llm_key_id=llm_key_id,
                                     user_email=claims.get(OAuthCredMgr.EMAIL),
-                                    cookie=claims.get(OAuthCredMgr.COOKIE))
+                                    cookie=cookie, token=token)
         response_data = Status200OkNoContentData()
         response_data.details = f"LLM token {llm_key_id} has been successfully deleted"
         response = Status200OkNoContent()
@@ -696,7 +698,7 @@ def tokens_delete_llm_delete(llm_key_id: str, claims: dict = None):  # noqa: E50
         return cors_500(details=str(ex))
 
 
-@login_required
+@login_or_token_required
 def tokens_llm_keys_get(limit: int = 200, offset: int = 0,
                          claims: dict = None):  # noqa: E501
     """Get LLM tokens for a user
@@ -715,7 +717,9 @@ def tokens_llm_keys_get(limit: int = 200, offset: int = 0,
     received_counter.labels(HTTP_METHOD_GET, TOKENS_LLM_KEYS_URL).inc()
     try:
         credmgr = OAuthCredMgr()
-        keys = credmgr.get_llm_keys(cookie=claims.get(OAuthCredMgr.COOKIE),
+        cookie = claims.get(OAuthCredMgr.COOKIE)
+        token = claims.get("id_token") if not cookie else None
+        keys = credmgr.get_llm_keys(cookie=cookie, token=token,
                                          offset=offset, limit=limit)
         response_data = Status200OkNoContentData()
         response_data.details = keys
@@ -733,7 +737,7 @@ def tokens_llm_keys_get(limit: int = 200, offset: int = 0,
         return cors_500(details=str(ex))
 
 
-@login_required
+@login_or_token_required
 def tokens_llm_models_get(claims: dict = None):  # noqa: E501
     """Get available LLM models
 
