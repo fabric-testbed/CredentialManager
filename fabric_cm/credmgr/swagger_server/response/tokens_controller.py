@@ -611,13 +611,15 @@ fetch(CALLBACK_URL, {{ mode: 'no-cors' }})
         return cors_500(details=str(ex))
 
 
-@login_required
+@login_or_token_required
 def tokens_create_llm_post(key_name: str = None, comment: str = None,
                             duration: int = 30, models: str = None,
                             claims: dict = None):  # noqa: E501
     """Create an LLM token
 
     Request to create an LLM token for an user  # noqa: E501
+
+    Accepts either Vouch cookie auth (browser) or Bearer token auth (API/CLI).
 
     :param key_name: Human-readable name for the key
     :type key_name: str
@@ -638,7 +640,9 @@ def tokens_create_llm_post(key_name: str = None, comment: str = None,
         if models:
             models_list = [m.strip() for m in models.split(',') if m.strip()]
         credmgr = OAuthCredMgr()
-        result = credmgr.create_llm_key(cookie=claims.get(OAuthCredMgr.COOKIE),
+        cookie = claims.get(OAuthCredMgr.COOKIE)
+        token = claims.get("id_token") if not cookie else None
+        result = credmgr.create_llm_key(cookie=cookie, token=token,
                                          key_name=key_name, comment=comment,
                                          duration_days=duration, models=models_list)
         response_data = Status200OkNoContentData()

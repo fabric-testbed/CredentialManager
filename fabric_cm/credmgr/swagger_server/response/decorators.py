@@ -100,19 +100,22 @@ def vouch_authorize() -> Union[dict, None]:
 def validate_authorization_token(token: str) -> Union[dict, str]:
     """
     Validate that the API has fabric token and the token is valid
-    @return returns the decoded claims
+    @return returns the decoded claims (with ``id_token`` key containing the raw token)
     """
     if token is not None:
         try:
-            token = token.replace('Bearer ', '')
+            raw_token = token.replace('Bearer ', '')
             LOG.info("Validating Fabric token")
             credmgr = OAuthCredMgr()
-            state, claims = credmgr.validate_token(token=token)
+            state, claims = credmgr.validate_token(token=raw_token)
 
             if state not in [str(TokenState.Valid), str(TokenState.Refreshed)]:
                 msg = f"Unable to validate provided token: {state} claims:{claims}"
                 LOG.error(msg)
                 return msg
+            # Include the raw id_token so downstream code can use it for
+            # Bearer-authenticated Core API calls (e.g. create_llm_key).
+            claims["id_token"] = raw_token
             return claims
         except Exception as e:
             msg = f"Unable to validate provided token e: {e}!"

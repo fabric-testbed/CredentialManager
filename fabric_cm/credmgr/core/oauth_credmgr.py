@@ -531,12 +531,13 @@ class OAuthCredMgr:
         except LiteLLMApiError as e:
             LOG.warning(f"Could not add user {uuid} to team {team_id}: {e}")
 
-    def create_llm_key(self, cookie: str, key_name: str = None, comment: str = None,
-                       duration_days: int = 30, models: list = None) -> dict:
+    def create_llm_key(self, cookie: str = None, token: str = None, key_name: str = None,
+                       comment: str = None, duration_days: int = 30, models: list = None) -> dict:
         """
         Create an LLM API key for the user.
         Full workflow: verify FABRIC project membership → ensure LLM user → add to team → generate key.
-        @param cookie Vouch cookie
+        @param cookie Vouch cookie (browser auth)
+        @param token FABRIC id_token (Bearer auth — alternative to cookie)
         @param key_name Human-readable name for the key
         @param comment Comment
         @param duration_days Token duration in days (1-30)
@@ -546,7 +547,8 @@ class OAuthCredMgr:
 
         core_api = CoreApi(api_server=CONFIG_OBJ.get_core_api_url(), cookie=cookie,
                            cookie_name=CONFIG_OBJ.get_vouch_cookie_name(),
-                           cookie_domain=CONFIG_OBJ.get_vouch_cookie_domain_name())
+                           cookie_domain=CONFIG_OBJ.get_vouch_cookie_domain_name(),
+                           token=token)
 
         uuid, email = core_api.get_user_id_and_email()
 
