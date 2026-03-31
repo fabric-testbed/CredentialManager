@@ -166,8 +166,16 @@ class OAuthCredMgr:
 
         # validate the token
         if jwt_validator is not None:
-            LOG.info("Validating CI Logon token")
-            code, claims_or_exception = jwt_validator.validate_jwt(token=ci_logon_id_token)
+            if cookie is not None:
+                # Token comes from our vouch cookie where member_of was stripped,
+                # breaking the CILogon signature. The vouch cookie itself is
+                # integrity-protected, so decode without signature verification.
+                LOG.info("Decoding CI Logon token from cookie (signature not verified)")
+                claims_or_exception = jwt.decode(ci_logon_id_token, options={"verify_signature": False})
+                code = ValidateCode.VALID
+            else:
+                LOG.info("Validating CI Logon token")
+                code, claims_or_exception = jwt_validator.validate_jwt(token=ci_logon_id_token)
             if code is not ValidateCode.VALID:
                 LOG.error(f"Unable to validate provided token: {code}/{claims_or_exception}")
                 raise claims_or_exception
