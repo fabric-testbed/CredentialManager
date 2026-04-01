@@ -35,6 +35,7 @@ class CoreApi:
     """
     Class implements functionality to interface with Project Registry
     """
+    VOUCH_COOKIE_CHUNK_SIZE = 4000
 
     @staticmethod
     def _extract_error_message(response) -> str:
@@ -57,6 +58,18 @@ class CoreApi:
             if len(text) > 256:
                 text = text[:256] + "...(truncated)"
             return text
+
+    def _set_chunked_cookie(self, cookie_value: str):
+        """
+        Set a cookie on the session, chunking it the same way vouch-proxy does.
+        Vouch splits cookies > 4000 bytes into <name>, <name>_1, <name>_2, etc.
+        """
+        for i in range(0, len(cookie_value), self.VOUCH_COOKIE_CHUNK_SIZE):
+            chunk = cookie_value[i:i + self.VOUCH_COOKIE_CHUNK_SIZE]
+            chunk_index = i // self.VOUCH_COOKIE_CHUNK_SIZE
+            name = self.cookie_name if chunk_index == 0 else f"{self.cookie_name}_{chunk_index}"
+            cookie_obj = requests.cookies.create_cookie(name=name, value=chunk)
+            self.session.cookies.set_cookie(cookie_obj)
 
     def __init__(self, api_server: str, cookie: str, cookie_name: str, cookie_domain: str, token: str = None):
         self.api_server = api_server
@@ -81,12 +94,8 @@ class CoreApi:
         self.session = requests.Session()
 
         if cookie is not None:
-            # Set the Cookie
-            cookie_obj = requests.cookies.create_cookie(
-                name=self.cookie_name,
-                value=self.cookie
-            )
-            self.session.cookies.set_cookie(cookie_obj)
+            # Chunk cookie the same way vouch-proxy does (splits at 4000 bytes)
+            self._set_chunked_cookie(cookie)
             LOG.debug(f"Using vouch cookie: {self.session.cookies}")
         else:
             headers['authorization'] = f"Bearer {token}"

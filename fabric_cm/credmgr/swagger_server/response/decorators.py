@@ -1,6 +1,8 @@
 from functools import wraps
 from typing import Union
 
+import jwt as pyjwt
+
 from fabric_cm.credmgr.common.utils import Utils
 from fabric_cm.credmgr.core.oauth_credmgr import OAuthCredMgr, TokenState
 from fabric_cm.credmgr.swagger_server import jwt_validator
@@ -71,6 +73,7 @@ def vouch_authorize() -> Union[dict, None]:
     refresh_token = request.headers.get(VOUCH_REFRESH_TOKEN, None)
     cookie_name = CONFIG_OBJ.get_vouch_cookie_name()
     cookie = request.cookies.get(cookie_name)
+    from_cookie = False
     if ci_logon_id_token is None and refresh_token is None and cookie is not None:
         vouch_secret = CONFIG_OBJ.get_vouch_secret()
         vouch_compression = CONFIG_OBJ.is_vouch_cookie_compressed()
@@ -79,12 +82,24 @@ def vouch_authorize() -> Union[dict, None]:
         if status == ValidateCode.VALID:
             ci_logon_id_token = decoded_cookie.get('PIdToken')
             refresh_token = decoded_cookie.get('PRefreshToken')
+            from_cookie = True
 
     if ci_logon_id_token is not None and refresh_token is not None and cookie is not None:
-        code, claims_or_exception = jwt_validator.validate_jwt(token=ci_logon_id_token)
-        if code is not ValidateCode.VALID:
-            LOG.error(f"Unable to validate provided token: {code}/{claims_or_exception}")
-            return None
+        # When PIdToken comes from a vouch cookie we created, member_of was
+        # stripped to reduce cookie size, which invalidates the CILogon
+        # signature. The vouch cookie itself is integrity-protected, so we
+        # can safely decode without signature verification in that case.
+        if from_cookie:
+            try:
+                claims_or_exception = pyjwt.decode(ci_logon_id_token, options={"verify_signature": False})
+            except Exception as e:
+                LOG.error(f"Unable to decode token from cookie: {e}")
+                return None
+        else:
+            code, claims_or_exception = jwt_validator.validate_jwt(token=ci_logon_id_token)
+            if code is not ValidateCode.VALID:
+                LOG.error(f"Unable to validate provided token: {code}/{claims_or_exception}")
+                return None
 
         result = {OAuthCredMgr.REFRESH_TOKEN: refresh_token,
                   OAuthCredMgr.ID_TOKEN: ci_logon_id_token,
@@ -100,19 +115,22 @@ def vouch_authorize() -> Union[dict, None]:
 def validate_authorization_token(token: str) -> Union[dict, str]:
     """
     Validate that the API has fabric token and the token is valid
-    @return returns the decoded claims
+    @return returns the decoded claims (with ``id_token`` key containing the raw token)
     """
     if token is not None:
         try:
-            token = token.replace('Bearer ', '')
+            raw_token = token.replace('Bearer ', '')
             LOG.info("Validating Fabric token")
             credmgr = OAuthCredMgr()
-            state, claims = credmgr.validate_token(token=token)
+            state, claims = credmgr.validate_token(token=raw_token)
 
             if state not in [str(TokenState.Valid), str(TokenState.Refreshed)]:
                 msg = f"Unable to validate provided token: {state} claims:{claims}"
                 LOG.error(msg)
                 return msg
+            # Include the raw id_token so downstream code can use it for
+            # Bearer-authenticated Core API calls (e.g. create_llm_key).
+            claims["id_token"] = raw_token
             return claims
         except Exception as e:
             msg = f"Unable to validate provided token e: {e}!"

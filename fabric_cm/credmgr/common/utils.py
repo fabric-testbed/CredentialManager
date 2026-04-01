@@ -22,6 +22,9 @@
 # SOFTWARE.
 #
 # Author Komal Thareja (kthare10@renci.org)
+import base64
+import json
+
 from fabric_cm.credmgr.external_apis.core_api import CoreApi
 
 from fabric_cm.credmgr.logging import LOG
@@ -67,7 +70,15 @@ class Utils:
             if c_type == CustomClaimsType.CILOGON_USER_INFO.name:
                 custom_claims.append(CustomClaimsType.CILOGON_USER_INFO)
 
-        p_tokens = PTokens(id_token=id_token, idp_claims=claims)
+        # Remove member_of from claims and id_token to reduce cookie size
+        filtered_claims = {k: v for k, v in claims.items() if k != "member_of"}
+
+        # Strip member_of from the JWT payload to shrink PIdToken in the cookie.
+        # The vouch cookie itself is integrity-protected, so the modified JWT
+        # does not need a valid CILogon signature inside the cookie.
+        stripped_id_token = Utils._strip_jwt_claim(id_token, "member_of")
+
+        p_tokens = PTokens(id_token=stripped_id_token, idp_claims=filtered_claims)
 
         code, cookie_or_exception = vouch_helper.encode(custom_claims_type=custom_claims, p_tokens=p_tokens,
                                                         validity_in_seconds=vouch_cookie_lifetime)
@@ -77,6 +88,33 @@ class Utils:
             raise cookie_or_exception
 
         return cookie_or_exception
+
+    @staticmethod
+    def _strip_jwt_claim(token: str, claim: str) -> str:
+        """
+        Remove a claim from a JWT payload and return the modified JWT.
+        The signature becomes invalid, but this is acceptable when the JWT
+        is embedded inside an integrity-protected vouch cookie.
+        """
+        try:
+            parts = token.split('.')
+            if len(parts) != 3:
+                return token
+            # Decode payload (add padding as needed)
+            payload_b64 = parts[1]
+            payload_b64 += '=' * (-len(payload_b64) % 4)
+            payload = json.loads(base64.urlsafe_b64decode(payload_b64))
+            if claim not in payload:
+                return token
+            del payload[claim]
+            # Re-encode payload (strip padding to match JWT format)
+            new_payload_b64 = base64.urlsafe_b64encode(
+                json.dumps(payload, separators=(',', ':')).encode()
+            ).rstrip(b'=').decode()
+            return f"{parts[0]}.{new_payload_b64}.{parts[2]}"
+        except Exception:
+            LOG.warning(f"Failed to strip '{claim}' from JWT, using original token")
+            return token
 
     @staticmethod
     def is_facility_operator(*, cookie: str, token: str = None):
