@@ -29,7 +29,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import SpinnerFullPage from "@/components/spinner-full-page";
 import { useUserStatus } from "@/hooks/use-user-status";
-import { getPerson, getProjects } from "@/services/core-api-service";
+import { getPerson, getProjects, getAllProjectsPaginated } from "@/services/core-api-service";
 import { createIdToken } from "@/services/credential-manager-service";
 import { getStorageProject } from "@/lib/config";
 import {
@@ -93,6 +93,7 @@ interface Project {
   uuid: string;
   name: string;
   active: boolean;
+  project_type?: string;
 }
 
 // Utility
@@ -535,19 +536,26 @@ export default function StoragePage() {
   }, [ensureToken]);
 
   // Load active projects (for per-project subvolume creation)
+  // Operators see all projects (paginated); normal users see only their own.
   const loadProjects = useCallback(async () => {
     try {
       const userId = localStorage.getItem("cmUserID");
       if (!userId) return;
-      const { data: projRes } = await getProjects(userId);
-      const allProjects: Project[] = (projRes.results || [])
-        .filter((p: Project) => p.active)
+      let results: Project[];
+      if (isOperator) {
+        results = (await getAllProjectsPaginated()) as Project[];
+      } else {
+        const { data: projRes } = await getProjects(userId);
+        results = projRes.results || [];
+      }
+      const allProjects: Project[] = results
+        .filter((p: Project) => p.active && p.project_type !== "service")
         .sort((a: Project, b: Project) => a.name.localeCompare(b.name));
       setProjects(allProjects);
     } catch (ex) {
       toast.error(getErrorMessage(ex, "Failed to load projects."));
     }
-  }, []);
+  }, [isOperator]);
 
   // Load data when cluster changes
   useEffect(() => {
