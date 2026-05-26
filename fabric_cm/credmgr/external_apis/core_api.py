@@ -155,7 +155,7 @@ class CoreApi:
 
     def __get_user_projects(self, *, project_name: str = None):
         offset = 0
-        limit = 50
+        limit = 200
         uuid, email = self.get_user_id_and_email()
         result = []
         total_fetched = 0
@@ -187,8 +187,7 @@ class CoreApi:
 
             if total_fetched == total:
                 break
-            offset = size
-            limit += limit
+            offset += size
 
         return result
 
