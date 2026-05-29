@@ -50,6 +50,7 @@ interface Project {
   name: string;
   active: boolean;
   memberships: { is_token_holder: boolean };
+  project_type?: string;
 }
 
 interface TokenRecord {
@@ -138,6 +139,7 @@ export default function CredentialManagerPage() {
   const [spinnerMessage, setSpinnerMessage] = useState("");
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [hashCopied, setHashCopied] = useState<string | null>(null);
+  const [isServiceProject, setIsServiceProject] = useState(false);
 
   const portalLink = portalLinkMap[getEnvironment()];
 
@@ -161,12 +163,20 @@ export default function CredentialManagerPage() {
         if (!userId) return;
         const { data: res } = await getProjects(userId);
         const allProjects: Project[] = res.results;
-        const loadedProjects = allProjects.filter((p) => p.active);
+        const loadedProjects = allProjects.filter((p: Project) => p.active);
+        // Sort: FABRIC projects first, then service projects, alphabetical within each group
+        loadedProjects.sort((a: Project, b: Project) => {
+          const aIsService = a.project_type === "service";
+          const bIsService = b.project_type === "service";
+          if (aIsService !== bIsService) return aIsService ? 1 : -1;
+          return a.name.localeCompare(b.name);
+        });
         setProjects(loadedProjects);
         if (loadedProjects.length > 0) {
           const first = loadedProjects[0];
           setSelectedProjectId(first.uuid);
           setIsTokenHolder(first.memberships.is_token_holder);
+          setIsServiceProject(first.project_type === "service");
           listTokens(first.uuid);
         }
       } catch (ex) {
@@ -190,7 +200,8 @@ export default function CredentialManagerPage() {
   const handleCreateToken = async (e: React.FormEvent) => {
     e.preventDefault();
     setShowFullPageSpinner(true);
-    setSpinnerMessage("Creating Token...");
+    const tokenTypeLabel = isServiceProject ? "Service Token" : "FABRIC Token";
+    setSpinnerMessage(`Creating ${tokenTypeLabel}...`);
     try {
       const lifetime = parseTokenLifetime();
       const { data: res } = await createIdToken(
@@ -205,7 +216,7 @@ export default function CredentialManagerPage() {
       setShowFullPageSpinner(false);
       setSpinnerMessage("");
       listTokens(selectedProjectId);
-      toast.success("Token created successfully.");
+      toast.success(`${tokenTypeLabel} created successfully.`);
     } catch (ex) {
       setShowFullPageSpinner(false);
       setSpinnerMessage("");
@@ -274,6 +285,7 @@ export default function CredentialManagerPage() {
     if (!project) return;
     setSelectedProjectId(project.uuid);
     setIsTokenHolder(project.memberships.is_token_holder);
+    setIsServiceProject(project.project_type === "service");
     setCreateSuccess(false);
     setCreateCopySuccess(false);
     setInputLifetime(4);
@@ -346,7 +358,7 @@ export default function CredentialManagerPage() {
           </div>
 
           <h3 className="text-xl font-semibold my-3">
-            Create and List Tokens
+            Create and Manage Tokens
           </h3>
 
           {/* Project selector */}
@@ -366,54 +378,92 @@ export default function CredentialManagerPage() {
               value={selectedProjectId}
               onChange={handleSelectProject}
             >
-              {projects.map((project) => (
-                <option key={project.uuid} value={project.uuid}>
-                  {project.name}
-                </option>
-              ))}
+              {projects.some((p) => p.project_type !== "service") && (
+                <optgroup label="FABRIC Projects (resource access)">
+                  {projects
+                    .filter((p) => p.project_type !== "service")
+                    .map((project) => (
+                      <option key={project.uuid} value={project.uuid}>
+                        {project.name}
+                      </option>
+                    ))}
+                </optgroup>
+              )}
+              {projects.some((p) => p.project_type === "service") && (
+                <optgroup label="Service Projects (no slice provisioning)">
+                  {projects
+                    .filter((p) => p.project_type === "service")
+                    .map((project) => (
+                      <option key={project.uuid} value={project.uuid}>
+                        {project.name}
+                      </option>
+                    ))}
+                </optgroup>
+              )}
             </select>
           </div>
 
-          {/* Token holder info */}
-          <div
-            className={`rounded p-4 my-2 text-fabric-dark ${
-              isTokenHolder
-                ? "bg-fabric-success/10 border border-fabric-success/30"
-                : "bg-fabric-warning/10 border border-fabric-warning/30"
-            }`}
-          >
-            {!isTokenHolder ? (
+          {/* Token type indicator */}
+          {isServiceProject ? (
+            <div className="rounded p-4 my-2 text-fabric-dark bg-blue-50 border border-blue-300">
+              <div className="flex items-center gap-2 mb-1">
+                <Badge className="bg-blue-600 text-white hover:bg-blue-600">Service Token</Badge>
+                <span className="font-semibold">Service project selected</span>
+              </div>
               <span>
-                The default token lifetime is 4 hours. To obtain{" "}
-                <a
-                  href={externalLinks.learnArticleLonglivedTokens}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="font-bold"
-                >
-                  long-lived tokens
-                </a>{" "}
-                for the selected project, please request access from{" "}
-                <a href={portalLink} target="_blank" rel="noreferrer">
-                  FABRIC Portal
-                </a>
-                .
+                This will create a <strong>Service Token</strong>. Service tokens are used for
+                service-to-service authentication and <strong>do not allow slice provisioning or
+                resource access</strong>. If you need to provision slices or access FABRIC resources,
+                select a FABRIC project instead.
               </span>
-            ) : (
-              <span>
-                You have access to{" "}
-                <a
-                  href={externalLinks.learnArticleLonglivedTokens}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="font-bold"
-                >
-                  long-lived tokens
-                </a>{" "}
-                for this project. The lifetime limit is 9 weeks.
-              </span>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div
+              className={`rounded p-4 my-2 text-fabric-dark ${
+                isTokenHolder
+                  ? "bg-fabric-success/10 border border-fabric-success/30"
+                  : "bg-fabric-warning/10 border border-fabric-warning/30"
+              }`}
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <Badge className="bg-fabric-success text-white hover:bg-fabric-success">FABRIC Token</Badge>
+                <span className="font-semibold">FABRIC project selected</span>
+              </div>
+              {!isTokenHolder ? (
+                <span>
+                  This will create a <strong>FABRIC Token</strong> with resource access.
+                  The default token lifetime is 4 hours. To obtain{" "}
+                  <a
+                    href={externalLinks.learnArticleLonglivedTokens}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-bold"
+                  >
+                    long-lived tokens
+                  </a>{" "}
+                  for the selected project, please request access from{" "}
+                  <a href={portalLink} target="_blank" rel="noreferrer">
+                    FABRIC Portal
+                  </a>
+                  .
+                </span>
+              ) : (
+                <span>
+                  This will create a <strong>FABRIC Token</strong> with resource access.
+                  You have access to{" "}
+                  <a
+                    href={externalLinks.learnArticleLonglivedTokens}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-bold"
+                  >
+                    long-lived tokens
+                  </a>{" "}
+                  for this project. The lifetime limit is 9 weeks.
+                </span>
+              )}
+            </div>
+          )}
 
           {/* Create token form */}
           <form onSubmit={handleCreateToken}>
@@ -479,9 +529,13 @@ export default function CredentialManagerPage() {
                 <Button
                   type="submit"
                   disabled={createSuccess || !isCommentValid}
-                  className="bg-fabric-success hover:bg-fabric-success/90 text-white"
+                  className={
+                    isServiceProject
+                      ? "bg-blue-600 hover:bg-blue-700 text-white"
+                      : "bg-fabric-success hover:bg-fabric-success/90 text-white"
+                  }
                 >
-                  Create Token
+                  {isServiceProject ? "Create Service Token" : "Create FABRIC Token"}
                 </Button>
               </div>
             </div>
