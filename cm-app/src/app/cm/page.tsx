@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { toast } from "sonner";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -33,6 +33,7 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import SpinnerFullPage from "@/components/spinner-full-page";
 import toLocaleTime from "@/utils/to-locale-time";
 import {
@@ -139,11 +140,23 @@ export default function CredentialManagerPage() {
   const [spinnerMessage, setSpinnerMessage] = useState("");
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [hashCopied, setHashCopied] = useState<string | null>(null);
-  const [isServiceProject, setIsServiceProject] = useState(false);
+  const [activeTab, setActiveTab] = useState("fabric");
 
   const portalLink = portalLinkMap[getEnvironment()];
 
   const isCommentValid = tokenComment.length >= 10 && tokenComment.length <= 100;
+
+  const fabricProjects = useMemo(
+    () => projects.filter((p) => p.project_type !== "service").sort((a, b) => a.name.localeCompare(b.name)),
+    [projects]
+  );
+
+  const serviceProjects = useMemo(
+    () => projects.filter((p) => p.project_type === "service").sort((a, b) => a.name.localeCompare(b.name)),
+    [projects]
+  );
+
+  const isServiceTab = activeTab === "service";
 
   const listTokens = useCallback(async (projectId: string) => {
     try {
@@ -156,6 +169,22 @@ export default function CredentialManagerPage() {
     }
   }, []);
 
+  const resetForm = useCallback(() => {
+    setCreateSuccess(false);
+    setCreateCopySuccess(false);
+    setCreateTokenResult("");
+    setInputLifetime(4);
+    setSelectLifetimeUnit("hours");
+    setSelectedCreateScope("all");
+    setTokenComment("Created via GUI");
+  }, []);
+
+  const selectProject = useCallback((project: Project) => {
+    setSelectedProjectId(project.uuid);
+    setIsTokenHolder(project.memberships.is_token_holder);
+    listTokens(project.uuid);
+  }, [listTokens]);
+
   useEffect(() => {
     async function loadProjects() {
       try {
@@ -164,20 +193,20 @@ export default function CredentialManagerPage() {
         const { data: res } = await getProjects(userId);
         const allProjects: Project[] = res.results;
         const loadedProjects = allProjects.filter((p: Project) => p.active);
-        // Sort: FABRIC projects first, then service projects, alphabetical within each group
-        loadedProjects.sort((a: Project, b: Project) => {
-          const aIsService = a.project_type === "service";
-          const bIsService = b.project_type === "service";
-          if (aIsService !== bIsService) return aIsService ? 1 : -1;
-          return a.name.localeCompare(b.name);
-        });
         setProjects(loadedProjects);
-        if (loadedProjects.length > 0) {
-          const first = loadedProjects[0];
-          setSelectedProjectId(first.uuid);
-          setIsTokenHolder(first.memberships.is_token_holder);
-          setIsServiceProject(first.project_type === "service");
-          listTokens(first.uuid);
+        // Select first FABRIC project by default; fall back to service if none
+        const fabric = loadedProjects.filter((p) => p.project_type !== "service").sort((a, b) => a.name.localeCompare(b.name));
+        const service = loadedProjects.filter((p) => p.project_type === "service").sort((a, b) => a.name.localeCompare(b.name));
+        if (fabric.length > 0) {
+          setActiveTab("fabric");
+          setSelectedProjectId(fabric[0].uuid);
+          setIsTokenHolder(fabric[0].memberships.is_token_holder);
+          listTokens(fabric[0].uuid);
+        } else if (service.length > 0) {
+          setActiveTab("service");
+          setSelectedProjectId(service[0].uuid);
+          setIsTokenHolder(service[0].memberships.is_token_holder);
+          listTokens(service[0].uuid);
         }
       } catch (ex) {
         const errorMessage = getErrorMessage(
@@ -200,7 +229,7 @@ export default function CredentialManagerPage() {
   const handleCreateToken = async (e: React.FormEvent) => {
     e.preventDefault();
     setShowFullPageSpinner(true);
-    const tokenTypeLabel = isServiceProject ? "Service Token" : "FABRIC Token";
+    const tokenTypeLabel = isServiceTab ? "Service Token" : "FABRIC Token";
     setSpinnerMessage(`Creating ${tokenTypeLabel}...`);
     try {
       const lifetime = parseTokenLifetime();
@@ -283,16 +312,22 @@ export default function CredentialManagerPage() {
   const handleSelectProject = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const project = projects.find((p) => p.uuid === e.target.value);
     if (!project) return;
-    setSelectedProjectId(project.uuid);
-    setIsTokenHolder(project.memberships.is_token_holder);
-    setIsServiceProject(project.project_type === "service");
-    setCreateSuccess(false);
-    setCreateCopySuccess(false);
-    setInputLifetime(4);
-    setSelectLifetimeUnit("hours");
-    setSelectedCreateScope("all");
-    setTokenComment("Created via GUI");
-    listTokens(project.uuid);
+    resetForm();
+    selectProject(project);
+  };
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    resetForm();
+    setListSuccess(false);
+    setTokenList([]);
+    const tabProjects = tab === "service" ? serviceProjects : fabricProjects;
+    if (tabProjects.length > 0) {
+      selectProject(tabProjects[0]);
+    } else {
+      setSelectedProjectId("");
+      setIsTokenHolder(false);
+    }
   };
 
   if (showFullPageSpinner) {
@@ -302,6 +337,260 @@ export default function CredentialManagerPage() {
       </div>
     );
   }
+
+  const renderProjectSelector = (projectList: Project[], idSuffix: string) => (
+    <div className="mb-4">
+      <Label htmlFor={`project-select-${idSuffix}`}>
+        Select Project
+        <span className="ml-1 text-xs text-muted-foreground font-normal">
+          (only active projects are shown — if your project is missing, verify it is active on{" "}
+          <a href={portalLink} target="_blank" rel="noreferrer" className="underline text-fabric-primary">
+            FABRIC Portal
+          </a>)
+        </span>
+      </Label>
+      <select
+        id={`project-select-${idSuffix}`}
+        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        value={selectedProjectId}
+        onChange={handleSelectProject}
+      >
+        {projectList.map((project) => (
+          <option key={project.uuid} value={project.uuid}>
+            {project.name}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+
+  const renderTokenForm = (isService: boolean) => (
+    <form onSubmit={handleCreateToken}>
+      <div className="grid grid-cols-12 gap-4 items-end">
+        <div className="col-span-2">
+          <Label htmlFor={`lifetime-${isService ? "service" : "fabric"}`}>Lifetime</Label>
+          <Input
+            id={`lifetime-${isService ? "service" : "fabric"}`}
+            type="number"
+            min={1}
+            max={selectLifetimeUnit === "hours" ? 1512 : selectLifetimeUnit === "days" ? 63 : 9}
+            disabled={!isTokenHolder}
+            value={inputLifetime}
+            onChange={(e) => setInputLifetime(parseInt(e.target.value) || 1)}
+          />
+        </div>
+        <div className="col-span-2">
+          <Label htmlFor={`lifetime-unit-${isService ? "service" : "fabric"}`}>Unit</Label>
+          <select
+            id={`lifetime-unit-${isService ? "service" : "fabric"}`}
+            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            value={selectLifetimeUnit}
+            onChange={(e) => setSelectLifetimeUnit(e.target.value)}
+            disabled={!isTokenHolder}
+          >
+            <option value="hours">Hours</option>
+            <option value="days">Days</option>
+            <option value="weeks">Weeks</option>
+          </select>
+        </div>
+        <div className="col-span-3">
+          <Label htmlFor={`comment-${isService ? "service" : "fabric"}`}>
+            Comment
+            <span className={`ml-1 text-xs ${isCommentValid ? "text-muted-foreground" : "text-fabric-danger"}`}>
+              ({tokenComment.length}/100, min 10)
+            </span>
+          </Label>
+          <Input
+            id={`comment-${isService ? "service" : "fabric"}`}
+            type="text"
+            minLength={10}
+            maxLength={100}
+            value={tokenComment}
+            onChange={(e) => setTokenComment(e.target.value)}
+          />
+        </div>
+        <div className="col-span-3">
+          <Label htmlFor={`scope-${isService ? "service" : "fabric"}`}>Select Scope</Label>
+          <select
+            id={`scope-${isService ? "service" : "fabric"}`}
+            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            value={selectedCreateScope}
+            onChange={(e) => setSelectedCreateScope(e.target.value)}
+          >
+            {SCOPE_OPTIONS.map((option) => (
+              <option key={option.id} value={option.value}>
+                {option.display}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="col-span-2 flex justify-end">
+          <Button
+            type="submit"
+            disabled={createSuccess || !isCommentValid}
+            className={
+              isService
+                ? "bg-blue-600 hover:bg-blue-700 text-white"
+                : "bg-fabric-success hover:bg-fabric-success/90 text-white"
+            }
+          >
+            {isService ? "Create Service Token" : "Create FABRIC Token"}
+          </Button>
+        </div>
+      </div>
+    </form>
+  );
+
+  const renderTokenResult = () => {
+    if (!createSuccess) return null;
+    return (
+      <div className="mt-2">
+        <Card>
+          <CardHeader className="flex flex-row gap-2 bg-muted/50 py-3 px-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCopyToken}
+              className="border-fabric-primary text-fabric-primary"
+            >
+              Copy
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDownloadToken}
+              className="border-fabric-primary text-fabric-primary"
+            >
+              Download
+            </Button>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <Textarea
+              id="createTokenTextArea"
+              defaultValue={createTokenResult}
+              rows={6}
+              readOnly
+            />
+            {createCopySuccess && (
+              <Alert className="bg-fabric-success/10 border-fabric-success/30 mt-2">
+                <AlertDescription>Copied to clipboard successfully!</AlertDescription>
+              </Alert>
+            )}
+          </CardContent>
+        </Card>
+        <div className="bg-fabric-warning/10 border border-fabric-warning/30 text-fabric-dark rounded p-4 mb-2 mt-2 flex items-center justify-between">
+          <span>
+            If you need to use multiple tokens in parallel in e.g. separate
+            API sessions, please log out and log back in to generate new
+            tokens.
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setCreateSuccess(false);
+              setCreateCopySuccess(false);
+              setCreateTokenResult("");
+            }}
+            className="border-fabric-success text-fabric-success hover:bg-fabric-success/10 ml-4 shrink-0"
+          >
+            Create Another Token
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
+  const renderTokenList = () => (
+    <div className="mt-3">
+      {listSuccess && tokenList.length > 0 ? (
+        <div className="rounded-md border overflow-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Token Hash</TableHead>
+                <TableHead>Comment</TableHead>
+                <TableHead>Created At</TableHead>
+                <TableHead>Expires At</TableHead>
+                <TableHead>State</TableHead>
+                <TableHead>From</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {tokenList.map((token, index) => (
+                <TableRow key={index}>
+                  <TableCell className="max-w-[200px]">
+                    <button
+                      type="button"
+                      onClick={() => handleCopyHash(token.token_hash)}
+                      className="truncate block max-w-full font-mono text-xs text-left hover:text-fabric-primary cursor-pointer"
+                      title="Click to copy full hash"
+                    >
+                      {hashCopied === token.token_hash ? (
+                        <span className="text-fabric-success">Copied!</span>
+                      ) : (
+                        token.token_hash
+                      )}
+                    </button>
+                  </TableCell>
+                  <TableCell>{token.comment}</TableCell>
+                  <TableCell>{toLocaleTime(token.created_at)}</TableCell>
+                  <TableCell>{toLocaleTime(token.expires_at)}</TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={getTokenStateVariant(token.state)}
+                      className={getTokenStateBg(token.state)}
+                    >
+                      {token.state}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{token.created_from}</TableCell>
+                  <TableCell>
+                    {token.state !== "Revoked" && token.state !== "Expired" && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="border-fabric-danger text-fabric-danger hover:bg-fabric-danger/10"
+                          >
+                            Revoke
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Revoke Token</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to revoke this token? Any applications
+                              using this token will lose access. This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleRevokeToken(token.token_hash)}
+                              className="bg-destructive text-white hover:bg-destructive/90"
+                            >
+                              Revoke
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      ) : (
+        <div className="bg-fabric-primary/10 border border-fabric-primary/30 text-fabric-dark rounded p-4 my-2">
+          No tokens available for the selected project.
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div className="container mx-auto min-h-[80vh] mt-8 mb-8 px-4">
@@ -361,333 +650,115 @@ export default function CredentialManagerPage() {
             Create and Manage Tokens
           </h3>
 
-          {/* Project selector */}
-          <div className="mb-4">
-            <Label htmlFor="project-select">
-              Select Project
-              <span className="ml-1 text-xs text-muted-foreground font-normal">
-                (only active projects are shown — if your project is missing, verify it is active on{" "}
-                <a href={portalLink} target="_blank" rel="noreferrer" className="underline text-fabric-primary">
-                  FABRIC Portal
-                </a>)
-              </span>
-            </Label>
-            <select
-              id="project-select"
-              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              value={selectedProjectId}
-              onChange={handleSelectProject}
-            >
-              {projects.some((p) => p.project_type !== "service") && (
-                <optgroup label="FABRIC Projects (resource access)">
-                  {projects
-                    .filter((p) => p.project_type !== "service")
-                    .map((project) => (
-                      <option key={project.uuid} value={project.uuid}>
-                        {project.name}
-                      </option>
-                    ))}
-                </optgroup>
-              )}
-              {projects.some((p) => p.project_type === "service") && (
-                <optgroup label="Service Projects (no slice provisioning)">
-                  {projects
-                    .filter((p) => p.project_type === "service")
-                    .map((project) => (
-                      <option key={project.uuid} value={project.uuid}>
-                        {project.name}
-                      </option>
-                    ))}
-                </optgroup>
-              )}
-            </select>
-          </div>
+          <Tabs value={activeTab} onValueChange={handleTabChange}>
+            <TabsList>
+              <TabsTrigger value="fabric">FABRIC Tokens</TabsTrigger>
+              <TabsTrigger value="service">Service Tokens</TabsTrigger>
+            </TabsList>
 
-          {/* Token type indicator */}
-          {isServiceProject ? (
-            <div className="rounded p-4 my-2 text-fabric-dark bg-blue-50 border border-blue-300">
-              <div className="flex items-center gap-2 mb-1">
-                <Badge className="bg-blue-600 text-white hover:bg-blue-600">Service Token</Badge>
-                <span className="font-semibold">Service project selected</span>
-              </div>
-              <span>
-                This will create a <strong>Service Token</strong>. Service tokens are used for
-                service-to-service authentication and <strong>do not allow slice provisioning or
-                resource access</strong>. If you need to provision slices or access FABRIC resources,
-                select a FABRIC project instead.
-              </span>
-            </div>
-          ) : (
-            <div
-              className={`rounded p-4 my-2 text-fabric-dark ${
-                isTokenHolder
-                  ? "bg-fabric-success/10 border border-fabric-success/30"
-                  : "bg-fabric-warning/10 border border-fabric-warning/30"
-              }`}
-            >
-              <div className="flex items-center gap-2 mb-1">
-                <Badge className="bg-fabric-success text-white hover:bg-fabric-success">FABRIC Token</Badge>
-                <span className="font-semibold">FABRIC project selected</span>
-              </div>
-              {!isTokenHolder ? (
-                <span>
-                  This will create a <strong>FABRIC Token</strong> with resource access.
-                  The default token lifetime is 4 hours. To obtain{" "}
-                  <a
-                    href={externalLinks.learnArticleLonglivedTokens}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="font-bold"
-                  >
-                    long-lived tokens
-                  </a>{" "}
-                  for the selected project, please request access from{" "}
-                  <a href={portalLink} target="_blank" rel="noreferrer">
-                    FABRIC Portal
-                  </a>
-                  .
-                </span>
+            {/* FABRIC Tokens tab */}
+            <TabsContent value="fabric">
+              {fabricProjects.length === 0 ? (
+                <div className="bg-fabric-warning/10 border border-fabric-warning/30 text-fabric-dark rounded p-4 my-2">
+                  You don&apos;t have any FABRIC projects. To create tokens for resource access and slice provisioning,{" "}
+                  <a href={portalLink} target="_blank" rel="noreferrer" className="font-bold underline text-fabric-primary">
+                    join or create a project on FABRIC Portal
+                  </a>.
+                </div>
               ) : (
-                <span>
-                  This will create a <strong>FABRIC Token</strong> with resource access.
-                  You have access to{" "}
-                  <a
-                    href={externalLinks.learnArticleLonglivedTokens}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="font-bold"
+                <>
+                  {renderProjectSelector(fabricProjects, "fabric")}
+
+                  {/* FABRIC token info banner */}
+                  <div
+                    className={`rounded p-4 my-2 text-fabric-dark ${
+                      isTokenHolder
+                        ? "bg-fabric-success/10 border border-fabric-success/30"
+                        : "bg-fabric-warning/10 border border-fabric-warning/30"
+                    }`}
                   >
-                    long-lived tokens
-                  </a>{" "}
-                  for this project. The lifetime limit is 9 weeks.
-                </span>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Badge className="bg-fabric-success text-white hover:bg-fabric-success">FABRIC Token</Badge>
+                      <span className="font-semibold">FABRIC project selected</span>
+                    </div>
+                    {!isTokenHolder ? (
+                      <span>
+                        This will create a <strong>FABRIC Token</strong> with resource access.
+                        The default token lifetime is 4 hours. To obtain{" "}
+                        <a
+                          href={externalLinks.learnArticleLonglivedTokens}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-bold"
+                        >
+                          long-lived tokens
+                        </a>{" "}
+                        for the selected project, please request access from{" "}
+                        <a href={portalLink} target="_blank" rel="noreferrer">
+                          FABRIC Portal
+                        </a>
+                        .
+                      </span>
+                    ) : (
+                      <span>
+                        This will create a <strong>FABRIC Token</strong> with resource access.
+                        You have access to{" "}
+                        <a
+                          href={externalLinks.learnArticleLonglivedTokens}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-bold"
+                        >
+                          long-lived tokens
+                        </a>{" "}
+                        for this project. The lifetime limit is 9 weeks.
+                      </span>
+                    )}
+                  </div>
+
+                  {renderTokenForm(false)}
+                  {renderTokenResult()}
+                  {renderTokenList()}
+                </>
               )}
-            </div>
-          )}
+            </TabsContent>
 
-          {/* Create token form */}
-          <form onSubmit={handleCreateToken}>
-            <div className="grid grid-cols-12 gap-4 items-end">
-              <div className="col-span-2">
-                <Label htmlFor="lifetime">Lifetime</Label>
-                <Input
-                  id="lifetime"
-                  type="number"
-                  min={1}
-                  max={selectLifetimeUnit === "hours" ? 1512 : selectLifetimeUnit === "days" ? 63 : 9}
-                  disabled={!isTokenHolder}
-                  value={inputLifetime}
-                  onChange={(e) => setInputLifetime(parseInt(e.target.value) || 1)}
-                />
-              </div>
-              <div className="col-span-2">
-                <Label htmlFor="lifetime-unit">Unit</Label>
-                <select
-                  id="lifetime-unit"
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  value={selectLifetimeUnit}
-                  onChange={(e) => setSelectLifetimeUnit(e.target.value)}
-                  disabled={!isTokenHolder}
-                >
-                  <option value="hours">Hours</option>
-                  <option value="days">Days</option>
-                  <option value="weeks">Weeks</option>
-                </select>
-              </div>
-              <div className="col-span-3">
-                <Label htmlFor="comment">
-                  Comment
-                  <span className={`ml-1 text-xs ${isCommentValid ? "text-muted-foreground" : "text-fabric-danger"}`}>
-                    ({tokenComment.length}/100, min 10)
-                  </span>
-                </Label>
-                <Input
-                  id="comment"
-                  type="text"
-                  minLength={10}
-                  maxLength={100}
-                  value={tokenComment}
-                  onChange={(e) => setTokenComment(e.target.value)}
-                />
-              </div>
-              <div className="col-span-3">
-                <Label htmlFor="scope">Select Scope</Label>
-                <select
-                  id="scope"
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  value={selectedCreateScope}
-                  onChange={(e) => setSelectedCreateScope(e.target.value)}
-                >
-                  {SCOPE_OPTIONS.map((option) => (
-                    <option key={option.id} value={option.value}>
-                      {option.display}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="col-span-2 flex justify-end">
-                <Button
-                  type="submit"
-                  disabled={createSuccess || !isCommentValid}
-                  className={
-                    isServiceProject
-                      ? "bg-blue-600 hover:bg-blue-700 text-white"
-                      : "bg-fabric-success hover:bg-fabric-success/90 text-white"
-                  }
-                >
-                  {isServiceProject ? "Create Service Token" : "Create FABRIC Token"}
-                </Button>
-              </div>
-            </div>
-          </form>
+            {/* Service Tokens tab */}
+            <TabsContent value="service">
+              {serviceProjects.length === 0 ? (
+                <div className="bg-fabric-warning/10 border border-fabric-warning/30 text-fabric-dark rounded p-4 my-2">
+                  You don&apos;t have any service projects. Contact your project lead to be added to a service project,
+                  or visit the{" "}
+                  <a href={portalLink} target="_blank" rel="noreferrer" className="font-bold underline text-fabric-primary">
+                    FABRIC Portal
+                  </a>{" "}
+                  for more information.
+                </div>
+              ) : (
+                <>
+                  {renderProjectSelector(serviceProjects, "service")}
 
-          {/* Created token display */}
-          {createSuccess && (
-            <div className="mt-2">
-              <Card>
-                <CardHeader className="flex flex-row gap-2 bg-muted/50 py-3 px-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleCopyToken}
-                    className="border-fabric-primary text-fabric-primary"
-                  >
-                    Copy
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleDownloadToken}
-                    className="border-fabric-primary text-fabric-primary"
-                  >
-                    Download
-                  </Button>
-                </CardHeader>
-                <CardContent className="pt-4">
-                  <Textarea
-                    id="createTokenTextArea"
-                    defaultValue={createTokenResult}
-                    rows={6}
-                    readOnly
-                  />
-                  {createCopySuccess && (
-                    <Alert className="bg-fabric-success/10 border-fabric-success/30 mt-2">
-                      <AlertDescription>Copied to clipboard successfully!</AlertDescription>
-                    </Alert>
-                  )}
-                </CardContent>
-              </Card>
-              <div className="bg-fabric-warning/10 border border-fabric-warning/30 text-fabric-dark rounded p-4 mb-2 mt-2 flex items-center justify-between">
-                <span>
-                  If you need to use multiple tokens in parallel in e.g. separate
-                  API sessions, please log out and log back in to generate new
-                  tokens.
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setCreateSuccess(false);
-                    setCreateCopySuccess(false);
-                    setCreateTokenResult("");
-                  }}
-                  className="border-fabric-success text-fabric-success hover:bg-fabric-success/10 ml-4 shrink-0"
-                >
-                  Create Another Token
-                </Button>
-              </div>
-            </div>
-          )}
+                  {/* Service token info banner */}
+                  <div className="rounded p-4 my-2 text-fabric-dark bg-blue-50 border border-blue-300">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Badge className="bg-blue-600 text-white hover:bg-blue-600">Service Token</Badge>
+                      <span className="font-semibold">Service project selected</span>
+                    </div>
+                    <span>
+                      This will create a <strong>Service Token</strong>. Service tokens are used for
+                      service-to-service authentication and <strong>do not allow slice provisioning or
+                      resource access</strong>. If you need to provision slices or access FABRIC resources,
+                      switch to the FABRIC Tokens tab.
+                    </span>
+                  </div>
 
-          {/* Token list */}
-          <div className="mt-3">
-            {listSuccess && tokenList.length > 0 ? (
-              <div className="rounded-md border overflow-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Token Hash</TableHead>
-                      <TableHead>Comment</TableHead>
-                      <TableHead>Created At</TableHead>
-                      <TableHead>Expires At</TableHead>
-                      <TableHead>State</TableHead>
-                      <TableHead>From</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {tokenList.map((token, index) => (
-                      <TableRow key={index}>
-                        <TableCell className="max-w-[200px]">
-                          <button
-                            type="button"
-                            onClick={() => handleCopyHash(token.token_hash)}
-                            className="truncate block max-w-full font-mono text-xs text-left hover:text-fabric-primary cursor-pointer"
-                            title="Click to copy full hash"
-                          >
-                            {hashCopied === token.token_hash ? (
-                              <span className="text-fabric-success">Copied!</span>
-                            ) : (
-                              token.token_hash
-                            )}
-                          </button>
-                        </TableCell>
-                        <TableCell>{token.comment}</TableCell>
-                        <TableCell>{toLocaleTime(token.created_at)}</TableCell>
-                        <TableCell>{toLocaleTime(token.expires_at)}</TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={getTokenStateVariant(token.state)}
-                            className={getTokenStateBg(token.state)}
-                          >
-                            {token.state}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{token.created_from}</TableCell>
-                        <TableCell>
-                          {token.state !== "Revoked" && token.state !== "Expired" && (
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="border-fabric-danger text-fabric-danger hover:bg-fabric-danger/10"
-                                >
-                                  Revoke
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Revoke Token</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Are you sure you want to revoke this token? Any applications
-                                    using this token will lose access. This action cannot be undone.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => handleRevokeToken(token.token_hash)}
-                                    className="bg-destructive text-white hover:bg-destructive/90"
-                                  >
-                                    Revoke
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            ) : (
-              <div className="bg-fabric-primary/10 border border-fabric-primary/30 text-fabric-dark rounded p-4 my-2">
-                No tokens available for the selected project.
-              </div>
-            )}
-          </div>
+                  {renderTokenForm(true)}
+                  {renderTokenResult()}
+                  {renderTokenList()}
+                </>
+              )}
+            </TabsContent>
+          </Tabs>
 
           {/* Advanced: Validate token */}
           <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen} className="mt-6">
