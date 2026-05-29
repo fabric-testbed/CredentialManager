@@ -14,13 +14,13 @@ export function createIdToken(
   return http.post(
     getApiEndpoint() +
       "/create?project_id=" +
-      projectId +
+      encodeURIComponent(projectId) +
       "&scope=" +
-      scope +
+      encodeURIComponent(scope) +
       "&lifetime=" +
-      lifetime +
+      encodeURIComponent(lifetime) +
       "&comment=" +
-      comment
+      encodeURIComponent(comment)
   );
 }
 
@@ -31,7 +31,7 @@ export function refreshToken(
 ) {
   const data = { refresh_token };
   return http.post(
-    getApiEndpoint() + "/refresh?project_id=" + projectId + "&scope=" + scope,
+    getApiEndpoint() + "/refresh?project_id=" + encodeURIComponent(projectId) + "&scope=" + encodeURIComponent(scope),
     data
   );
 }
@@ -42,18 +42,18 @@ export function revokeToken(token_type: string, token: string) {
 }
 
 export function tokenRevokeList(projectId: string) {
-  return http.get(getApiEndpoint() + "/revoke_list?project_id=" + projectId);
+  return http.get(getApiEndpoint() + "/revoke_list?project_id=" + encodeURIComponent(projectId));
 }
 
 export function getTokenByHash(tokenHash: string) {
   return http.get(
-    getApiEndpoint() + "?token_hash=" + tokenHash + "&limit=200&offset=0"
+    getApiEndpoint() + "?token_hash=" + encodeURIComponent(tokenHash) + "&limit=200&offset=0"
   );
 }
 
 export function getTokenByProjectId(projectId: string) {
   return http.get(
-    getApiEndpoint() + "?project_id=" + projectId + "&limit=200&offset=0"
+    getApiEndpoint() + "?project_id=" + encodeURIComponent(projectId) + "&limit=200&offset=0"
   );
 }
 

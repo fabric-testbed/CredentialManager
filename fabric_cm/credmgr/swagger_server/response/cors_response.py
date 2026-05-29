@@ -10,7 +10,18 @@ from fabric_cm.credmgr.swagger_server.models import Tokens, Version, Status200Ok
     Status401Unauthorized, Status403ForbiddenErrors, Status403Forbidden, Status404NotFoundErrors, Status404NotFound, \
     Status500InternalServerErrorErrors, Status500InternalServerError, RevokeList, DecodedToken
 
+from fabric_cm.credmgr.config import CONFIG_OBJ
+
 _INDENT = int(os.getenv('OC_API_JSON_RESPONSE_INDENT', '4'))
+
+_ALLOWED_ORIGINS = None
+
+
+def _get_allowed_origins() -> set:
+    global _ALLOWED_ORIGINS
+    if _ALLOWED_ORIGINS is None:
+        _ALLOWED_ORIGINS = set(CONFIG_OBJ.get_cors_allowed_origins())
+    return _ALLOWED_ORIGINS
 
 
 def delete_none(_dict):
@@ -37,8 +48,18 @@ def cors_response(req: request, status_code: int = 200, body: object = None, x_e
     response = Response()
     response.status_code = status_code
     response.data = body
-    response.headers['Access-Control-Allow-Origin'] = req.headers.get('Origin', '*')
-    response.headers['Access-Control-Allow-Credentials'] = 'true'
+
+    origin = req.headers.get('Origin')
+    allowed_origins = _get_allowed_origins()
+    if allowed_origins:
+        if origin in allowed_origins:
+            response.headers['Access-Control-Allow-Origin'] = origin
+            response.headers['Access-Control-Allow-Credentials'] = 'true'
+    else:
+        # No allowlist configured — preserve legacy behavior
+        response.headers['Access-Control-Allow-Origin'] = origin if origin else '*'
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+
     response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, PATCH, DELETE, OPTIONS'
     response.headers['Access-Control-Allow-Headers'] = \
         'DNT, User-Agent, X-Requested-With, If-Modified-Since, Cache-Control, Content-Type, Range, Authorization'

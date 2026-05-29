@@ -162,15 +162,16 @@ class OAuthCredMgr:
             raise OAuthCredMgrError(f"CredMgr: Either Project ID: '{project_id}' or Project Name'{project_name}' "
                                     f"must be specified")
 
-        self.log.debug("CILogon Token: %s", ci_logon_id_token)
+        self.log.debug("CILogon Token received (redacted for security)")
 
         # validate the token
         if jwt_validator is not None:
             if cookie is not None:
-                # Token comes from our vouch cookie where member_of was stripped,
-                # breaking the CILogon signature. The vouch cookie itself is
-                # integrity-protected, so decode without signature verification.
-                LOG.info("Decoding CI Logon token from cookie (signature not verified)")
+                # SECURITY NOTE: The CILogon ID token from the vouch cookie has
+                # member_of stripped, breaking the CILogon signature. The vouch
+                # cookie's own JWT signature IS verified in the auth decorator,
+                # so the PIdToken integrity is transitively protected.
+                LOG.info("Decoding CI Logon token from cookie (CILogon signature not verified; vouch cookie is verified)")
                 claims_or_exception = jwt.decode(ci_logon_id_token, options={"verify_signature": False})
                 code = ValidateCode.VALID
             else:
@@ -317,7 +318,7 @@ class OAuthCredMgr:
         providers = CONFIG_OBJ.get_providers()
 
         refresh_token_dict = {self.REFRESH_TOKEN: refresh_token}
-        self.log.debug(f"Incoming refresh_token: {refresh_token}")
+        self.log.debug("Incoming refresh_token received (redacted for security)")
 
         # refresh the token (provides both new refresh and access tokens)
         oauth_client = OAuth2Session(providers[provider][self.CLIENT_ID], token=refresh_token_dict)
@@ -331,7 +332,7 @@ class OAuthCredMgr:
         except KeyError:
             self.log.error("No refresh or id token returned")
             raise OAuthCredMgrError("No refresh or id token returned")
-        self.log.debug(f"new_refresh_token: {new_refresh_token}")
+        self.log.debug("New refresh_token obtained (redacted for security)")
 
         try:
             result = self.__generate_token_and_save_info(ci_logon_id_token=id_token, project_id=project_id,
@@ -341,12 +342,11 @@ class OAuthCredMgr:
             return result
         except Exception as e:
             self.log.error(f"Exception error while generating Fabric Token: {e}")
-            self.log.error(f"Failed generating the token but still returning refresh token")
+            self.log.error("Failed generating the token after refresh")
             exception_string = str(e)
-            if exception_string.__contains__("could not be associated with a pending flow"):
+            if "could not be associated with a pending flow" in exception_string:
                 exception_string = "Specified refresh token is expired and can not be found in the database."
-            error_string = f"error: {exception_string}, {self.REFRESH_TOKEN}: {new_refresh_token}"
-            raise OAuthCredMgrError(error_string)
+            raise OAuthCredMgrError(f"error: {exception_string}")
 
     def revoke_token(self, refresh_token: str):
         """
@@ -783,18 +783,16 @@ class OAuthCredMgr:
         @return token state and claims
         """
         claims = {}
-        # get kid from token
+        # Pin the algorithm to RS256 to prevent algorithm confusion attacks.
+        # The token header is only used to extract the kid for key lookup.
+        PINNED_ALG = "RS256"
         try:
             kid = jwt.get_unverified_header(token).get('kid', None)
-            alg = jwt.get_unverified_header(token).get('alg', None)
         except jwt.DecodeError as e:
             raise Exception(ValidateCode.UNPARSABLE_TOKEN)
 
         if kid is None:
             raise Exception(ValidateCode.UNSPECIFIED_KEY)
-
-        if alg is None:
-            raise Exception(ValidateCode.UNSPECIFIED_ALG)
 
         if kid != jwk_public_key_rsa['kid']:
             raise Exception(ValidateCode.UNKNOWN_KEY)
@@ -805,7 +803,7 @@ class OAuthCredMgr:
 
         # options https://pyjwt.readthedocs.io/en/latest/api.html
         try:
-            claims = jwt.decode(token, key=key, algorithms=[alg], options=options,
+            claims = jwt.decode(token, key=key, algorithms=[PINNED_ALG], options=options,
                                 audience=CONFIG_OBJ.get_oauth_client_id())
 
             # Check if the Token is Revoked

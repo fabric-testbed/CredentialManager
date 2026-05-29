@@ -2,7 +2,8 @@
 # bare minimum to get vouch running with OpenID Connect (such as okta)
 
 vouch:
-    logLevel: debug
+    # Use 'info' or 'warn' in production to avoid logging sensitive auth data
+    logLevel: info
     # domains:
     # valid domains that the jwt cookies can be set into
     # the callback_urls will be to these domains
@@ -16,7 +17,8 @@ vouch:
     # and set vouch.cookie.domain to the domain you wish to protect
     allowAllUsers: true
 
-    # Setting publicAccess: true will accept all requests, even without a valid jwt/cookie.  - VOUCH_PUBLICACCESS
+    # WARNING: publicAccess: true accepts all requests even without a valid jwt/cookie.
+    # Set to false in production if you want to enforce authentication for all routes.
     # If the user is logged in, the cookie will be validated and the user header will be set.
     # You will need to direct people to the Vouch Proxy login page from your application.
     publicAccess: true
@@ -36,11 +38,13 @@ vouch:
         # - if `./config/secret` doesn't exist then randomly generate a secret and store it there
         # in order to run multiple instances of vouch on multiple servers (perhaps purely for validating the jwt),
         # you'll want them all to have the same secret
-        secret: kmDDgMLGThapDV1QnhWPJd0oARzjLa5Zy3bQ8WfOIYk=
+        # IMPORTANT: Replace with a unique random secret before deployment.
+        # Generate with: openssl rand -base64 32
+        secret: CHANGE_ME_GENERATE_A_RANDOM_SECRET
 
     cookie:
-        # allow the jwt/cookie to be set into http://yourdomain.com (defaults to true, requiring https://yourdomain.com)
-        secure: false
+        # Set to true in production to require HTTPS for cookie transmission
+        secure: true
         # vouch.cookie.domain must be set when enabling allowAllUsers
         domain: 127.0.0.1
         name: fabric-service

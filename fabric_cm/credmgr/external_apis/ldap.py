@@ -26,6 +26,7 @@ import re
 import threading
 
 from ldap3 import Connection, Server, ALL
+from ldap3.utils.conv import escape_filter_chars
 
 from fabric_cm.credmgr.config import CONFIG_OBJ
 from fabric_cm.credmgr.logging import LOG
@@ -58,11 +59,11 @@ class CmLdapMgr:
         @return tuple of roles and project tags(always empty) as tags are not in CoManage
         """
         if eppn:
-            ldap_search_filter = '(eduPersonPrincipalName=' + eppn + ')'
+            ldap_search_filter = '(eduPersonPrincipalName=' + escape_filter_chars(eppn) + ')'
         elif sub is not None:
-            ldap_search_filter = '(uid=' + sub + ')'
+            ldap_search_filter = '(uid=' + escape_filter_chars(sub) + ')'
         else:
-            ldap_search_filter = '(mail=' + email + ')'
+            ldap_search_filter = '(mail=' + escape_filter_chars(email) + ')'
         LOG.debug("ldap_host:%s", self.ldap_host)
         LOG.debug("ldap_user:%s", self.ldap_user)
         LOG.debug("ldap_search_base:%s", self.ldap_search_base)

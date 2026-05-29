@@ -50,4 +50,4 @@ def certs_get():  # noqa: E501
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_GET, CERTS_URL).inc()
-        return cors_500(details=str(ex))
+        return cors_500(details="An internal error occurred. Please try again or contact support.")

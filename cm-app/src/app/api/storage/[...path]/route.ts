@@ -8,7 +8,14 @@ async function proxyRequest(
   { params }: { params: Promise<{ path: string[] }> }
 ) {
   const { path } = await params;
-  const targetPath = path.join("/");
+  // Sanitize path segments to prevent path traversal attacks
+  const sanitizedPath = path
+    .map((segment: string) => segment.replace(/\.\./g, ""))
+    .filter((segment: string) => segment.length > 0);
+  if (sanitizedPath.length === 0) {
+    return NextResponse.json({ detail: "Invalid path" }, { status: 400 });
+  }
+  const targetPath = sanitizedPath.join("/");
   const searchParams = req.nextUrl.searchParams.toString();
   const url = `${STORAGE_API_URL}/${targetPath}${searchParams ? "?" + searchParams : ""}`;
 

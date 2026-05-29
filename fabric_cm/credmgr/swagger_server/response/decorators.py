@@ -20,9 +20,46 @@ from flask import request
 EMAIL = "email"
 
 
+def _csrf_check() -> bool:
+    """
+    CSRF protection for cookie-authenticated requests.
+    Validates that Origin or Referer header matches the configured base URL.
+    Requests with Bearer token auth bypass this check (no cookie = no CSRF risk).
+    """
+    if request.method in ('GET', 'HEAD', 'OPTIONS'):
+        return True
+
+    # If using Bearer token auth, CSRF is not a concern
+    if 'authorization' in [h.casefold() for h in request.headers.keys()]:
+        return True
+
+    try:
+        base_url = CONFIG_OBJ.get_base_url()
+    except Exception:
+        # If base_url not configured, skip CSRF check
+        return True
+
+    from urllib.parse import urlparse
+    allowed_origin = urlparse(base_url).netloc
+
+    origin = request.headers.get('Origin')
+    if origin:
+        return urlparse(origin).netloc == allowed_origin
+
+    referer = request.headers.get('Referer')
+    if referer:
+        return urlparse(referer).netloc == allowed_origin
+
+    # No Origin or Referer — block (same-origin requests always include one)
+    return False
+
+
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        if not _csrf_check():
+            LOG.warning("CSRF check failed: Origin/Referer mismatch")
+            return cors_401(details='Request origin not allowed')
         if CONFIG_OBJ.get_vouch_cookie_name() not in request.cookies:
             details = 'Login required'
             LOG.info(f"login_required(): {details}")
@@ -41,6 +78,9 @@ def login_required(f):
 def login_or_token_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        if not _csrf_check():
+            LOG.warning("CSRF check failed: Origin/Referer mismatch")
+            return cors_401(details='Request origin not allowed')
         if 'authorization' in [h.casefold() for h in request.headers.keys()]:
             claims = validate_authorization_token(request.headers.get('authorization'))
             if isinstance(claims, dict):
@@ -77,18 +117,19 @@ def vouch_authorize() -> Union[dict, None]:
     if ci_logon_id_token is None and refresh_token is None and cookie is not None:
         vouch_secret = CONFIG_OBJ.get_vouch_secret()
         vouch_compression = CONFIG_OBJ.is_vouch_cookie_compressed()
-        status, decoded_cookie = JWTManager.decode(cookie=cookie,secret=vouch_secret,
-                                                   compression=vouch_compression, verify=False)
+        status, decoded_cookie = JWTManager.decode(cookie=cookie, secret=vouch_secret,
+                                                   compression=vouch_compression, verify=True)
         if status == ValidateCode.VALID:
             ci_logon_id_token = decoded_cookie.get('PIdToken')
             refresh_token = decoded_cookie.get('PRefreshToken')
             from_cookie = True
 
     if ci_logon_id_token is not None and refresh_token is not None and cookie is not None:
-        # When PIdToken comes from a vouch cookie we created, member_of was
-        # stripped to reduce cookie size, which invalidates the CILogon
-        # signature. The vouch cookie itself is integrity-protected, so we
-        # can safely decode without signature verification in that case.
+        # SECURITY NOTE: When PIdToken comes from a vouch cookie, member_of
+        # was stripped to reduce cookie size, which invalidates the CILogon
+        # signature. The vouch cookie's own JWT signature IS verified above
+        # (verify=True), so the PIdToken integrity is transitively protected.
+        # Signature verification is only skipped for the inner CILogon JWT.
         if from_cookie:
             try:
                 claims_or_exception = pyjwt.decode(ci_logon_id_token, options={"verify_signature": False})

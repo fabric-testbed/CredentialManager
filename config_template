@@ -44,6 +44,8 @@ max-llt-count-per-project = 5
 llt-role-suffix = tk
 # Public base URL of this credential manager instance (used for safe redirects)
 base-url = https://cm.fabric-testbed.net
+# Comma-separated list of allowed CORS origins (e.g. https://portal.fabric-testbed.net,https://cm.fabric-testbed.net)
+cors-allowed-origins =
 
 [logging]
 logger = credmgr
@@ -56,7 +58,8 @@ log-file = credmgr.log
 metrics-log-file = metrics.log
 #
 ## The default log level for credmgr.
-log-level = DEBUG
+## Use INFO or WARNING in production to avoid logging sensitive data.
+log-level = INFO
 #
 ## credmgr rotates log files. You may specify how many archived log files to keep here.
 log-retain = 5
@@ -90,7 +93,8 @@ jwt-pass-phrase =
 
 [core-api]
 core-api-url = https://alpha-6.fabric-testbed.net/
-ssl_verify = False
+# Set to True in production to enable TLS certificate verification
+ssl_verify = True
 
 [vouch]
 secret =
@@ -102,8 +106,9 @@ cookie-name = fabric-service
 cookie-domain-name = cookie_domain
 
 [database]
-db-user = fabric
-db-password = fabric
+# IMPORTANT: Change default credentials before deployment
+db-user = CHANGE_ME
+db-password = CHANGE_ME
 db-name = credmgr
 db-host = credmgr-db:5432
 

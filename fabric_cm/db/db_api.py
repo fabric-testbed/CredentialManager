@@ -29,6 +29,7 @@ from typing import List
 
 from fabric_cm.db import Base, Tokens, LlmKeys
 from sqlalchemy import create_engine, desc
+from sqlalchemy.engine import URL
 from sqlalchemy.orm import scoped_session, sessionmaker
 
 
@@ -38,8 +39,19 @@ class DbApi:
     """
 
     def __init__(self, *, user: str, password: str, database: str, db_host: str, logger):
-        # Connecting to PostgreSQL server at localhost using psycopg2 DBAPI
-        self.db_engine = create_engine("postgresql+psycopg2://{}:{}@{}/{}".format(user, password, db_host, database))
+        # Connecting to PostgreSQL server using psycopg2 DBAPI
+        # Use URL.create() to safely handle special characters in credentials
+        db_host_name = db_host.split(":")[0] if ":" in db_host else db_host
+        db_port = int(db_host.split(":")[1]) if ":" in db_host else 5432
+        db_url = URL.create(
+            drivername="postgresql+psycopg2",
+            username=user,
+            password=password,
+            host=db_host_name,
+            port=db_port,
+            database=database,
+        )
+        self.db_engine = create_engine(db_url)
         self.logger = logger
         self.session_factory = sessionmaker(bind=self.db_engine)
         self.sessions = {}
