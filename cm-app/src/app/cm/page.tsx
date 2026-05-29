@@ -194,19 +194,19 @@ export default function CredentialManagerPage() {
         const allProjects: Project[] = res.results;
         const loadedProjects = allProjects.filter((p: Project) => p.active);
         setProjects(loadedProjects);
-        // Select first FABRIC project by default; fall back to service if none
+        // Default to Service tab if user has service projects, otherwise FABRIC
         const fabric = loadedProjects.filter((p) => p.project_type !== "service").sort((a, b) => a.name.localeCompare(b.name));
         const service = loadedProjects.filter((p) => p.project_type === "service").sort((a, b) => a.name.localeCompare(b.name));
-        if (fabric.length > 0) {
-          setActiveTab("fabric");
-          setSelectedProjectId(fabric[0].uuid);
-          setIsTokenHolder(fabric[0].memberships.is_token_holder);
-          listTokens(fabric[0].uuid);
-        } else if (service.length > 0) {
+        if (service.length > 0) {
           setActiveTab("service");
           setSelectedProjectId(service[0].uuid);
           setIsTokenHolder(service[0].memberships.is_token_holder);
           listTokens(service[0].uuid);
+        } else if (fabric.length > 0) {
+          setActiveTab("fabric");
+          setSelectedProjectId(fabric[0].uuid);
+          setIsTokenHolder(fabric[0].memberships.is_token_holder);
+          listTokens(fabric[0].uuid);
         }
       } catch (ex) {
         const errorMessage = getErrorMessage(
@@ -229,7 +229,7 @@ export default function CredentialManagerPage() {
   const handleCreateToken = async (e: React.FormEvent) => {
     e.preventDefault();
     setShowFullPageSpinner(true);
-    const tokenTypeLabel = isServiceTab ? "Service Token" : "FABRIC Token";
+    const tokenTypeLabel = isServiceTab ? "Service Token" : "Resource Token";
     setSpinnerMessage(`Creating ${tokenTypeLabel}...`);
     try {
       const lifetime = parseTokenLifetime();
@@ -434,7 +434,7 @@ export default function CredentialManagerPage() {
                 : "bg-fabric-success hover:bg-fabric-success/90 text-white"
             }
           >
-            {isService ? "Create Service Token" : "Create FABRIC Token"}
+            {isService ? "Create Service Token" : "Create Resource Token"}
           </Button>
         </div>
       </div>
@@ -652,7 +652,7 @@ export default function CredentialManagerPage() {
 
           <Tabs value={activeTab} onValueChange={handleTabChange}>
             <TabsList>
-              <TabsTrigger value="fabric">FABRIC Tokens</TabsTrigger>
+              <TabsTrigger value="fabric">Resource Tokens</TabsTrigger>
               <TabsTrigger value="service">Service Tokens</TabsTrigger>
             </TabsList>
 
@@ -660,7 +660,7 @@ export default function CredentialManagerPage() {
             <TabsContent value="fabric">
               {fabricProjects.length === 0 ? (
                 <div className="bg-fabric-warning/10 border border-fabric-warning/30 text-fabric-dark rounded p-4 my-2">
-                  You don&apos;t have any FABRIC projects. To create tokens for resource access and slice provisioning,{" "}
+                  You don&apos;t have any resource projects. To create tokens for resource access and slice provisioning,{" "}
                   <a href={portalLink} target="_blank" rel="noreferrer" className="font-bold underline text-fabric-primary">
                     join or create a project on FABRIC Portal
                   </a>.
@@ -678,12 +678,12 @@ export default function CredentialManagerPage() {
                     }`}
                   >
                     <div className="flex items-center gap-2 mb-1">
-                      <Badge className="bg-fabric-success text-white hover:bg-fabric-success">FABRIC Token</Badge>
-                      <span className="font-semibold">FABRIC project selected</span>
+                      <Badge className="bg-fabric-success text-white hover:bg-fabric-success">Resource Token</Badge>
+                      <span className="font-semibold">Resource project selected</span>
                     </div>
                     {!isTokenHolder ? (
                       <span>
-                        This will create a <strong>FABRIC Token</strong> with resource access.
+                        This will create a <strong>Resource Token</strong> with resource access.
                         The default token lifetime is 4 hours. To obtain{" "}
                         <a
                           href={externalLinks.learnArticleLonglivedTokens}
@@ -701,7 +701,7 @@ export default function CredentialManagerPage() {
                       </span>
                     ) : (
                       <span>
-                        This will create a <strong>FABRIC Token</strong> with resource access.
+                        This will create a <strong>Resource Token</strong> with resource access.
                         You have access to{" "}
                         <a
                           href={externalLinks.learnArticleLonglivedTokens}
@@ -748,7 +748,7 @@ export default function CredentialManagerPage() {
                       This will create a <strong>Service Token</strong>. Service tokens are used for
                       service-to-service authentication and <strong>do not allow slice provisioning or
                       resource access</strong>. If you need to provision slices or access FABRIC resources,
-                      switch to the FABRIC Tokens tab.
+                      switch to the Resource Tokens tab.
                     </span>
                   </div>
 
