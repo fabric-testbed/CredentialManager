@@ -156,7 +156,11 @@ class TokenEncoder:
         LOG.debug(f"UUID: {uuid} Roles: {roles} Projects: {projects}")
         self.claims[self.PROJECTS] = projects
         self.claims[self.ROLES] = roles
-        self.claims[self.SCOPE] = self.scope
+        if self.claims[self.PROJECTS]:
+            project_type = self.claims[self.PROJECTS][0].get("project_type")
+            self.claims[self.SCOPE] = "service" if project_type == "service" else "resource"
+        else:
+            self.claims[self.SCOPE] = self.scope
         if uuid is not None:
             self.claims[self.UUID] = uuid
         if self.claims.get(self.EMAIL) is None:

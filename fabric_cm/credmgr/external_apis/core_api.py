@@ -229,7 +229,8 @@ class CoreApi:
                 raise CoreApiError(f"User is not a member of Project: {p.get('uuid')}")
             project = {
                 "name": p.get("name"),
-                "uuid": p.get("uuid")
+                "uuid": p.get("uuid"),
+                "project_type": p.get("project_type"),
             }
 
             # Only pass tags and membership when token is requested for a specific project
