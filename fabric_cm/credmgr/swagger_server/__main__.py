@@ -25,11 +25,10 @@
 """
 Main Entry Point
 """
-import connexion
+import uvicorn
 import prometheus_client
-import waitress
 
-from fabric_cm.credmgr.swagger_server import encoder
+from fabric_cm.credmgr.swagger_server.app import create_app
 from fabric_cm.credmgr.config import CONFIG_OBJ
 from fabric_cm.credmgr.logging import LOG
 
@@ -40,22 +39,18 @@ def main():
     """
     log = LOG
     try:
-        app = connexion.App(__name__, specification_dir='swagger/')
-        app.json_provider_class = encoder.JSONEncoder
-        app.add_api('swagger.yaml',
-                    arguments={'title': 'Fabric Credential Manager API'},
-                    pythonic_params=True)
+        app = create_app()
         port = CONFIG_OBJ.get_rest_port()
 
         # prometheus server
         prometheus_port = CONFIG_OBJ.get_prometheus_port()
         prometheus_client.start_http_server(prometheus_port)
 
-        # Start up the server to expose the metrics.
-        waitress.serve(app, port=port)
+        # Start up the server
+        uvicorn.run(app, host="0.0.0.0", port=port)
 
     except Exception as ex:
-        log.error("Exception occurred while starting Flask app")
+        log.error("Exception occurred while starting the application")
         log.error(ex)
         raise ex
 

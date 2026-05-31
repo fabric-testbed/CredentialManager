@@ -2,9 +2,8 @@ import json
 import os
 from typing import Union
 
-from flask import request, Response
+from fastapi.responses import JSONResponse
 
-# Constants
 from fabric_cm.credmgr.swagger_server.models import Tokens, Version, Status200OkNoContent, \
     Status200OkNoContentData, Status400BadRequestErrors, Status400BadRequest, Status401UnauthorizedErrors, \
     Status401Unauthorized, Status403ForbiddenErrors, Status403Forbidden, Status404NotFoundErrors, Status404NotFound, \
@@ -30,126 +29,90 @@ def delete_none(_dict):
     return _dict
 
 
-def cors_response(req: request, status_code: int = 200, body: object = None, x_error: str = None) -> Response:
-    """
-    Return CORS Response object
-    """
-    response = Response()
-    response.status_code = status_code
-    response.data = body
-    response.headers['Access-Control-Allow-Origin'] = req.headers.get('Origin', '*')
-    response.headers['Access-Control-Allow-Credentials'] = 'true'
-    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, PATCH, DELETE, OPTIONS'
-    response.headers['Access-Control-Allow-Headers'] = \
-        'DNT, User-Agent, X-Requested-With, If-Modified-Since, Cache-Control, Content-Type, Range, Authorization'
-    response.headers['Access-Control-Expose-Headers'] = 'Content-Length, Content-Range'
-    return response
+def _serialize(body: object) -> dict:
+    """Serialize a model object to a dict suitable for JSONResponse."""
+    cleaned = delete_none(body.to_dict())
+    return cleaned
 
 
-def cors_200(response_body: Union[Tokens, Version, Status200OkNoContent, DecodedToken, RevokeList] = None) -> cors_response:
+def cors_response(status_code: int = 200, body: object = None, x_error: str = None) -> JSONResponse:
+    """
+    Return JSONResponse object. CORS headers are handled by FastAPI CORSMiddleware.
+    """
+    if body is not None:
+        if isinstance(body, str):
+            content = json.loads(body)
+        elif isinstance(body, dict):
+            content = body
+        else:
+            content = _serialize(body)
+    else:
+        content = None
+    return JSONResponse(status_code=status_code, content=content)
+
+
+def cors_200(response_body: Union[Tokens, Version, Status200OkNoContent, DecodedToken, RevokeList] = None) -> JSONResponse:
     """
     Return 200 - OK
     """
-    body = json.dumps(delete_none(response_body.to_dict()), indent=_INDENT, sort_keys=True) \
-        if _INDENT != 0 else json.dumps(delete_none(response_body.to_dict()), sort_keys=True)
-    return cors_response(
-        req=request,
-        status_code=200,
-        body=body
-    )
+    return cors_response(status_code=200, body=response_body)
 
 
-def cors_200_no_content(details: str = None) -> cors_response:
+def cors_200_no_content(details: str = None) -> JSONResponse:
     """
     Return 200 - No Content
     """
     data = Status200OkNoContentData()
     data.details = details
     data_object = Status200OkNoContent([data])
-    return cors_response(
-        req=request,
-        status_code=200,
-        body=json.dumps(delete_none(data_object.to_dict()), indent=_INDENT, sort_keys=True)
-        if _INDENT != 0 else json.dumps(delete_none(data_object.to_dict()), sort_keys=True),
-        x_error=details
-    )
+    return cors_response(status_code=200, body=data_object, x_error=details)
 
 
-def cors_400(details: str = None) -> cors_response:
+def cors_400(details: str = None) -> JSONResponse:
     """
     Return 400 - Bad Request
     """
     errors = Status400BadRequestErrors()
     errors.details = details
     error_object = Status400BadRequest([errors])
-    return cors_response(
-        req=request,
-        status_code=400,
-        body=json.dumps(delete_none(error_object.to_dict()), indent=_INDENT, sort_keys=True)
-        if _INDENT != 0 else json.dumps(delete_none(error_object.to_dict()), sort_keys=True),
-        x_error=details
-    )
+    return cors_response(status_code=400, body=error_object, x_error=details)
 
 
-def cors_401(details: str = None) -> cors_response:
+def cors_401(details: str = None) -> JSONResponse:
     """
     Return 401 - Unauthorized
     """
     errors = Status401UnauthorizedErrors()
     errors.details = details
     error_object = Status401Unauthorized([errors])
-    return cors_response(
-        req=request,
-        status_code=401,
-        body=json.dumps(delete_none(error_object.to_dict()), indent=_INDENT, sort_keys=True)
-        if _INDENT != 0 else json.dumps(delete_none(error_object.to_dict()), sort_keys=True),
-        x_error=details
-    )
+    return cors_response(status_code=401, body=error_object, x_error=details)
 
 
-def cors_403(details: str = None) -> cors_response:
+def cors_403(details: str = None) -> JSONResponse:
     """
     Return 403 - Forbidden
     """
     errors = Status403ForbiddenErrors()
     errors.details = details
     error_object = Status403Forbidden([errors])
-    return cors_response(
-        req=request,
-        status_code=403,
-        body=json.dumps(delete_none(error_object.to_dict()), indent=_INDENT, sort_keys=True)
-        if _INDENT != 0 else json.dumps(delete_none(error_object.to_dict()), sort_keys=True),
-        x_error=details
-    )
+    return cors_response(status_code=403, body=error_object, x_error=details)
 
 
-def cors_404(details: str = None) -> cors_response:
+def cors_404(details: str = None) -> JSONResponse:
     """
     Return 404 - Not Found
     """
     errors = Status404NotFoundErrors()
     errors.details = details
     error_object = Status404NotFound([errors])
-    return cors_response(
-        req=request,
-        status_code=404,
-        body=json.dumps(delete_none(error_object.to_dict()), indent=_INDENT, sort_keys=True)
-        if _INDENT != 0 else json.dumps(delete_none(error_object.to_dict()), sort_keys=True),
-        x_error=details
-    )
+    return cors_response(status_code=404, body=error_object, x_error=details)
 
 
-def cors_500(details: str = None) -> cors_response:
+def cors_500(details: str = None) -> JSONResponse:
     """
     Return 500 - Internal Server Error
     """
     errors = Status500InternalServerErrorErrors()
     errors.details = details
     error_object = Status500InternalServerError([errors])
-    return cors_response(
-        req=request,
-        status_code=500,
-        body=json.dumps(delete_none(error_object.to_dict()), indent=_INDENT, sort_keys=True)
-        if _INDENT != 0 else json.dumps(delete_none(error_object.to_dict()), sort_keys=True),
-        x_error=details
-    )
+    return cors_response(status_code=500, body=error_object, x_error=details)

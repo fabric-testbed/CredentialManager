@@ -2,8 +2,8 @@
 
 from __future__ import absolute_import
 
-from flask import json
-from six import BytesIO
+import json
+from io import BytesIO
 
 from fabric_cm.credmgr.swagger_server.models.status500_internal_server_error import Status500InternalServerError  # noqa: E501
 from fabric_cm.credmgr.swagger_server.models.version import Version  # noqa: E501
@@ -18,11 +18,9 @@ class TestVersionController(BaseTestCase):
 
         Version
         """
-        response = self.client.open(
-            '/credmgr//version',
-            method='GET')
+        response = self.client.get('/version')
         self.assert200(response,
-                       'Response body is : ' + response.data.decode('utf-8'))
+                       'Response body is : ' + response.text)
 
 
 if __name__ == '__main__':
