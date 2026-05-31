@@ -739,17 +739,52 @@ export default function CredentialManagerPage() {
                   {renderProjectSelector(serviceProjects, "service")}
 
                   {/* Service token info banner */}
-                  <div className="rounded p-4 my-2 text-fabric-dark bg-blue-50 border border-blue-300">
+                  <div className={`rounded p-4 my-2 text-fabric-dark ${
+                    isTokenHolder
+                      ? "bg-blue-50 border border-blue-300"
+                      : "bg-blue-50 border border-blue-300"
+                  }`}>
                     <div className="flex items-center gap-2 mb-1">
                       <Badge className="bg-blue-600 text-white hover:bg-blue-600">Service Token</Badge>
                       <span className="font-semibold">Service project selected</span>
                     </div>
-                    <span>
-                      This will create a <strong>Service Token</strong>. Service tokens are used for
-                      service-to-service authentication and <strong>do not allow slice provisioning or
-                      resource access</strong>. If you need to provision slices or access FABRIC resources,
-                      switch to the Resource Tokens tab.
-                    </span>
+                    {!isTokenHolder ? (
+                      <span>
+                        This will create a <strong>Service Token</strong>. Service tokens are used for
+                        service-to-service authentication and <strong>do not allow slice provisioning or
+                        resource access</strong>. The default token lifetime is 4 hours. To obtain{" "}
+                        <a
+                          href={externalLinks.learnArticleLonglivedTokens}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-bold"
+                        >
+                          long-lived tokens
+                        </a>{" "}
+                        for the selected project, please request access from{" "}
+                        <a href={portalLink} target="_blank" rel="noreferrer">
+                          FABRIC Portal
+                        </a>
+                        . If you need to provision slices or access FABRIC resources,
+                        switch to the Resource Tokens tab.
+                      </span>
+                    ) : (
+                      <span>
+                        This will create a <strong>Service Token</strong>. Service tokens are used for
+                        service-to-service authentication and <strong>do not allow slice provisioning or
+                        resource access</strong>. You have access to{" "}
+                        <a
+                          href={externalLinks.learnArticleLonglivedTokens}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-bold"
+                        >
+                          long-lived tokens
+                        </a>{" "}
+                        for this project. The lifetime limit is 9 weeks. If you need to provision slices
+                        or access FABRIC resources, switch to the Resource Tokens tab.
+                      </span>
+                    )}
                   </div>
 
                   {renderTokenForm(true)}
