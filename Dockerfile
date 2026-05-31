@@ -36,8 +36,9 @@ COPY . /usr/src/app/
 RUN pip3 install .
 
 # Run as non-root user for security
-RUN groupadd -r credmgr && useradd -r -g credmgr -d /usr/src/app credmgr \
-    && chown -R credmgr:credmgr /usr/src/app /etc/credmgr
+RUN mkdir -p /var/log/credmgr \
+    && groupadd -r credmgr && useradd -r -g credmgr -d /usr/src/app credmgr \
+    && chown -R credmgr:credmgr /usr/src/app /etc/credmgr /var/log/credmgr
 USER credmgr
 
 EXPOSE 7000 8100
