@@ -752,20 +752,8 @@ export default function CredentialManagerPage() {
                       <span>
                         This will create a <strong>Service Token</strong>. Service tokens are used for
                         service-to-service authentication and <strong>do not allow slice provisioning or
-                        resource access</strong>. The default token lifetime is 4 hours. To obtain{" "}
-                        <a
-                          href={externalLinks.learnArticleLonglivedTokens}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="font-bold"
-                        >
-                          long-lived tokens
-                        </a>{" "}
-                        for the selected project, please request access from{" "}
-                        <a href={portalLink} target="_blank" rel="noreferrer">
-                          FABRIC Portal
-                        </a>
-                        . If you need to provision slices or access FABRIC resources,
+                        resource access</strong>. The default token lifetime is 4 hours.
+                        If you need to provision slices or access FABRIC resources,
                         switch to the Resource Tokens tab.
                       </span>
                     ) : (
