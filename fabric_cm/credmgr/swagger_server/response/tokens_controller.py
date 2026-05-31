@@ -427,6 +427,31 @@ def _validate_localhost_redirect(redirect_uri: str):
     return None
 
 
+_UUID_RE = re.compile(r'^[0-9a-fA-F-]{1,64}$|^all$', re.IGNORECASE)
+_SCOPE_RE = re.compile(r'^[a-zA-Z0-9_:.-]{1,64}$')
+_PROJECT_NAME_RE = re.compile(r'^[a-zA-Z0-9 _\-().]{1,256}$')
+_COMMENT_RE = re.compile(r'^[a-zA-Z0-9 _\-.,!?/()]{0,256}$')
+
+
+def _sanitize_cli_params(project_id, project_name, scope, lifetime, comment):
+    """Validate and sanitize user-supplied CLI parameters before storing in a cookie.
+
+    Returns sanitized (project_id, project_name, scope, lifetime, comment) or raises
+    ValueError with a description of the invalid parameter.
+    """
+    if project_id is not None and not _UUID_RE.match(str(project_id)):
+        raise ValueError("project_id must be a valid UUID or 'all'")
+    if project_name is not None and not _PROJECT_NAME_RE.match(str(project_name)):
+        raise ValueError("project_name contains invalid characters")
+    if scope is not None and not _SCOPE_RE.match(str(scope)):
+        raise ValueError("scope contains invalid characters")
+    if not isinstance(lifetime, int) or not (1 <= lifetime <= 262800):
+        raise ValueError("lifetime must be an integer between 1 and 262800")
+    if comment is not None and not _COMMENT_RE.match(str(comment)):
+        raise ValueError("comment contains invalid characters")
+    return project_id, project_name, scope, lifetime, comment
+
+
 def tokens_create_cli_get(request: Request, project_id: str = None, project_name: str = None,
                           scope: str = None, lifetime: int = 4, comment: str = None,
                           redirect_uri: str = None):  # noqa: E501
@@ -485,7 +510,15 @@ def tokens_create_cli_get(request: Request, project_id: str = None, project_name
             return_url = f"{base_url}/credmgr/tokens/create_cli"
             login_url = f"{base_url}/cli-login?url={quote(return_url, safe='')}"
 
-            # Save the original params so we can restore them after login
+            # Validate user-supplied parameters before storing in cookie
+            try:
+                project_id, project_name, scope, lifetime, comment = _sanitize_cli_params(
+                    project_id, project_name, scope, lifetime, comment)
+            except ValueError as e:
+                failure_counter.labels(HTTP_METHOD_GET, TOKENS_CREATE_CLI_URL).inc()
+                return cors_400(details=str(e))
+
+            # Save the sanitized params so we can restore them after login
             cli_params = _json.dumps({
                 "redirect_uri": redirect_uri,
                 "project_id": project_id,
