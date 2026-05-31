@@ -35,14 +35,20 @@ COPY . /usr/src/app/
 
 RUN pip3 install .
 
-# Run as non-root user for security
+# Install gosu for dropping privileges after fixing bind-mount permissions
+RUN apt-get update && apt-get install -y --no-install-recommends gosu && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user for security
 RUN mkdir -p /var/log/credmgr \
     && groupadd -r credmgr && useradd -r -g credmgr -d /usr/src/app credmgr \
     && chown -R credmgr:credmgr /usr/src/app /etc/credmgr /var/log/credmgr
-USER credmgr
+
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 EXPOSE 7000 8100
 
-ENTRYPOINT ["python3"]
+# Start as root so entrypoint can fix bind-mount ownership, then drop to credmgr via gosu
+ENTRYPOINT ["docker-entrypoint.sh"]
 
 CMD ["-m", "fabric_cm.credmgr.swagger_server"]
