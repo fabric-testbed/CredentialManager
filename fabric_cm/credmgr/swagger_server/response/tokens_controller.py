@@ -22,16 +22,18 @@
 # SOFTWARE.
 #
 # Author Komal Thareja (kthare10@renci.org)
+import re
 from datetime import datetime
 
-import connexion
+from fastapi import Request
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from oauthlib.oauth2.rfc6749.errors import CustomOAuth2Error
 
 from fabric_cm.credmgr.common.utils import Utils
 from fabric_cm.credmgr.core.oauth_credmgr import OAuthCredMgr, TokenState
 from fabric_cm.credmgr.swagger_server.models import Tokens, Token, Status200OkNoContent, Status200OkNoContentData, \
     RevokeList, DecodedToken
-from fabric_cm.credmgr.swagger_server.models.request import Request  # noqa: E501
+from fabric_cm.credmgr.swagger_server.models.request import Request as RequestModel  # noqa: E501
 from fabric_cm.credmgr.swagger_server import received_counter, success_counter, failure_counter
 from fabric_cm.credmgr.swagger_server.models.token_post import TokenPost
 from fabric_cm.credmgr.swagger_server.response.constants import HTTP_METHOD_POST, TOKENS_REVOKE_URL, \
@@ -41,24 +43,32 @@ from fabric_cm.credmgr.swagger_server.response.constants import HTTP_METHOD_POST
 from fabric_cm.credmgr.logging import LOG
 from fabric_cm.credmgr.swagger_server.response.cors_response import cors_200, cors_500, cors_400
 from fabric_cm.credmgr.config import CONFIG_OBJ
-from fabric_cm.credmgr.swagger_server.response.decorators import login_required, login_or_token_required, vouch_authorize
+from fabric_cm.credmgr.swagger_server.dependencies import vouch_authorize
 from urllib.parse import quote, urlparse, urlencode, urlunparse, parse_qs
-
-from flask import request, redirect, make_response
-import re
 
 # Input validation constants
 _TOKEN_HASH_PATTERN = re.compile(r'^[0-9a-f]{64}$')
 _MAX_LIMIT = 500
 _MAX_OFFSET = 100000
 
-@login_required
-def tokens_create_post(project_id: str, project_name: str, scope: str = None, lifetime: int = 4, comment: str = None,
+
+def _get_remote_addr(request: Request) -> str:
+    """Extract the client IP, preferring X-Real-IP header."""
+    remote_addr = request.client.host if request.client else "unknown"
+    x_real_ip = request.headers.get('X-Real-IP')
+    if x_real_ip is not None:
+        remote_addr = x_real_ip
+    return remote_addr
+
+
+def tokens_create_post(request: Request, project_id: str, project_name: str, scope: str = None,
+                       lifetime: int = 4, comment: str = None,
                        claims: dict = None):  # noqa: E501
     """Generate Fabric OAuth tokens for an user
 
     Request to generate Fabric OAuth tokens for an user  # noqa: E501
 
+    :param request: FastAPI request
     :param project_id: Project Id
     :type project_id: str
     :param project_name: Project identified by name
@@ -79,9 +89,7 @@ def tokens_create_post(project_id: str, project_name: str, scope: str = None, li
         return cors_400(details="Comment must be between 10 and 100 characters.")
     try:
         credmgr = OAuthCredMgr()
-        remote_addr = connexion.request.remote_addr
-        if connexion.request.headers.get('X-Real-IP') is not None:
-            remote_addr = connexion.request.headers.get('X-Real-IP')
+        remote_addr = _get_remote_addr(request)
         token_dict = credmgr.create_token(ci_logon_id_token=claims.get(OAuthCredMgr.ID_TOKEN),
                                           refresh_token=claims.get(OAuthCredMgr.REFRESH_TOKEN),
                                           cookie=claims.get(OAuthCredMgr.COOKIE),
@@ -103,7 +111,6 @@ def tokens_create_post(project_id: str, project_name: str, scope: str = None, li
         return cors_500(details="An internal error occurred. Please try again or contact support.")
 
 
-@login_required
 def tokens_delete_delete(claims: dict = None):  # noqa: E501
     """Delete all tokens for a user
 
@@ -132,7 +139,6 @@ def tokens_delete_delete(claims: dict = None):  # noqa: E501
         return cors_500(details="An internal error occurred. Please try again or contact support.")
 
 
-@login_required
 def tokens_delete_token_hash_delete(token_hash: str, claims: dict = None):  # noqa: E501
     """Delete a token for an user
 
@@ -168,11 +174,12 @@ def tokens_delete_token_hash_delete(token_hash: str, claims: dict = None):  # no
         return cors_500(details="An internal error occurred. Please try again or contact support.")
 
 
-def tokens_refresh_post(body: Request, project_id=None, project_name=None, scope=None):  # noqa: E501
+def tokens_refresh_post(request: Request, body: RequestModel, project_id=None, project_name=None, scope=None):  # noqa: E501
     """Refresh tokens for an user
 
     Request to refresh OAuth tokens for an user  # noqa: E501
 
+    :param request: FastAPI request
     :param body:
     :type body: dict | bytes
     :param project_id: Project identified by universally unique identifier
@@ -187,9 +194,7 @@ def tokens_refresh_post(body: Request, project_id=None, project_name=None, scope
     received_counter.labels(HTTP_METHOD_POST, TOKENS_REFRESH_URL).inc()
     try:
         credmgr = OAuthCredMgr()
-        remote_addr = connexion.request.remote_addr
-        if connexion.request.headers.get('X-Real-IP') is not None:
-            remote_addr = connexion.request.headers.get('X-Real-IP')
+        remote_addr = _get_remote_addr(request)
         token_dict = credmgr.refresh_token(refresh_token=body.refresh_token, project_id=project_id,
                                            project_name=project_name, scope=scope,
                                            remote_addr=remote_addr)
@@ -213,8 +218,7 @@ def tokens_refresh_post(body: Request, project_id=None, project_name=None, scope
         return cors_500(details="An internal error occurred. Please try again or contact support.")
 
 
-@login_or_token_required
-def tokens_revoke_post(body: Request, claims: dict = None):  # noqa: E501
+def tokens_revoke_post(body: RequestModel, claims: dict = None):  # noqa: E501
     """Revoke a refresh token for an user
 
     Request to revoke a refresh token for an user  # noqa: E501
@@ -245,12 +249,12 @@ def tokens_revoke_post(body: Request, claims: dict = None):  # noqa: E501
         return cors_500(details="An internal error occurred. Please try again or contact support.")
 
 
-@login_or_token_required
-def tokens_revokes_post(body: TokenPost, claims: dict = None):  # noqa: E501
+def tokens_revokes_post(request: Request, body: TokenPost, claims: dict = None):  # noqa: E501
     """Revoke a refresh token for an user
 
     Request to revoke a refresh token for an user  # noqa: E501
 
+    :param request: FastAPI request
     :param body:
     :type body: dict | bytes
     :param claims
@@ -285,7 +289,6 @@ def tokens_revokes_post(body: TokenPost, claims: dict = None):  # noqa: E501
         return cors_500(details="An internal error occurred. Please try again or contact support.")
 
 
-@login_or_token_required
 def tokens_get(token_hash=None, project_id=None, expires=None, states=None, limit=None, offset=None,
                claims: dict = None):  # noqa: E501
     """Get tokens
@@ -424,8 +427,8 @@ def _validate_localhost_redirect(redirect_uri: str):
     return None
 
 
-def tokens_create_cli_get(project_id: str = None, project_name: str = None, scope: str = None,
-                          lifetime: int = 4, comment: str = None,
+def tokens_create_cli_get(request: Request, project_id: str = None, project_name: str = None,
+                          scope: str = None, lifetime: int = 4, comment: str = None,
                           redirect_uri: str = None):  # noqa: E501
     """Generate tokens for a CLI user and redirect with token data
 
@@ -436,6 +439,7 @@ def tokens_create_cli_get(project_id: str = None, project_name: str = None, scop
     Phase 2 (logged in, after CILogon): Read params back from cookie,
         create the token, clear cookie, redirect to localhost callback.
 
+    :param request: FastAPI request
     :param project_id: Project Id
     :param project_name: Project identified by name
     :param scope: Scope for which token is requested
@@ -472,7 +476,7 @@ def tokens_create_cli_get(project_id: str = None, project_name: str = None, scop
         safe_scheme, safe_netloc, safe_path = validated_redirect
 
         # Check authentication
-        claims = vouch_authorize()
+        claims = vouch_authorize(request)
         if claims is None:
             # Phase 1: not logged in — save params in a cookie, then redirect
             # to vouch login with a simple URL (just this endpoint, no params).
@@ -492,8 +496,8 @@ def tokens_create_cli_get(project_id: str = None, project_name: str = None, scop
             })
 
             LOG.info("CLI create: user not logged in, saving params and redirecting to login")
-            resp = redirect(login_url, code=302)
-            resp.set_cookie(COOKIE_NAME, cli_params, max_age=600, httponly=True, secure=True, samesite='Lax')
+            resp = RedirectResponse(url=login_url, status_code=302)
+            resp.set_cookie(key=COOKIE_NAME, value=cli_params, max_age=600, httponly=True, secure=True, samesite='lax')
             return resp
 
         # Phase 2: logged in — create token and redirect to CLI callback
@@ -513,9 +517,7 @@ def tokens_create_cli_get(project_id: str = None, project_name: str = None, scop
             LOG.info(f"CLI create: no project specified, using first active project: {project_id}")
 
         credmgr = OAuthCredMgr()
-        remote_addr = connexion.request.remote_addr
-        if connexion.request.headers.get('X-Real-IP') is not None:
-            remote_addr = connexion.request.headers.get('X-Real-IP')
+        remote_addr = _get_remote_addr(request)
         token_dict = credmgr.create_token(ci_logon_id_token=claims.get(OAuthCredMgr.ID_TOKEN),
                                           refresh_token=claims.get(OAuthCredMgr.REFRESH_TOKEN),
                                           cookie=claims.get(OAuthCredMgr.COOKIE),
@@ -620,10 +622,9 @@ fetch(CALLBACK_URL, {{ mode: 'no-cors' }})
 </body>
 </html>"""
 
-        resp = make_response(html, 200)
-        resp.headers['Content-Type'] = 'text/html'
+        resp = HTMLResponse(content=html, status_code=200)
         # Clear the params cookie
-        resp.set_cookie(COOKIE_NAME, '', max_age=0, httponly=True, samesite='Lax')
+        resp.set_cookie(key=COOKIE_NAME, value='', max_age=0, httponly=True, samesite='lax')
         return resp
     except Exception as ex:
         LOG.exception(ex)
@@ -631,7 +632,6 @@ fetch(CALLBACK_URL, {{ mode: 'no-cors' }})
         return cors_500(details="An internal error occurred. Please try again or contact support.")
 
 
-@login_or_token_required
 def tokens_create_llm_post(key_name: str = None, comment: str = None,
                             duration: int = 30, models: str = None,
                             claims: dict = None):  # noqa: E501
@@ -681,7 +681,6 @@ def tokens_create_llm_post(key_name: str = None, comment: str = None,
         return cors_500(details="An internal error occurred. Please try again or contact support.")
 
 
-@login_or_token_required
 def tokens_delete_llm_delete(llm_key_id: str, claims: dict = None):  # noqa: E501
     """Delete an LLM token
 
@@ -720,7 +719,6 @@ def tokens_delete_llm_delete(llm_key_id: str, claims: dict = None):  # noqa: E50
         return cors_500(details="An internal error occurred. Please try again or contact support.")
 
 
-@login_or_token_required
 def tokens_llm_keys_get(limit: int = 200, offset: int = 0,
                          claims: dict = None):  # noqa: E501
     """Get LLM tokens for a user
@@ -763,7 +761,6 @@ def tokens_llm_keys_get(limit: int = 200, offset: int = 0,
         return cors_500(details="An internal error occurred. Please try again or contact support.")
 
 
-@login_or_token_required
 def tokens_llm_models_get(claims: dict = None):  # noqa: E501
     """Get available LLM models
 
