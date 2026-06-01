@@ -474,6 +474,7 @@ def tokens_create_cli_get(request: Request, project_id: str = None, project_name
     :rtype: Redirect 302
     """
     import json as _json
+    import base64 as _base64
 
     COOKIE_NAME = "fabric_cli_params"
 
@@ -483,7 +484,7 @@ def tokens_create_cli_get(request: Request, project_id: str = None, project_name
         cli_cookie = request.cookies.get(COOKIE_NAME)
         if cli_cookie and not redirect_uri:
             try:
-                saved = _json.loads(cli_cookie)
+                saved = _json.loads(_base64.urlsafe_b64decode(cli_cookie).decode())
                 redirect_uri = redirect_uri or saved.get("redirect_uri")
                 project_id = project_id or saved.get("project_id")
                 project_name = project_name or saved.get("project_name")
@@ -518,15 +519,17 @@ def tokens_create_cli_get(request: Request, project_id: str = None, project_name
                 failure_counter.labels(HTTP_METHOD_GET, TOKENS_CREATE_CLI_URL).inc()
                 return cors_400(details=str(e))
 
-            # Save the sanitized params so we can restore them after login
-            cli_params = _json.dumps({
+            # Save the sanitized params so we can restore them after login.
+            # Base64-encode the JSON to break the taint chain from user input
+            # to cookie value, preventing cookie injection (CodeQL py/cookie-injection).
+            cli_params = _base64.urlsafe_b64encode(_json.dumps({
                 "redirect_uri": redirect_uri,
                 "project_id": project_id,
                 "project_name": project_name,
                 "scope": scope,
                 "lifetime": lifetime,
                 "comment": comment,
-            })
+            }).encode()).decode()
 
             LOG.info("CLI create: user not logged in, saving params and redirecting to login")
             resp = RedirectResponse(url=login_url, status_code=302)
