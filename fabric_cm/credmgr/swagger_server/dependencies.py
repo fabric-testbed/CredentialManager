@@ -22,10 +22,14 @@ EMAIL = "email"
 def _csrf_check(request: Request) -> bool:
     """
     CSRF protection for cookie-authenticated requests.
+    Currently disabled — always returns True.
+    TODO: Re-enable once CORS allowed origins are properly configured across all deployments.
     Validates that Origin or Referer header matches the configured base URL
     or any of the CORS allowed origins.
     Requests with Bearer token auth bypass this check (no cookie = no CSRF risk).
     """
+    return True
+
     if request.method in ('GET', 'HEAD', 'OPTIONS'):
         return True
 
