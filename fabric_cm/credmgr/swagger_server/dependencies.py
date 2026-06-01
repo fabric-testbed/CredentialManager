@@ -22,7 +22,8 @@ EMAIL = "email"
 def _csrf_check(request: Request) -> bool:
     """
     CSRF protection for cookie-authenticated requests.
-    Validates that Origin or Referer header matches the configured base URL.
+    Validates that Origin or Referer header matches the configured base URL
+    or any of the CORS allowed origins.
     Requests with Bearer token auth bypass this check (no cookie = no CSRF risk).
     """
     if request.method in ('GET', 'HEAD', 'OPTIONS'):
@@ -32,21 +33,30 @@ def _csrf_check(request: Request) -> bool:
     if 'authorization' in [h.casefold() for h in request.headers.keys()]:
         return True
 
+    # Build set of allowed origin netlocs from base_url + CORS allowed origins
+    allowed_netlocs = set()
     try:
         base_url = CONFIG_OBJ.get_base_url()
+        allowed_netlocs.add(urlparse(base_url).netloc)
     except Exception:
-        # If base_url not configured, skip CSRF check
-        return True
+        pass
 
-    allowed_origin = urlparse(base_url).netloc
+    for cors_origin in CONFIG_OBJ.get_cors_allowed_origins():
+        netloc = urlparse(cors_origin).netloc
+        if netloc:
+            allowed_netlocs.add(netloc)
+
+    if not allowed_netlocs:
+        # No origins configured — skip CSRF check
+        return True
 
     origin = request.headers.get('Origin')
     if origin:
-        return urlparse(origin).netloc == allowed_origin
+        return urlparse(origin).netloc in allowed_netlocs
 
     referer = request.headers.get('Referer')
     if referer:
-        return urlparse(referer).netloc == allowed_origin
+        return urlparse(referer).netloc in allowed_netlocs
 
     # No Origin or Referer — block (same-origin requests always include one)
     return False
