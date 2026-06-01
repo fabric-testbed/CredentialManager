@@ -45,7 +45,7 @@ llt-role-suffix = tk
 # Public base URL of this credential manager instance (used for safe redirects)
 base-url = https://cm.fabric-testbed.net
 # Comma-separated list of allowed CORS origins (e.g. https://portal.fabric-testbed.net,https://cm.fabric-testbed.net)
-cors-allowed-origins =
+cors-allowed-origins = https://portal.fabric-testbed.net
 
 [logging]
 logger = credmgr

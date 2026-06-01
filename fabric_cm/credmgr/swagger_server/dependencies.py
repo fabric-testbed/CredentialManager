@@ -33,6 +33,23 @@ def _csrf_check(request: Request) -> bool:
     if 'authorization' in [h.casefold() for h in request.headers.keys()]:
         return True
 
+    # If the request carries a valid vouch cookie, the user was authenticated
+    # through vouch-proxy/CILogon. The cookie's JWT signature is verified below
+    # in vouch_authorize(), so a valid cookie is proof of authentication and
+    # the cross-origin request from the portal is legitimate.
+    cookie_name = CONFIG_OBJ.get_vouch_cookie_name()
+    cookie = request.cookies.get(cookie_name)
+    if cookie:
+        try:
+            vouch_secret = CONFIG_OBJ.get_vouch_secret()
+            vouch_compression = CONFIG_OBJ.is_vouch_cookie_compressed()
+            status, _ = JWTManager.decode(cookie=cookie, secret=vouch_secret,
+                                          compression=vouch_compression, verify=True)
+            if status == ValidateCode.VALID:
+                return True
+        except Exception:
+            pass
+
     # Build set of allowed origin netlocs from base_url + CORS allowed origins
     allowed_netlocs = set()
     try:
