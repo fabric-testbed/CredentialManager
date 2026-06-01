@@ -26,5 +26,5 @@ def create_app() -> FastAPI:
         expose_headers=["Content-Length", "Content-Range"],
     )
 
-    app.include_router(router)
+    app.include_router(router, prefix="/credmgr")
     return app
