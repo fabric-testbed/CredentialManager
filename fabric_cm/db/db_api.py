@@ -23,7 +23,6 @@
 #
 #
 # Author: Komal Thareja (kthare10@renci.org)
-import threading
 from datetime import datetime
 from typing import List
 
@@ -51,20 +50,21 @@ class DbApi:
             port=db_port,
             database=database,
         )
-        self.db_engine = create_engine(db_url)
+        self.db_engine = create_engine(
+            db_url,
+            pool_size=10,
+            max_overflow=20,
+            pool_pre_ping=True,
+            pool_recycle=3600,
+        )
         self.logger = logger
-        self.session_factory = sessionmaker(bind=self.db_engine)
-        self.sessions = {}
+        self.Session = scoped_session(sessionmaker(bind=self.db_engine))
 
     def get_session(self):
-        thread_id = threading.get_ident()
-        session = None
-        if thread_id in self.sessions:
-            session = self.sessions.get(thread_id)
-        else:
-            session = scoped_session(self.session_factory)
-            self.sessions[thread_id] = session
-        return session
+        return self.Session()
+
+    def remove_session(self):
+        self.Session.remove()
 
     def create_db(self):
         """
@@ -90,6 +90,8 @@ class DbApi:
             session.rollback()
             self.logger.error(f"Exception occurred: {e}", stack_info=True)
             raise e
+        finally:
+            self.remove_session()
 
     def add_token(self, *, user_id: str, user_email: str, project_id: str, created_from: str, state: int,
                   token_hash: str, created_at: datetime, expires_at: datetime, comment: str):
@@ -117,6 +119,8 @@ class DbApi:
             session.rollback()
             self.logger.error(f"Exception occurred: {e}", stack_info=True)
             raise e
+        finally:
+            self.remove_session()
 
     def update_token(self, *, token_hash: str, state: int):
         """
@@ -136,6 +140,8 @@ class DbApi:
             session.rollback()
             self.logger.error(f"Exception occurred: {e}", stack_info=True)
             raise e
+        finally:
+            self.remove_session()
 
     def remove_token(self, *, token_hash: str):
         """
@@ -151,6 +157,8 @@ class DbApi:
             session.rollback()
             self.logger.error(f"Exception occurred: {e}", stack_info=True)
             raise e
+        finally:
+            self.remove_session()
 
     def get_tokens(self, *, user_id: str = None, user_email: str = None, project_id: str = None,
                    token_hash: str = None, expires: datetime = None, states: List[int] = None,
@@ -191,6 +199,8 @@ class DbApi:
         except Exception as e:
             self.logger.error(f"Exception occurred: {e}", stack_info=True)
             raise e
+        finally:
+            self.remove_session()
         return result
 
     @staticmethod
@@ -240,6 +250,8 @@ class DbApi:
             session.rollback()
             self.logger.error(f"Exception occurred: {e}", stack_info=True)
             raise e
+        finally:
+            self.remove_session()
 
     def get_llm_keys(self, *, user_email: str = None, llm_key_id: str = None,
                      offset: int = 0, limit: int = 200) -> list:
@@ -271,6 +283,8 @@ class DbApi:
         except Exception as e:
             self.logger.error(f"Exception occurred: {e}", stack_info=True)
             raise e
+        finally:
+            self.remove_session()
         return result
 
     def remove_llm_key(self, *, llm_key_id: str):
@@ -286,3 +300,5 @@ class DbApi:
             session.rollback()
             self.logger.error(f"Exception occurred: {e}", stack_info=True)
             raise e
+        finally:
+            self.remove_session()
