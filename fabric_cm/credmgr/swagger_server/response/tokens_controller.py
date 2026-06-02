@@ -41,7 +41,7 @@ from fabric_cm.credmgr.swagger_server.response.constants import HTTP_METHOD_POST
     TOKENS_VALIDATE_URL, TOKENS_DELETE_URL, TOKENS_DELETE_TOKEN_HASH_URL, HTTP_METHOD_DELETE, \
     TOKENS_CREATE_CLI_URL, TOKENS_CREATE_LLM_URL, TOKENS_DELETE_LLM_URL, TOKENS_LLM_KEYS_URL, TOKENS_LLM_MODELS_URL
 from fabric_cm.credmgr.logging import LOG
-from fabric_cm.credmgr.swagger_server.response.cors_response import cors_200, cors_500, cors_400
+from fabric_cm.credmgr.swagger_server.response.cors_response import cors_200, cors_500, cors_400, cors_401
 from fabric_cm.credmgr.config import CONFIG_OBJ
 from fabric_cm.credmgr.swagger_server.dependencies import vouch_authorize
 from urllib.parse import quote, urlparse, urlencode, urlunparse, parse_qs
@@ -211,6 +211,9 @@ def tokens_refresh_post(request: Request, body: RequestModel, project_id=None, p
         LOG.exception(ex.error)
         LOG.exception(ex.description)
         failure_counter.labels(HTTP_METHOD_POST, TOKENS_REFRESH_URL).inc()
+        error_type = getattr(ex, 'error', '') or ''
+        if error_type in ('invalid_token', 'invalid_grant'):
+            return cors_401(details="Refresh token is invalid or has expired. Please re-login to obtain a new token.")
         return cors_500(details="An internal error occurred. Please try again or contact support.")
     except Exception as ex:
         LOG.exception(ex)
