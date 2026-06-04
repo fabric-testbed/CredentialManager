@@ -54,6 +54,7 @@ class Config:
     FACILITY_OPERATOR_ROLE = 'facility-operators-role'
     LLT_ROLE_SUFFIX = 'llt-role-suffix'
     BASE_URL = 'base-url'
+    CORS_ALLOWED_ORIGINS = 'cors-allowed-origins'
 
     # Logging Parameters
     LOGGER = 'logger'
@@ -154,6 +155,13 @@ class Config:
     def get_base_url(self) -> str:
         """Return the public base URL of the credential manager (e.g. https://cm.fabric-testbed.net)."""
         return self._get_config_from_section(self.SECTION_RUNTIME, self.BASE_URL).rstrip('/')
+
+    def get_cors_allowed_origins(self) -> List[str]:
+        try:
+            value = self._get_config_from_section(self.SECTION_RUNTIME, self.CORS_ALLOWED_ORIGINS)
+            return [o.strip() for o in value.split(',') if o.strip()]
+        except ConfigError:
+            return []
 
     def get_logger_name(self) -> str:
         return self._get_config_from_section(self.SECTION_LOGGING, self.LOGGER)

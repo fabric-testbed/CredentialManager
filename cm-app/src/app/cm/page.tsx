@@ -188,7 +188,7 @@ export default function CredentialManagerPage() {
   useEffect(() => {
     async function loadProjects() {
       try {
-        const userId = localStorage.getItem("cmUserID");
+        const userId = sessionStorage.getItem("cmUserID");
         if (!userId) return;
         const { data: res } = await getProjects(userId);
         const allProjects: Project[] = res.results;

@@ -5,22 +5,22 @@ axios.defaults.withCredentials = true;
 
 axios.interceptors.response.use(null, (error) => {
   if (error.response && error.response.status === 401) {
-    const isCookieExpired = localStorage.getItem("cmUserStatus") === "active";
+    const isCookieExpired = sessionStorage.getItem("cmUserStatus") === "active";
 
     const errors = error.response.data?.errors;
 
     if (errors && errors[0]?.details?.includes("Login required")) {
-      localStorage.setItem("cmUserStatus", "unauthorized");
-      localStorage.removeItem("userID");
+      sessionStorage.setItem("cmUserStatus", "unauthorized");
+      sessionStorage.removeItem("userID");
     }
 
     if (errors && errors[0]?.details?.includes("Enrollment required")) {
-      localStorage.setItem("cmUserStatus", "inactive");
+      sessionStorage.setItem("cmUserStatus", "inactive");
     }
 
     if (isCookieExpired) {
-      localStorage.removeItem("cmUserID");
-      localStorage.removeItem("cmUserStatus");
+      sessionStorage.removeItem("cmUserID");
+      sessionStorage.removeItem("cmUserStatus");
       window.location.href = "/logout";
     }
 

@@ -30,7 +30,7 @@ export function UserStatusProvider({ children }: { children: ReactNode }) {
   const [cmUserStatus, setCmUserStatus] = useState<UserStatus>("");
 
   const checkEnrollment = useCallback(async () => {
-    const cached = localStorage.getItem("cmUserStatus") as UserStatus;
+    const cached = sessionStorage.getItem("cmUserStatus") as UserStatus;
     if (cached) {
       setCmUserStatus(cached);
       return;
@@ -40,14 +40,14 @@ export function UserStatusProvider({ children }: { children: ReactNode }) {
       const { data } = await getWhoAmI();
       const user = data.results[0];
       if (user.enrolled) {
-        localStorage.setItem("cmUserID", user.uuid);
-        localStorage.setItem("cmUserStatus", "active");
+        sessionStorage.setItem("cmUserID", user.uuid);
+        sessionStorage.setItem("cmUserStatus", "active");
         setCmUserStatus("active");
       } else {
         toast.error("Please enroll to FABRIC in the Portal first.");
       }
     } catch {
-      localStorage.setItem("cmUserStatus", "unauthorized");
+      sessionStorage.setItem("cmUserStatus", "unauthorized");
       setCmUserStatus("unauthorized");
     }
   }, []);

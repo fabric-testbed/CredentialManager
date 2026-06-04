@@ -420,7 +420,7 @@ export default function StoragePage() {
     try {
       const projectName = getStorageProject();
       const { getProjects } = await import("@/services/core-api-service");
-      const userId = localStorage.getItem("cmUserID");
+      const userId = sessionStorage.getItem("cmUserID");
       if (!userId) throw new Error("Not logged in");
       const { data: projRes } = await getProjects(userId);
       const projects = projRes.results || [];
@@ -463,7 +463,7 @@ export default function StoragePage() {
     if (cmUserStatus !== "active") return;
     async function loadRole() {
       try {
-        const userId = localStorage.getItem("cmUserID");
+        const userId = sessionStorage.getItem("cmUserID");
         if (!userId) return;
         const { data: res } = await getPerson(userId);
         const person = res.results[0];
@@ -539,7 +539,7 @@ export default function StoragePage() {
   // Operators see all projects (paginated); normal users see only their own.
   const loadProjects = useCallback(async () => {
     try {
-      const userId = localStorage.getItem("cmUserID");
+      const userId = sessionStorage.getItem("cmUserID");
       if (!userId) return;
       let results: Project[];
       if (isOperator) {

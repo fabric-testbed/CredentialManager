@@ -1,4 +1,5 @@
 from typing import Union
+from urllib.parse import urlparse
 
 import jwt as pyjwt
 
@@ -18,6 +19,70 @@ from fabric_cm.credmgr.logging import LOG
 EMAIL = "email"
 
 
+def _csrf_check(request: Request) -> bool:
+    """
+    CSRF protection for cookie-authenticated requests.
+    Currently disabled — always returns True.
+    TODO: Re-enable once CORS allowed origins are properly configured across all deployments.
+    Validates that Origin or Referer header matches the configured base URL
+    or any of the CORS allowed origins.
+    Requests with Bearer token auth bypass this check (no cookie = no CSRF risk).
+    """
+    return True
+
+    if request.method in ('GET', 'HEAD', 'OPTIONS'):
+        return True
+
+    # If using Bearer token auth, CSRF is not a concern
+    if 'authorization' in [h.casefold() for h in request.headers.keys()]:
+        return True
+
+    # If the request carries a valid vouch cookie, the user was authenticated
+    # through vouch-proxy/CILogon. The cookie's JWT signature is verified below
+    # in vouch_authorize(), so a valid cookie is proof of authentication and
+    # the cross-origin request from the portal is legitimate.
+    cookie_name = CONFIG_OBJ.get_vouch_cookie_name()
+    cookie = request.cookies.get(cookie_name)
+    if cookie:
+        try:
+            vouch_secret = CONFIG_OBJ.get_vouch_secret()
+            vouch_compression = CONFIG_OBJ.is_vouch_cookie_compressed()
+            status, _ = JWTManager.decode(cookie=cookie, secret=vouch_secret,
+                                          compression=vouch_compression, verify=True)
+            if status == ValidateCode.VALID:
+                return True
+        except Exception:
+            pass
+
+    # Build set of allowed origin netlocs from base_url + CORS allowed origins
+    allowed_netlocs = set()
+    try:
+        base_url = CONFIG_OBJ.get_base_url()
+        allowed_netlocs.add(urlparse(base_url).netloc)
+    except Exception:
+        pass
+
+    for cors_origin in CONFIG_OBJ.get_cors_allowed_origins():
+        netloc = urlparse(cors_origin).netloc
+        if netloc:
+            allowed_netlocs.add(netloc)
+
+    if not allowed_netlocs:
+        # No origins configured — skip CSRF check
+        return True
+
+    origin = request.headers.get('Origin')
+    if origin:
+        return urlparse(origin).netloc in allowed_netlocs
+
+    referer = request.headers.get('Referer')
+    if referer:
+        return urlparse(referer).netloc in allowed_netlocs
+
+    # No Origin or Referer — block (same-origin requests always include one)
+    return False
+
+
 def vouch_authorize(request: Request) -> Union[dict, None]:
     """
     Decode vouch cookie and extract identity and refresh tokens.
@@ -31,13 +96,18 @@ def vouch_authorize(request: Request) -> Union[dict, None]:
         vouch_secret = CONFIG_OBJ.get_vouch_secret()
         vouch_compression = CONFIG_OBJ.is_vouch_cookie_compressed()
         status, decoded_cookie = JWTManager.decode(cookie=cookie, secret=vouch_secret,
-                                                   compression=vouch_compression, verify=False)
+                                                   compression=vouch_compression, verify=True)
         if status == ValidateCode.VALID:
             ci_logon_id_token = decoded_cookie.get('PIdToken')
             refresh_token = decoded_cookie.get('PRefreshToken')
             from_cookie = True
 
     if ci_logon_id_token is not None and refresh_token is not None and cookie is not None:
+        # SECURITY NOTE: When PIdToken comes from a vouch cookie, member_of
+        # was stripped to reduce cookie size, which invalidates the CILogon
+        # signature. The vouch cookie's own JWT signature IS verified above
+        # (verify=True), so the PIdToken integrity is transitively protected.
+        # Signature verification is only skipped for the inner CILogon JWT.
         if from_cookie:
             try:
                 claims_or_exception = pyjwt.decode(ci_logon_id_token, options={"verify_signature": False})
@@ -86,6 +156,9 @@ def validate_authorization_token(token: str) -> Union[dict, str]:
 
 async def get_login_claims(request: Request) -> dict:
     """FastAPI dependency: requires vouch cookie login."""
+    if not _csrf_check(request):
+        LOG.warning("CSRF check failed: Origin/Referer mismatch")
+        raise HTTPException(status_code=401, detail='Request origin not allowed')
     cookie_name = CONFIG_OBJ.get_vouch_cookie_name()
     if cookie_name not in request.cookies:
         details = 'Login required'
@@ -101,6 +174,9 @@ async def get_login_claims(request: Request) -> dict:
 
 async def get_login_or_token_claims(request: Request) -> dict:
     """FastAPI dependency: accepts either Authorization header or vouch cookie."""
+    if not _csrf_check(request):
+        LOG.warning("CSRF check failed: Origin/Referer mismatch")
+        raise HTTPException(status_code=401, detail='Request origin not allowed')
     if 'authorization' in [h.casefold() for h in request.headers.keys()]:
         claims = validate_authorization_token(request.headers.get('authorization'))
         if isinstance(claims, dict):

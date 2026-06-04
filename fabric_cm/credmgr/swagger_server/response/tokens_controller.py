@@ -22,6 +22,7 @@
 # SOFTWARE.
 #
 # Author Komal Thareja (kthare10@renci.org)
+import re
 from datetime import datetime
 
 from fastapi import Request
@@ -40,10 +41,15 @@ from fabric_cm.credmgr.swagger_server.response.constants import HTTP_METHOD_POST
     TOKENS_VALIDATE_URL, TOKENS_DELETE_URL, TOKENS_DELETE_TOKEN_HASH_URL, HTTP_METHOD_DELETE, \
     TOKENS_CREATE_CLI_URL, TOKENS_CREATE_LLM_URL, TOKENS_DELETE_LLM_URL, TOKENS_LLM_KEYS_URL, TOKENS_LLM_MODELS_URL
 from fabric_cm.credmgr.logging import LOG
-from fabric_cm.credmgr.swagger_server.response.cors_response import cors_200, cors_500, cors_400
+from fabric_cm.credmgr.swagger_server.response.cors_response import cors_200, cors_500, cors_400, cors_401
 from fabric_cm.credmgr.config import CONFIG_OBJ
 from fabric_cm.credmgr.swagger_server.dependencies import vouch_authorize
 from urllib.parse import quote, urlparse, urlencode, urlunparse, parse_qs
+
+# Input validation constants
+_TOKEN_HASH_PATTERN = re.compile(r'^[0-9a-f]{64}$')
+_MAX_LIMIT = 500
+_MAX_OFFSET = 100000
 
 
 def _get_remote_addr(request: Request) -> str:
@@ -79,6 +85,8 @@ def tokens_create_post(request: Request, project_id: str, project_name: str, sco
     :rtype: Success
     """
     received_counter.labels(HTTP_METHOD_POST, TOKENS_CREATE_URL).inc()
+    if comment is not None and (len(comment) < 10 or len(comment) > 100):
+        return cors_400(details="Comment must be between 10 and 100 characters.")
     try:
         credmgr = OAuthCredMgr()
         remote_addr = _get_remote_addr(request)
@@ -100,7 +108,7 @@ def tokens_create_post(request: Request, project_id: str, project_name: str, sco
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_POST, TOKENS_CREATE_URL).inc()
-        return cors_500(details=str(ex))
+        return cors_500(details="An internal error occurred. Please try again or contact support.")
 
 
 def tokens_delete_delete(claims: dict = None):  # noqa: E501
@@ -128,7 +136,7 @@ def tokens_delete_delete(claims: dict = None):  # noqa: E501
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_DELETE, TOKENS_DELETE_URL).inc()
-        return cors_500(details=str(ex))
+        return cors_500(details="An internal error occurred. Please try again or contact support.")
 
 
 def tokens_delete_token_hash_delete(token_hash: str, claims: dict = None):  # noqa: E501
@@ -144,6 +152,8 @@ def tokens_delete_token_hash_delete(token_hash: str, claims: dict = None):  # no
     :rtype: Status200OkNoContent
     """
     received_counter.labels(HTTP_METHOD_DELETE, TOKENS_DELETE_TOKEN_HASH_URL).inc()
+    if token_hash and not _TOKEN_HASH_PATTERN.match(token_hash):
+        return cors_400(details="Invalid token hash format. Expected 64-character hex string.")
     try:
         credmgr = OAuthCredMgr()
         credmgr.delete_tokens(token_hash=token_hash, user_email=claims.get(OAuthCredMgr.EMAIL))
@@ -161,7 +171,7 @@ def tokens_delete_token_hash_delete(token_hash: str, claims: dict = None):  # no
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_DELETE, TOKENS_DELETE_TOKEN_HASH_URL).inc()
-        return cors_500(details=str(ex))
+        return cors_500(details="An internal error occurred. Please try again or contact support.")
 
 
 def tokens_refresh_post(request: Request, body: RequestModel, project_id=None, project_name=None, scope=None):  # noqa: E501
@@ -201,11 +211,14 @@ def tokens_refresh_post(request: Request, body: RequestModel, project_id=None, p
         LOG.exception(ex.error)
         LOG.exception(ex.description)
         failure_counter.labels(HTTP_METHOD_POST, TOKENS_REFRESH_URL).inc()
-        return cors_500(details=str(ex.description))
+        error_type = getattr(ex, 'error', '') or ''
+        if error_type in ('invalid_token', 'invalid_grant'):
+            return cors_401(details="Refresh token is invalid or has expired. Please re-login to obtain a new token.")
+        return cors_500(details="An internal error occurred. Please try again or contact support.")
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_POST, TOKENS_REFRESH_URL).inc()
-        return cors_500(details=str(ex))
+        return cors_500(details="An internal error occurred. Please try again or contact support.")
 
 
 def tokens_revoke_post(body: RequestModel, claims: dict = None):  # noqa: E501
@@ -236,7 +249,7 @@ def tokens_revoke_post(body: RequestModel, claims: dict = None):  # noqa: E501
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_POST, TOKENS_REVOKE_URL).inc()
-        return cors_500(details=str(ex))
+        return cors_500(details="An internal error occurred. Please try again or contact support.")
 
 
 def tokens_revokes_post(request: Request, body: TokenPost, claims: dict = None):  # noqa: E501
@@ -276,7 +289,7 @@ def tokens_revokes_post(request: Request, body: TokenPost, claims: dict = None):
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_POST, TOKENS_REVOKES_URL).inc()
-        return cors_500(details=str(ex))
+        return cors_500(details="An internal error occurred. Please try again or contact support.")
 
 
 def tokens_get(token_hash=None, project_id=None, expires=None, states=None, limit=None, offset=None,
@@ -302,11 +315,19 @@ def tokens_get(token_hash=None, project_id=None, expires=None, states=None, limi
     """
     received_counter.labels(HTTP_METHOD_GET, TOKENS_REVOKE_LIST_URL).inc()
 
+    if token_hash and not _TOKEN_HASH_PATTERN.match(token_hash):
+        return cors_400(details="Invalid token hash format. Expected 64-character hex string.")
+
     if expires is not None:
         try:
             expires = datetime.strptime(expires, OAuthCredMgr.TIME_FORMAT)
         except Exception:
             return cors_400(f"Expiry time is not in format {OAuthCredMgr.TIME_FORMAT}")
+
+    if limit is not None and (limit < 1 or limit > _MAX_LIMIT):
+        return cors_400(details=f"limit must be between 1 and {_MAX_LIMIT}.")
+    if offset is not None and (offset < 0 or offset > _MAX_OFFSET):
+        return cors_400(details=f"offset must be between 0 and {_MAX_OFFSET}.")
 
     try:
         credmgr = OAuthCredMgr()
@@ -325,7 +346,7 @@ def tokens_get(token_hash=None, project_id=None, expires=None, states=None, limi
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_GET, TOKENS_REVOKE_LIST_URL).inc()
-        return cors_500(details=str(ex))
+        return cors_500(details="An internal error occurred. Please try again or contact support.")
 
 
 def tokens_revoke_list_get(project_id: str):  # noqa: E501
@@ -351,7 +372,7 @@ def tokens_revoke_list_get(project_id: str):  # noqa: E501
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_GET, TOKENS_REVOKE_LIST_URL).inc()
-        return cors_500(details=str(ex))
+        return cors_500(details="An internal error occurred. Please try again or contact support.")
 
 
 def tokens_validate_post(body: TokenPost):  # noqa: E501
@@ -385,7 +406,7 @@ def tokens_validate_post(body: TokenPost):  # noqa: E501
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_POST, TOKENS_VALIDATE_URL).inc()
-        return cors_500(details=str(ex))
+        return cors_500(details="An internal error occurred. Please try again or contact support.")
 
 
 def _validate_localhost_redirect(redirect_uri: str):
@@ -393,18 +414,45 @@ def _validate_localhost_redirect(redirect_uri: str):
 
     Returns a tuple (scheme, netloc, path) built from validated parts, or None if invalid.
     This reconstructs the URL from validated components to avoid passing raw user input through.
+    Only allows unprivileged ports (1024-65535) to prevent probing internal services.
     """
     if not redirect_uri:
         return None
     parsed = urlparse(redirect_uri)
     if (parsed.scheme == "http" and
             parsed.hostname in ("localhost", "127.0.0.1") and
-            parsed.port is not None):
+            parsed.port is not None and
+            1024 <= parsed.port <= 65535):
         # Reconstruct from validated parts only — breaks taint chain for static analysis
         safe_netloc = f"{parsed.hostname}:{parsed.port}"
         safe_path = parsed.path if parsed.path else "/"
         return ("http", safe_netloc, safe_path)
     return None
+
+
+_UUID_RE = re.compile(r'^[0-9a-fA-F-]{1,64}$|^all$', re.IGNORECASE)
+_SCOPE_RE = re.compile(r'^[a-zA-Z0-9_:.-]{1,64}$')
+_PROJECT_NAME_RE = re.compile(r'^[a-zA-Z0-9 _\-().]{1,256}$')
+_COMMENT_RE = re.compile(r'^[a-zA-Z0-9 _\-.,!?/()]{0,256}$')
+
+
+def _sanitize_cli_params(project_id, project_name, scope, lifetime, comment):
+    """Validate and sanitize user-supplied CLI parameters before storing in a cookie.
+
+    Returns sanitized (project_id, project_name, scope, lifetime, comment) or raises
+    ValueError with a description of the invalid parameter.
+    """
+    if project_id is not None and not _UUID_RE.match(str(project_id)):
+        raise ValueError("project_id must be a valid UUID or 'all'")
+    if project_name is not None and not _PROJECT_NAME_RE.match(str(project_name)):
+        raise ValueError("project_name contains invalid characters")
+    if scope is not None and not _SCOPE_RE.match(str(scope)):
+        raise ValueError("scope contains invalid characters")
+    if not isinstance(lifetime, int) or not (1 <= lifetime <= 262800):
+        raise ValueError("lifetime must be an integer between 1 and 262800")
+    if comment is not None and not _COMMENT_RE.match(str(comment)):
+        raise ValueError("comment contains invalid characters")
+    return project_id, project_name, scope, lifetime, comment
 
 
 def tokens_create_cli_get(request: Request, project_id: str = None, project_name: str = None,
@@ -429,6 +477,7 @@ def tokens_create_cli_get(request: Request, project_id: str = None, project_name
     :rtype: Redirect 302
     """
     import json as _json
+    import base64 as _base64
 
     COOKIE_NAME = "fabric_cli_params"
 
@@ -438,7 +487,7 @@ def tokens_create_cli_get(request: Request, project_id: str = None, project_name
         cli_cookie = request.cookies.get(COOKIE_NAME)
         if cli_cookie and not redirect_uri:
             try:
-                saved = _json.loads(cli_cookie)
+                saved = _json.loads(_base64.urlsafe_b64decode(cli_cookie).decode())
                 redirect_uri = redirect_uri or saved.get("redirect_uri")
                 project_id = project_id or saved.get("project_id")
                 project_name = project_name or saved.get("project_name")
@@ -465,19 +514,29 @@ def tokens_create_cli_get(request: Request, project_id: str = None, project_name
             return_url = f"{base_url}/credmgr/tokens/create_cli"
             login_url = f"{base_url}/cli-login?url={quote(return_url, safe='')}"
 
-            # Save the original params so we can restore them after login
-            cli_params = _json.dumps({
+            # Validate user-supplied parameters before storing in cookie
+            try:
+                project_id, project_name, scope, lifetime, comment = _sanitize_cli_params(
+                    project_id, project_name, scope, lifetime, comment)
+            except ValueError as e:
+                failure_counter.labels(HTTP_METHOD_GET, TOKENS_CREATE_CLI_URL).inc()
+                return cors_400(details=str(e))
+
+            # Save the sanitized params so we can restore them after login.
+            # Base64-encode the JSON to break the taint chain from user input
+            # to cookie value, preventing cookie injection (CodeQL py/cookie-injection).
+            cli_params = _base64.urlsafe_b64encode(_json.dumps({
                 "redirect_uri": redirect_uri,
                 "project_id": project_id,
                 "project_name": project_name,
                 "scope": scope,
                 "lifetime": lifetime,
                 "comment": comment,
-            })
+            }).encode()).decode()
 
             LOG.info("CLI create: user not logged in, saving params and redirecting to login")
             resp = RedirectResponse(url=login_url, status_code=302)
-            resp.set_cookie(key=COOKIE_NAME, value=cli_params, max_age=600, httponly=True, samesite='lax')
+            resp.set_cookie(key=COOKIE_NAME, value=cli_params, max_age=600, httponly=True, secure=True, samesite='lax')
             return resp
 
         # Phase 2: logged in — create token and redirect to CLI callback
@@ -609,7 +668,7 @@ fetch(CALLBACK_URL, {{ mode: 'no-cors' }})
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_GET, TOKENS_CREATE_CLI_URL).inc()
-        return cors_500(details=str(ex))
+        return cors_500(details="An internal error occurred. Please try again or contact support.")
 
 
 def tokens_create_llm_post(key_name: str = None, comment: str = None,
@@ -658,7 +717,7 @@ def tokens_create_llm_post(key_name: str = None, comment: str = None,
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_POST, TOKENS_CREATE_LLM_URL).inc()
-        return cors_500(details=str(ex))
+        return cors_500(details="An internal error occurred. Please try again or contact support.")
 
 
 def tokens_delete_llm_delete(llm_key_id: str, claims: dict = None):  # noqa: E501
@@ -674,6 +733,8 @@ def tokens_delete_llm_delete(llm_key_id: str, claims: dict = None):  # noqa: E50
     :rtype: Status200OkNoContent
     """
     received_counter.labels(HTTP_METHOD_DELETE, TOKENS_DELETE_LLM_URL).inc()
+    if not llm_key_id or not re.match(r'^[a-zA-Z0-9_-]+$', llm_key_id) or len(llm_key_id) > 256:
+        return cors_400(details="Invalid LLM key identifier.")
     try:
         credmgr = OAuthCredMgr()
         cookie = claims.get(OAuthCredMgr.COOKIE)
@@ -694,7 +755,7 @@ def tokens_delete_llm_delete(llm_key_id: str, claims: dict = None):  # noqa: E50
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_DELETE, TOKENS_DELETE_LLM_URL).inc()
-        return cors_500(details=str(ex))
+        return cors_500(details="An internal error occurred. Please try again or contact support.")
 
 
 def tokens_llm_keys_get(limit: int = 200, offset: int = 0,
@@ -713,6 +774,10 @@ def tokens_llm_keys_get(limit: int = 200, offset: int = 0,
     :rtype: Status200OkNoContent
     """
     received_counter.labels(HTTP_METHOD_GET, TOKENS_LLM_KEYS_URL).inc()
+    if limit is not None and (limit < 1 or limit > _MAX_LIMIT):
+        return cors_400(details=f"limit must be between 1 and {_MAX_LIMIT}.")
+    if offset is not None and (offset < 0 or offset > _MAX_OFFSET):
+        return cors_400(details=f"offset must be between 0 and {_MAX_OFFSET}.")
     try:
         credmgr = OAuthCredMgr()
         cookie = claims.get(OAuthCredMgr.COOKIE)
@@ -732,7 +797,7 @@ def tokens_llm_keys_get(limit: int = 200, offset: int = 0,
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_GET, TOKENS_LLM_KEYS_URL).inc()
-        return cors_500(details=str(ex))
+        return cors_500(details="An internal error occurred. Please try again or contact support.")
 
 
 def tokens_llm_models_get(claims: dict = None):  # noqa: E501
@@ -762,4 +827,4 @@ def tokens_llm_models_get(claims: dict = None):  # noqa: E501
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_GET, TOKENS_LLM_MODELS_URL).inc()
-        return cors_500(details=str(ex))
+        return cors_500(details="An internal error occurred. Please try again or contact support.")

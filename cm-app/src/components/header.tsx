@@ -14,13 +14,13 @@ export default function Header({ cmUserStatus }: HeaderProps) {
   const pathname = usePathname();
 
   const handleLogin = () => {
-    localStorage.removeItem("cmUserStatus");
+    sessionStorage.removeItem("cmUserStatus");
     window.location.href = "/login";
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("cmUserStatus");
-    localStorage.removeItem("cmUserID");
+    sessionStorage.removeItem("cmUserStatus");
+    sessionStorage.removeItem("cmUserID");
     window.location.href = "/logout";
   };
 
