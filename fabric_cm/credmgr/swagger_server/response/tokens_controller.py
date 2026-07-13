@@ -29,8 +29,10 @@ from fastapi import Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from oauthlib.oauth2.rfc6749.errors import CustomOAuth2Error
 
+from http.client import BAD_REQUEST
+
 from fabric_cm.credmgr.common.utils import Utils
-from fabric_cm.credmgr.core.oauth_credmgr import OAuthCredMgr, TokenState
+from fabric_cm.credmgr.core.oauth_credmgr import OAuthCredMgr, OAuthCredMgrError, TokenState
 from fabric_cm.credmgr.swagger_server.models import Tokens, Token, Status200OkNoContent, Status200OkNoContentData, \
     RevokeList, DecodedToken
 from fabric_cm.credmgr.swagger_server.models.request import Request as RequestModel  # noqa: E501
@@ -714,6 +716,12 @@ def tokens_create_llm_post(key_name: str = None, comment: str = None,
         LOG.debug(response)
         success_counter.labels(HTTP_METHOD_POST, TOKENS_CREATE_LLM_URL).inc()
         return cors_200(response_body=response)
+    except OAuthCredMgrError as ex:
+        LOG.exception(ex)
+        failure_counter.labels(HTTP_METHOD_POST, TOKENS_CREATE_LLM_URL).inc()
+        if ex.get_http_error_code() == BAD_REQUEST:
+            return cors_400(details=str(ex))
+        return cors_500(details="An internal error occurred. Please try again or contact support.")
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_POST, TOKENS_CREATE_LLM_URL).inc()

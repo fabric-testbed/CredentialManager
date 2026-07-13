@@ -45,7 +45,7 @@ from fabric_cm.credmgr.token.token_encoder import TokenEncoder
 from fabric_cm.credmgr.swagger_server import jwt_validator, jwk_public_key_rsa
 from fss_utils.jwt_manager import ValidateCode
 
-from http.client import INTERNAL_SERVER_ERROR, NOT_FOUND
+from http.client import INTERNAL_SERVER_ERROR, NOT_FOUND, BAD_REQUEST
 
 from fabric_cm.credmgr.external_apis.litellm_api import LiteLLMApi, LiteLLMApiError
 from ..common.utils import Utils
@@ -539,6 +539,19 @@ class OAuthCredMgr:
         except LiteLLMApiError as e:
             LOG.warning(f"Could not add user {uuid} to team {team_id}: {e}")
 
+    @staticmethod
+    def _llm_key_display_name(key: dict) -> str:
+        """
+        User-facing name of an LLM key. LiteLLM's key_alias is globally unique
+        across all users, so the alias stored in the proxy is namespaced with the
+        user UUID and the user-chosen name lives in metadata. Keys created before
+        namespacing fall back to the raw alias.
+        @param key key record as returned by the LLM proxy
+        @return display name or None
+        """
+        metadata = key.get('metadata') or {}
+        return metadata.get('key_name') or key.get('key_alias')
+
     def create_llm_key(self, cookie: str = None, token: str = None, key_name: str = None,
                        comment: str = None, duration_days: int = 30, models: list = None) -> dict:
         """
@@ -585,7 +598,7 @@ class OAuthCredMgr:
         # Ensure user exists in LLM proxy and is part of the team
         self._ensure_llm_user_and_team(llm_api, uuid, email)
 
-        # Enforce max active LLM keys per user (limit: 10)
+        # Enforce max active LLM keys per user (limit: 10) and per-user key name uniqueness
         max_llm_keys = 10
         try:
             existing_keys = llm_api.list_keys(user_id=uuid)
@@ -593,6 +606,7 @@ class OAuthCredMgr:
             from datetime import datetime, timezone
             now = datetime.now(timezone.utc)
             active_count = 0
+            active_names = set()
             for k in existing_keys:
                 expires_str = k.get('expires')
                 if expires_str:
@@ -603,10 +617,18 @@ class OAuthCredMgr:
                     except (ValueError, TypeError):
                         pass
                 active_count += 1
+                name = self._llm_key_display_name(k)
+                if name:
+                    active_names.add(name)
             if active_count >= max_llm_keys:
                 raise OAuthCredMgrError(
                     f"User {email} already has {active_count} active LLM keys "
                     f"(maximum {max_llm_keys}). Please delete unused keys first.")
+            if key_name and key_name in active_names:
+                raise OAuthCredMgrError(
+                    f"An LLM key named '{key_name}' already exists. "
+                    f"Key names must be unique; please choose a different name.",
+                    http_error_code=BAD_REQUEST)
         except OAuthCredMgrError:
             raise
         except Exception as ex:
@@ -623,9 +645,16 @@ class OAuthCredMgr:
 
         metadata = {'user_email': email, 'fabric_user_uuid': uuid}
 
+        # LiteLLM enforces key_alias uniqueness globally across all users, so
+        # namespace the alias with the user UUID; the user-chosen name is kept
+        # in metadata and restored via _llm_key_display_name when listing keys.
+        key_alias = f"{key_name}-{uuid}" if key_name else None
+        if key_name:
+            metadata['key_name'] = key_name
+
         # Generate the key with team_id so it's associated with the team
         result = llm_api.generate_key(user_id=uuid, user_email=email, team_id=team_id,
-                                          key_alias=key_name, duration=duration,
+                                          key_alias=key_alias, duration=duration,
                                           max_budget=max_budget, metadata=metadata,
                                           models=models)
 
@@ -754,6 +783,10 @@ class OAuthCredMgr:
                 except (ValueError, TypeError) as ex:
                     LOG.warning(f"Failed to parse expires field '{expires_str}': {ex}")
             active_keys.append(key)
+
+        # Replace the UUID-namespaced alias with the user-chosen name
+        for key in active_keys:
+            key['key_alias'] = self._llm_key_display_name(key)
 
         return active_keys
 
