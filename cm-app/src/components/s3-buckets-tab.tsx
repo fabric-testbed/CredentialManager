@@ -6,11 +6,12 @@
  * Authorization mirrors the Ceph Manager API exactly — the UI only hides what
  * the server would refuse anyway:
  *
- *   - Facility admins and owners of the "Service - FABRIC Ceph" project
- *     ("operators") may create and delete buckets, and see every bucket.
- *   - Everyone else sees only the buckets they own. The server pins a
- *     non-operator's listing to their own uid regardless of what is requested,
- *     so this is defence in depth, not the control itself.
+ *   - Anyone may create a bucket, but only owned by themselves. The server
+ *     forces the owner to the caller's uid for non-operators, so this is
+ *     defence in depth, not the control itself.
+ *   - Deleting a bucket, and changing quota or versioning, stays with facility
+ *     admins and owners of the "Service - FABRIC Ceph" project ("operators").
+ *   - Operators see every bucket; everyone else sees only their own.
  *
  * An S3 uid is the user's bastion login, the same identity used for CephFS
  * subvolumes.
@@ -304,7 +305,8 @@ export function S3BucketsTab({
 
   async function handleCreate() {
     const name = newBucket.trim().toLowerCase();
-    const owner = newOwner.trim();
+    // Non-operators always own what they create; the server enforces this too.
+    const owner = isOperator ? newOwner.trim() : bastionLogin;
     if (!BUCKET_NAME_RE.test(name)) {
       toast.error(
         "Bucket name must be 3–63 characters, lowercase letters, digits, dots or hyphens, and start and end with a letter or digit."
@@ -312,7 +314,11 @@ export function S3BucketsTab({
       return;
     }
     if (!owner) {
-      toast.error("Owner uid is required (a user's bastion login).");
+      toast.error(
+        isOperator
+          ? "Select an owner for the bucket."
+          : "Your bastion login is unavailable, so the bucket has no owner."
+      );
       return;
     }
     // Validate the quota before creating anything: a bad value thrown after
@@ -525,19 +531,18 @@ use_https = ${endpoint.startsWith("https://") ? "True" : "False"}`
           <Button variant="outline" size="sm" onClick={openCredentials}>
             Get S3 Credentials
           </Button>
-          {isOperator && (
-            <Button size="sm" onClick={() => setCreateOpen(true)}>
-              Create Bucket
-            </Button>
-          )}
+          <Button size="sm" onClick={() => setCreateOpen(true)}>
+            Create Bucket
+          </Button>
         </div>
       </div>
 
       {!isOperator && (
         <p className="text-xs text-muted-foreground">
-          Creating and deleting buckets is restricted to facility administrators
-          and owners of the FABRIC Ceph service project. You can read and write
-          objects in your own buckets using the credentials above.
+          You can create buckets and read and write objects in them using the
+          credentials above. Buckets you create are owned by you. Deleting a
+          bucket, and changing quotas or versioning, is restricted to facility
+          administrators and owners of the FABRIC Ceph service project.
         </p>
       )}
 
@@ -640,6 +645,17 @@ use_https = ${endpoint.startsWith("https://") ? "True" : "False"}`
                 3–63 chars: lowercase letters, digits, dots, hyphens.
               </p>
             </div>
+            {!isOperator ? (
+              <div>
+                <Label>Owner</Label>
+                <div className="h-9 flex items-center px-3 text-sm text-muted-foreground font-mono">
+                  {bastionLogin}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Buckets you create are owned by you.
+                </p>
+              </div>
+            ) : (
             <div>
               <Label htmlFor="bucket-owner">Owner (existing S3 user)</Label>
               <select
@@ -669,6 +685,7 @@ use_https = ${endpoint.startsWith("https://") ? "True" : "False"}`
                 </p>
               )}
             </div>
+            )}
             <div>
               <Label htmlFor="bucket-versioning">Versioning</Label>
               <select
