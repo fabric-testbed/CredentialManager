@@ -65,7 +65,11 @@ import {
   getS3UserKeys,
   listS3Buckets,
   listS3Users,
+  setS3BucketQuota,
 } from "@/services/storage-service";
+
+/** GiB → KiB, the unit the quota API speaks. */
+const GIB_TO_KIB = 1024 * 1024;
 
 export interface S3Bucket {
   name: string;
@@ -149,7 +153,15 @@ export function S3BucketsTab({
   const [newBucket, setNewBucket] = useState("");
   const [newOwner, setNewOwner] = useState("");
   const [newVersioning, setNewVersioning] = useState<"Disabled" | "Enabled">("Disabled");
+  const [newSizeGib, setNewSizeGib] = useState("");
+  const [newMaxObjects, setNewMaxObjects] = useState("");
   const [creating, setCreating] = useState(false);
+
+  // Quota dialog for an existing bucket
+  const [quotaTarget, setQuotaTarget] = useState<S3Bucket | null>(null);
+  const [quotaSizeGib, setQuotaSizeGib] = useState("");
+  const [quotaMaxObjects, setQuotaMaxObjects] = useState("");
+  const [savingQuota, setSavingQuota] = useState(false);
 
   // Delete confirmation
   const [deleteTarget, setDeleteTarget] = useState<S3Bucket | null>(null);
@@ -287,6 +299,15 @@ export function S3BucketsTab({
       toast.error("Owner uid is required (a user's bastion login).");
       return;
     }
+    // Validate the quota before creating anything: a bad value thrown after
+    // the create would be reported as "create failed" for a bucket that exists.
+    let quota;
+    try {
+      quota = buildQuota(newSizeGib, newMaxObjects);
+    } catch (ex) {
+      toast.error(ex instanceof Error ? ex.message : String(ex));
+      return;
+    }
     setCreating(true);
     try {
       const token = await ensureToken();
@@ -295,16 +316,80 @@ export function S3BucketsTab({
         uid: owner,
         versioning: newVersioning,
       });
+      // Quota is a separate call; the bucket exists either way, so a failure
+      // here is reported without claiming the create failed.
+      if (quota) {
+        try {
+          await setS3BucketQuota(token, cluster, name, quota);
+        } catch (ex) {
+          toast.error(
+            getErrorMessage(ex, `Bucket "${name}" was created, but its quota could not be set.`)
+          );
+        }
+      }
       toast.success(`Bucket "${name}" created for ${owner}.`);
       setCreateOpen(false);
       setNewBucket("");
       setNewOwner("");
       setNewVersioning("Disabled");
+      setNewSizeGib("");
+      setNewMaxObjects("");
       await loadBuckets();
     } catch (ex) {
       toast.error(getErrorMessage(ex, "Failed to create bucket."));
     } finally {
       setCreating(false);
+    }
+  }
+
+  /**
+   * Build a quota payload from the form, or null when both fields are blank.
+   * Blank means "no limit", which is expressed by disabling the quota rather
+   * than sending a zero.
+   */
+  function buildQuota(sizeGib: string, maxObjects: string) {
+    const size = sizeGib.trim();
+    const objs = maxObjects.trim();
+    if (!size && !objs) return null;
+    const payload: {
+      enabled: boolean;
+      max_size_kb?: number;
+      max_objects?: number;
+    } = { enabled: true };
+    if (size) {
+      const n = Number(size);
+      if (!Number.isFinite(n) || n <= 0) throw new Error("Max size must be a positive number of GiB.");
+      payload.max_size_kb = Math.round(n * GIB_TO_KIB);
+    }
+    if (objs) {
+      const n = Number(objs);
+      if (!Number.isInteger(n) || n <= 0) throw new Error("Max objects must be a positive whole number.");
+      payload.max_objects = n;
+    }
+    return payload;
+  }
+
+  async function handleSaveQuota() {
+    if (!quotaTarget) return;
+    setSavingQuota(true);
+    try {
+      const token = await ensureToken();
+      const quota =
+        buildQuota(quotaSizeGib, quotaMaxObjects) ??
+        // Both blank: explicitly lift the limit.
+        { enabled: false };
+      await setS3BucketQuota(token, cluster, quotaTarget.name, quota);
+      toast.success(
+        quota.enabled
+          ? `Quota updated for "${quotaTarget.name}".`
+          : `Quota removed from "${quotaTarget.name}".`
+      );
+      setQuotaTarget(null);
+      await loadBuckets();
+    } catch (ex) {
+      toast.error(getErrorMessage(ex, "Failed to set bucket quota."));
+    } finally {
+      setSavingQuota(false);
     }
   }
 
@@ -457,7 +542,7 @@ use_https = ${endpoint.startsWith("https://") ? "True" : "False"}`
                 <TableHead className="text-right">Objects</TableHead>
                 <TableHead className="text-right">Size</TableHead>
                 <TableHead>Versioning</TableHead>
-                {isOperator && <TableHead className="w-24">Actions</TableHead>}
+                {isOperator && <TableHead className="w-40">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -484,16 +569,29 @@ use_https = ${endpoint.startsWith("https://") ? "True" : "False"}`
                   </TableCell>
                   {isOperator && (
                     <TableCell>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => {
-                          setDeleteTarget(b);
-                          setPurgeObjects(false);
-                        }}
-                      >
-                        Delete
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setQuotaTarget(b);
+                            setQuotaSizeGib("");
+                            setQuotaMaxObjects("");
+                          }}
+                        >
+                          Quota
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => {
+                            setDeleteTarget(b);
+                            setPurgeObjects(false);
+                          }}
+                        >
+                          Delete
+                        </Button>
+                      </div>
                     </TableCell>
                   )}
                 </TableRow>
@@ -566,6 +664,36 @@ use_https = ${endpoint.startsWith("https://") ? "True" : "False"}`
                 <option value="Enabled">Enabled</option>
               </select>
             </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="bucket-size">Max size (GiB)</Label>
+                <Input
+                  id="bucket-size"
+                  type="number"
+                  min="0"
+                  step="any"
+                  value={newSizeGib}
+                  placeholder="unlimited"
+                  onChange={(e) => setNewSizeGib(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="bucket-objects">Max objects</Label>
+                <Input
+                  id="bucket-objects"
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={newMaxObjects}
+                  placeholder="unlimited"
+                  onChange={(e) => setNewMaxObjects(e.target.value)}
+                />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Leave blank for no limit. Quotas can be changed later from the
+              bucket&apos;s Quota action.
+            </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)}>
@@ -573,6 +701,63 @@ use_https = ${endpoint.startsWith("https://") ? "True" : "False"}`
             </Button>
             <Button onClick={handleCreate} disabled={creating}>
               {creating ? "Creating…" : "Create"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ===== Bucket quota ===== */}
+      <Dialog
+        open={!!quotaTarget}
+        onOpenChange={(open) => !open && setQuotaTarget(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Quota — {quotaTarget?.name}</DialogTitle>
+            <DialogDescription>
+              Caps this one bucket. Currently using{" "}
+              {formatSize(quotaTarget?.size_kb)} across{" "}
+              {quotaTarget?.num_objects ?? 0} object(s).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="quota-size">Max size (GiB)</Label>
+                <Input
+                  id="quota-size"
+                  type="number"
+                  min="0"
+                  step="any"
+                  value={quotaSizeGib}
+                  placeholder="unlimited"
+                  onChange={(e) => setQuotaSizeGib(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="quota-objects">Max objects</Label>
+                <Input
+                  id="quota-objects"
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={quotaMaxObjects}
+                  placeholder="unlimited"
+                  onChange={(e) => setQuotaMaxObjects(e.target.value)}
+                />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Leaving both blank removes the quota entirely. Writes that would
+              exceed a quota are rejected by the gateway.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setQuotaTarget(null)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveQuota} disabled={savingQuota}>
+              {savingQuota ? "Saving…" : "Save quota"}
             </Button>
           </DialogFooter>
         </DialogContent>
