@@ -95,6 +95,22 @@ export interface S3User {
   email?: string | null;
   max_buckets?: number;
   suspended?: boolean;
+  system?: boolean;
+}
+
+/** Account the service itself depends on; see PROVISIONER_UID server-side. */
+const PROVISIONER_UID = "fabric-bucket-provisioner";
+
+/**
+ * Control accounts must not be deleted or modified: the admin keypair in the
+ * service config belongs to a system account, and the provisioner is the only
+ * account able to create buckets for users. The server refuses these too — this
+ * just avoids offering an action that would be rejected.
+ */
+function protectedReason(u: S3User): string | null {
+  if (u.uid === PROVISIONER_UID) return "bucket provisioner";
+  if (u.system) return "RGW system account";
+  return null;
 }
 
 interface ProjectMember {
@@ -633,14 +649,17 @@ use_https = ${endpoint.startsWith("https://") ? "True" : "False"}`
                 onChange={(e) => setNewOwner(e.target.value)}
               >
                 <option value="">Select a user…</option>
-                {s3Users.map((u) => (
-                  <option key={u.uid} value={u.uid}>
-                    {u.uid}
-                    {u.display_name && u.display_name !== u.uid
-                      ? ` (${u.display_name})`
-                      : ""}
-                  </option>
-                ))}
+                {/* Control accounts are not valid bucket owners. */}
+                {s3Users
+                  .filter((u) => !protectedReason(u))
+                  .map((u) => (
+                    <option key={u.uid} value={u.uid}>
+                      {u.uid}
+                      {u.display_name && u.display_name !== u.uid
+                        ? ` (${u.display_name})`
+                        : ""}
+                    </option>
+                  ))}
               </select>
               {s3Users.length === 0 && (
                 <p className="text-xs text-muted-foreground mt-1">
@@ -1049,7 +1068,7 @@ use_https = ${endpoint.startsWith("https://") ? "True" : "False"}`
               <TableRow>
                 <TableHead>uid</TableHead>
                 <TableHead>Display name</TableHead>
-                <TableHead className="text-right">Max buckets</TableHead>
+                <TableHead className="text-right">Self-service buckets</TableHead>
                 <TableHead className="w-24">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -1064,27 +1083,43 @@ use_https = ${endpoint.startsWith("https://") ? "True" : "False"}`
                   </TableCell>
                 </TableRow>
               )}
-              {s3Users.map((u) => (
-                <TableRow key={u.uid}>
-                  <TableCell className="font-mono text-xs">{u.uid}</TableCell>
-                  <TableCell>{u.display_name || "—"}</TableCell>
-                  <TableCell className="text-right">
-                    {u.max_buckets ?? "—"}
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => {
-                        setDeleteUserTarget(u);
-                        setPurgeUserData(false);
-                      }}
-                    >
-                      Delete
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {s3Users.map((u) => {
+                const reason = protectedReason(u);
+                return (
+                  <TableRow key={u.uid}>
+                    <TableCell className="font-mono text-xs">
+                      {u.uid}
+                      {reason && (
+                        <Badge variant="secondary" className="ml-2">
+                          {reason}
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>{u.display_name || "—"}</TableCell>
+                    <TableCell className="text-right">
+                      {u.max_buckets === -1 ? "none" : u.max_buckets ?? "—"}
+                    </TableCell>
+                    <TableCell>
+                      {reason ? (
+                        <span className="text-xs text-muted-foreground">
+                          Managed by the service
+                        </span>
+                      ) : (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => {
+                            setDeleteUserTarget(u);
+                            setPurgeUserData(false);
+                          }}
+                        >
+                          Delete
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </CardContent>
