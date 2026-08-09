@@ -1155,6 +1155,7 @@ export default function StoragePage() {
               s3Endpoints={s3EndpointsForCluster}
               isOperator={isOperator}
               bastionLogin={bastionLogin}
+              projectMembers={projectMembers}
               ensureToken={ensureToken}
               getErrorMessage={getErrorMessage}
             />
@@ -1853,6 +1854,7 @@ export default function StoragePage() {
             s3Endpoints={s3EndpointsForCluster}
             isOperator={false}
             bastionLogin={bastionLogin}
+            projectMembers={[]}
             ensureToken={ensureToken}
             getErrorMessage={getErrorMessage}
           />

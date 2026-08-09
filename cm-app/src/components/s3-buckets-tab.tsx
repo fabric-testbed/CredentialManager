@@ -55,12 +55,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   createS3Bucket,
   createS3Key,
+  createS3User,
   deleteS3Bucket,
+  deleteS3User,
   getS3UserKeys,
   listS3Buckets,
+  listS3Users,
 } from "@/services/storage-service";
 
 export interface S3Bucket {
@@ -81,6 +85,20 @@ interface S3KeyPair {
   status?: string;
 }
 
+export interface S3User {
+  uid: string;
+  display_name?: string;
+  email?: string | null;
+  max_buckets?: number;
+  suspended?: boolean;
+}
+
+interface ProjectMember {
+  uuid: string;
+  bastion_login: string;
+  membership_types: string[];
+}
+
 interface Props {
   cluster: string;
   /** RGW S3 endpoints for `cluster`, from /cluster/info. */
@@ -89,6 +107,8 @@ interface Props {
   isOperator: boolean;
   /** The caller's bastion login, which is their S3 uid. */
   bastionLogin: string;
+  /** Service-project members; their bastion logins are the S3 uids to provision. */
+  projectMembers: ProjectMember[];
   ensureToken: () => Promise<string>;
   getErrorMessage: (ex: unknown, fallback: string) => string;
 }
@@ -108,11 +128,21 @@ export function S3BucketsTab({
   s3Endpoints,
   isOperator,
   bastionLogin,
+  projectMembers,
   ensureToken,
   getErrorMessage,
 }: Props) {
   const [buckets, setBuckets] = useState<S3Bucket[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // S3 user management (operators only)
+  const [s3Users, setS3Users] = useState<S3User[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [memberSearch, setMemberSearch] = useState("");
+  const [selectedLogins, setSelectedLogins] = useState<string[]>([]);
+  const [provisioning, setProvisioning] = useState(false);
+  const [deleteUserTarget, setDeleteUserTarget] = useState<S3User | null>(null);
+  const [purgeUserData, setPurgeUserData] = useState(false);
 
   // Create dialog
   const [createOpen, setCreateOpen] = useState(false);
@@ -156,9 +186,93 @@ export function S3BucketsTab({
     }
   }, [cluster, isOperator, bastionLogin, ensureToken, getErrorMessage]);
 
+  const loadS3Users = useCallback(async () => {
+    if (!cluster || !isOperator) return;
+    setUsersLoading(true);
+    try {
+      const token = await ensureToken();
+      const { data } = await listS3Users(token, cluster);
+      setS3Users(Array.isArray(data?.data) ? data.data : []);
+    } catch (ex) {
+      toast.error(getErrorMessage(ex, "Failed to load S3 users."));
+      setS3Users([]);
+    } finally {
+      setUsersLoading(false);
+    }
+  }, [cluster, isOperator, ensureToken, getErrorMessage]);
+
   useEffect(() => {
     loadBuckets();
   }, [loadBuckets]);
+
+  useEffect(() => {
+    loadS3Users();
+  }, [loadS3Users]);
+
+  const existingUids = new Set(s3Users.map((u) => u.uid?.toLowerCase()));
+
+  // Project members who do not yet have an S3 account on this cluster.
+  const provisionableMembers = projectMembers.filter(
+    (m) =>
+      m.bastion_login &&
+      !existingUids.has(m.bastion_login.toLowerCase()) &&
+      m.bastion_login.toLowerCase().includes(memberSearch.trim().toLowerCase())
+  );
+
+  function toggleLogin(login: string) {
+    setSelectedLogins((prev) =>
+      prev.includes(login) ? prev.filter((l) => l !== login) : [...prev, login]
+    );
+  }
+
+  async function handleProvisionUsers() {
+    if (selectedLogins.length === 0) {
+      toast.error("Select at least one project member.");
+      return;
+    }
+    setProvisioning(true);
+    try {
+      const token = await ensureToken();
+      // Provision one at a time so a single failure does not hide the rest;
+      // the endpoint is an upsert, so re-running is safe.
+      const failed: string[] = [];
+      for (const login of selectedLogins) {
+        try {
+          await createS3User(token, cluster, {
+            uid: login,
+            display_name: login,
+          });
+        } catch (ex) {
+          failed.push(login);
+          console.error(`createS3User failed for ${login}`, ex);
+        }
+      }
+      const ok = selectedLogins.length - failed.length;
+      if (ok > 0) toast.success(`Created ${ok} S3 user(s) on ${cluster}.`);
+      if (failed.length > 0) {
+        toast.error(`Failed for: ${failed.join(", ")}`);
+      }
+      setSelectedLogins([]);
+      await loadS3Users();
+    } finally {
+      setProvisioning(false);
+    }
+  }
+
+  async function handleDeleteUser() {
+    if (!deleteUserTarget) return;
+    try {
+      const token = await ensureToken();
+      await deleteS3User(token, cluster, deleteUserTarget.uid, purgeUserData);
+      toast.success(`S3 user "${deleteUserTarget.uid}" deleted.`);
+      setDeleteUserTarget(null);
+      setPurgeUserData(false);
+      await loadS3Users();
+      await loadBuckets();
+    } catch (ex) {
+      toast.error(getErrorMessage(ex, "Failed to delete S3 user."));
+    }
+  }
 
   async function handleCreate() {
     const name = newBucket.trim().toLowerCase();
@@ -285,7 +399,10 @@ host_bucket = ${endpoint.replace(/^https?:\/\//, "")}/%(bucket)
 use_https = ${endpoint.startsWith("https://") ? "True" : "False"}`
     : "";
 
-  return (
+  // Operators get bucket and user management side by side, mirroring the POSIX
+  // side's Subvolumes / CephX Users split. Regular users only ever see their
+  // own buckets, so the extra tab would be empty for them.
+  const bucketsPanel = (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="text-sm text-muted-foreground">
@@ -410,13 +527,30 @@ use_https = ${endpoint.startsWith("https://") ? "True" : "False"}`
               </p>
             </div>
             <div>
-              <Label htmlFor="bucket-owner">Owner uid (bastion login)</Label>
-              <Input
+              <Label htmlFor="bucket-owner">Owner (existing S3 user)</Label>
+              <select
                 id="bucket-owner"
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
                 value={newOwner}
-                placeholder="alice_0000123456"
                 onChange={(e) => setNewOwner(e.target.value)}
-              />
+              >
+                <option value="">Select a user…</option>
+                {s3Users.map((u) => (
+                  <option key={u.uid} value={u.uid}>
+                    {u.uid}
+                    {u.display_name && u.display_name !== u.uid
+                      ? ` (${u.display_name})`
+                      : ""}
+                  </option>
+                ))}
+              </select>
+              {s3Users.length === 0 && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  No S3 users on this cluster yet. Create them from the{" "}
+                  <strong>S3 Users</strong> tab first — a bucket must belong to
+                  an existing user.
+                </p>
+              )}
             </div>
             <div>
               <Label htmlFor="bucket-versioning">Versioning</Label>
@@ -617,5 +751,205 @@ use_https = ${endpoint.startsWith("https://") ? "True" : "False"}`
         </DialogContent>
       </Dialog>
     </div>
+  );
+
+  if (!isOperator) return bucketsPanel;
+
+  const usersPanel = (
+    <div className="space-y-4">
+      {/* --- Provision S3 users from project members --- */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Create S3 Users</CardTitle>
+          <CardDescription>
+            An S3 user id is the member&apos;s bastion login, the same identity
+            used for CephFS. Members who already have an account on{" "}
+            <strong>{cluster}</strong> are not listed.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-end gap-3 flex-wrap">
+            <div className="flex-1 min-w-48">
+              <Label htmlFor="member-search">Filter project members</Label>
+              <Input
+                id="member-search"
+                value={memberSearch}
+                placeholder="bastion login…"
+                onChange={(e) => setMemberSearch(e.target.value)}
+              />
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                setSelectedLogins(
+                  selectedLogins.length === provisionableMembers.length
+                    ? []
+                    : provisionableMembers.map((m) => m.bastion_login)
+                )
+              }
+              disabled={provisionableMembers.length === 0}
+            >
+              {selectedLogins.length === provisionableMembers.length &&
+              provisionableMembers.length > 0
+                ? "Clear selection"
+                : `Select all (${provisionableMembers.length})`}
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleProvisionUsers}
+              disabled={provisioning || selectedLogins.length === 0}
+            >
+              {provisioning
+                ? "Creating…"
+                : `Create ${selectedLogins.length || ""} S3 user(s)`}
+            </Button>
+          </div>
+
+          {provisionableMembers.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              {projectMembers.length === 0
+                ? "No project members loaded."
+                : "Every project member already has an S3 account on this cluster."}
+            </p>
+          ) : (
+            <div className="max-h-64 overflow-y-auto rounded border">
+              {provisionableMembers.map((m) => (
+                <label
+                  key={m.uuid}
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-muted cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedLogins.includes(m.bastion_login)}
+                    onChange={() => toggleLogin(m.bastion_login)}
+                  />
+                  <span className="font-mono text-xs">{m.bastion_login}</span>
+                  {m.membership_types?.includes("owner") && (
+                    <Badge variant="secondary">owner</Badge>
+                  )}
+                </label>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* --- Existing S3 users --- */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-base">
+                S3 Users on {cluster}
+              </CardTitle>
+              <CardDescription>
+                Buckets are owned by these users. Deleting a user does not
+                delete their buckets unless you purge their data.
+              </CardDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={loadS3Users}
+              disabled={usersLoading}
+            >
+              {usersLoading ? "Refreshing…" : "Refresh"}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>uid</TableHead>
+                <TableHead>Display name</TableHead>
+                <TableHead className="text-right">Max buckets</TableHead>
+                <TableHead className="w-24">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {s3Users.length === 0 && (
+                <TableRow>
+                  <TableCell
+                    colSpan={4}
+                    className="text-center text-sm text-muted-foreground py-6"
+                  >
+                    {usersLoading ? "Loading…" : "No S3 users on this cluster."}
+                  </TableCell>
+                </TableRow>
+              )}
+              {s3Users.map((u) => (
+                <TableRow key={u.uid}>
+                  <TableCell className="font-mono text-xs">{u.uid}</TableCell>
+                  <TableCell>{u.display_name || "—"}</TableCell>
+                  <TableCell className="text-right">
+                    {u.max_buckets ?? "—"}
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => {
+                        setDeleteUserTarget(u);
+                        setPurgeUserData(false);
+                      }}
+                    >
+                      Delete
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      <AlertDialog
+        open={!!deleteUserTarget}
+        onOpenChange={(open) => !open && setDeleteUserTarget(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Delete S3 user “{deleteUserTarget?.uid}”?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Their access keys stop working immediately. Any buckets they own
+              are left behind unless you purge their data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={purgeUserData}
+              onChange={(e) => setPurgeUserData(e.target.checked)}
+            />
+            Also permanently delete their buckets and all objects in them
+          </label>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteUser}>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+
+  return (
+    <Tabs defaultValue="buckets">
+      <TabsList>
+        <TabsTrigger value="buckets">Buckets</TabsTrigger>
+        <TabsTrigger value="s3users">S3 Users</TabsTrigger>
+      </TabsList>
+      <TabsContent value="buckets" className="space-y-4">
+        {bucketsPanel}
+      </TabsContent>
+      <TabsContent value="s3users" className="space-y-4">
+        {usersPanel}
+      </TabsContent>
+    </Tabs>
   );
 }

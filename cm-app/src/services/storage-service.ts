@@ -169,10 +169,11 @@ export function createS3User(
 export function deleteS3User(
   token: string,
   cluster: string,
-  uid: string
+  uid: string,
+  purgeData = false
 ) {
   return storageApi(token).delete(
-    `/s3/user/${encodeURIComponent(uid)}?cluster=${cluster}`
+    `/s3/user/${encodeURIComponent(uid)}?cluster=${cluster}&purge_data=${purgeData}`
   );
 }
 
