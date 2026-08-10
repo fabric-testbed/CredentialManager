@@ -6,12 +6,12 @@
  * Authorization mirrors the Ceph Manager API exactly — the UI only hides what
  * the server would refuse anyway:
  *
- *   - Anyone may create a bucket, but only owned by themselves. The server
- *     forces the owner to the caller's uid for non-operators, so this is
- *     defence in depth, not the control itself.
- *   - Deleting a bucket, and changing quota or versioning, stays with facility
- *     admins and owners of the "Service - FABRIC Ceph" project ("operators").
- *   - Operators see every bucket; everyone else sees only their own.
+ *   - Creating and deleting buckets, and changing quota or versioning, is for
+ *     facility admins and owners of the "Service - FABRIC Ceph" project
+ *     ("operators"). The server refuses all four for anyone else, so hiding
+ *     the controls is presentation, not the control itself.
+ *   - Operators see every bucket; everyone else sees only their own, and can
+ *     read and write objects in them with the credentials from this page.
  *
  * An S3 uid is the user's bastion login, the same identity used for CephFS
  * subvolumes.
@@ -72,15 +72,26 @@ import {
 /** GiB → KiB, the unit the quota API speaks. */
 const GIB_TO_KIB = 1024 * 1024;
 
+/** A quota is the configured cap, as opposed to what is currently stored. */
+interface S3QuotaEntry {
+  enabled?: boolean;
+  max_size_kb?: number | null;
+  max_objects?: number | null;
+}
+
 export interface S3Bucket {
   name: string;
   owner?: string;
+  /** Objects currently stored. */
   num_objects?: number;
+  /** Bytes currently stored, in KiB. */
   size_kb?: number;
   placement_rule?: string;
   zonegroup?: string;
   zone?: string;
   versioning?: string;
+  /** The bucket's own limits — what was asked for, not what is used. */
+  quota?: S3QuotaEntry;
 }
 
 interface S3KeyPair {
@@ -134,11 +145,37 @@ interface Props {
   getErrorMessage: (ex: unknown, fallback: string) => string;
 }
 
-function formatSize(sizeKb?: number): string {
+function formatSize(sizeKb?: number | null): string {
   if (sizeKb === undefined || sizeKb === null) return "—";
   if (sizeKb < 1024) return `${sizeKb} KiB`;
   if (sizeKb < 1024 * 1024) return `${(sizeKb / 1024).toFixed(1)} MiB`;
   return `${(sizeKb / 1024 / 1024).toFixed(2)} GiB`;
+}
+
+/**
+ * The cap on a bucket, as "<size> / <objects>".
+ *
+ * A quota that is disabled, or enabled with neither limit set, is unlimited —
+ * shown as such rather than as an em dash, which would read as "unknown".
+ */
+function formatQuota(quota?: S3QuotaEntry): string {
+  const size = quota?.max_size_kb;
+  const objects = quota?.max_objects;
+  const hasSize = quota?.enabled && size !== undefined && size !== null && size > 0;
+  const hasObjects =
+    quota?.enabled && objects !== undefined && objects !== null && objects > 0;
+  if (!hasSize && !hasObjects) return "Unlimited";
+  const parts: string[] = [];
+  if (hasSize) parts.push(formatSize(size));
+  if (hasObjects) parts.push(`${objects} objects`);
+  return parts.join(" / ");
+}
+
+/** KiB → the GiB string the quota form edits, or "" when there is no cap. */
+function quotaSizeToGib(quota?: S3QuotaEntry): string {
+  const size = quota?.max_size_kb;
+  if (!quota?.enabled || size === undefined || size === null || size <= 0) return "";
+  return String(size / GIB_TO_KIB);
 }
 
 // Bucket names must be DNS-compatible; RGW rejects anything else.
@@ -305,8 +342,7 @@ export function S3BucketsTab({
 
   async function handleCreate() {
     const name = newBucket.trim().toLowerCase();
-    // Non-operators always own what they create; the server enforces this too.
-    const owner = isOperator ? newOwner.trim() : bastionLogin;
+    const owner = newOwner.trim();
     if (!BUCKET_NAME_RE.test(name)) {
       toast.error(
         "Bucket name must be 3–63 characters, lowercase letters, digits, dots or hyphens, and start and end with a letter or digit."
@@ -314,11 +350,7 @@ export function S3BucketsTab({
       return;
     }
     if (!owner) {
-      toast.error(
-        isOperator
-          ? "Select an owner for the bucket."
-          : "Your bastion login is unavailable, so the bucket has no owner."
-      );
+      toast.error("Owner uid is required (a user's bastion login).");
       return;
     }
     // Validate the quota before creating anything: a bad value thrown after
@@ -531,18 +563,20 @@ use_https = ${endpoint.startsWith("https://") ? "True" : "False"}`
           <Button variant="outline" size="sm" onClick={openCredentials}>
             Get S3 Credentials
           </Button>
-          <Button size="sm" onClick={() => setCreateOpen(true)}>
-            Create Bucket
-          </Button>
+          {isOperator && (
+            <Button size="sm" onClick={() => setCreateOpen(true)}>
+              Create Bucket
+            </Button>
+          )}
         </div>
       </div>
 
       {!isOperator && (
         <p className="text-xs text-muted-foreground">
-          You can create buckets and read and write objects in them using the
-          credentials above. Buckets you create are owned by you. Deleting a
-          bucket, and changing quotas or versioning, is restricted to facility
-          administrators and owners of the FABRIC Ceph service project.
+          Creating and deleting buckets, and changing their quotas, is
+          restricted to facility administrators and owners of the FABRIC Ceph
+          service project. You can read and write objects in your own buckets
+          using the credentials above.
         </p>
       )}
 
@@ -561,7 +595,8 @@ use_https = ${endpoint.startsWith("https://") ? "True" : "False"}`
                 <TableHead>Name</TableHead>
                 <TableHead>Owner</TableHead>
                 <TableHead className="text-right">Objects</TableHead>
-                <TableHead className="text-right">Size</TableHead>
+                <TableHead className="text-right">Used</TableHead>
+                <TableHead className="text-right">Quota</TableHead>
                 <TableHead>Versioning</TableHead>
                 {isOperator && <TableHead className="w-40">Actions</TableHead>}
               </TableRow>
@@ -570,7 +605,7 @@ use_https = ${endpoint.startsWith("https://") ? "True" : "False"}`
               {buckets.length === 0 && (
                 <TableRow>
                   <TableCell
-                    colSpan={isOperator ? 6 : 5}
+                    colSpan={isOperator ? 7 : 6}
                     className="text-center text-sm text-muted-foreground py-6"
                   >
                     {loading ? "Loading…" : "No buckets found."}
@@ -583,6 +618,7 @@ use_https = ${endpoint.startsWith("https://") ? "True" : "False"}`
                   <TableCell className="font-mono text-xs">{b.owner || "—"}</TableCell>
                   <TableCell className="text-right">{b.num_objects ?? "—"}</TableCell>
                   <TableCell className="text-right">{formatSize(b.size_kb)}</TableCell>
+                  <TableCell className="text-right">{formatQuota(b.quota)}</TableCell>
                   <TableCell>
                     <Badge variant={b.versioning === "Enabled" ? "default" : "secondary"}>
                       {b.versioning || "Disabled"}
@@ -595,9 +631,15 @@ use_https = ${endpoint.startsWith("https://") ? "True" : "False"}`
                           variant="outline"
                           size="sm"
                           onClick={() => {
+                            // Seed the form with what is set, so opening it to
+                            // change one field does not silently clear the other.
                             setQuotaTarget(b);
-                            setQuotaSizeGib("");
-                            setQuotaMaxObjects("");
+                            setQuotaSizeGib(quotaSizeToGib(b.quota));
+                            setQuotaMaxObjects(
+                              b.quota?.enabled && (b.quota.max_objects ?? 0) > 0
+                                ? String(b.quota.max_objects)
+                                : ""
+                            );
                           }}
                         >
                           Quota
@@ -645,17 +687,6 @@ use_https = ${endpoint.startsWith("https://") ? "True" : "False"}`
                 3–63 chars: lowercase letters, digits, dots, hyphens.
               </p>
             </div>
-            {!isOperator ? (
-              <div>
-                <Label>Owner</Label>
-                <div className="h-9 flex items-center px-3 text-sm text-muted-foreground font-mono">
-                  {bastionLogin}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Buckets you create are owned by you.
-                </p>
-              </div>
-            ) : (
             <div>
               <Label htmlFor="bucket-owner">Owner (existing S3 user)</Label>
               <select
@@ -685,7 +716,6 @@ use_https = ${endpoint.startsWith("https://") ? "True" : "False"}`
                 </p>
               )}
             </div>
-            )}
             <div>
               <Label htmlFor="bucket-versioning">Versioning</Label>
               <select
@@ -709,7 +739,7 @@ use_https = ${endpoint.startsWith("https://") ? "True" : "False"}`
                   min="0"
                   step="any"
                   value={newSizeGib}
-                  placeholder="unlimited"
+                  placeholder="service default"
                   onChange={(e) => setNewSizeGib(e.target.value)}
                 />
               </div>
@@ -727,8 +757,10 @@ use_https = ${endpoint.startsWith("https://") ? "True" : "False"}`
               </div>
             </div>
             <p className="text-xs text-muted-foreground">
-              Leave blank for no limit. Quotas can be changed later from the
-              bucket&apos;s Quota action.
+              Leave blank to take the service default size quota, which may
+              itself be unlimited. Whatever ends up applied is shown in the
+              Quota column, and can be changed later from the bucket&apos;s
+              Quota action.
             </p>
           </div>
           <DialogFooter>
@@ -751,8 +783,8 @@ use_https = ${endpoint.startsWith("https://") ? "True" : "False"}`
           <DialogHeader>
             <DialogTitle>Quota — {quotaTarget?.name}</DialogTitle>
             <DialogDescription>
-              Caps this one bucket. Currently using{" "}
-              {formatSize(quotaTarget?.size_kb)} across{" "}
+              Caps this one bucket. Current limit {formatQuota(quotaTarget?.quota)};
+              using {formatSize(quotaTarget?.size_kb)} across{" "}
               {quotaTarget?.num_objects ?? 0} object(s).
             </DialogDescription>
           </DialogHeader>
