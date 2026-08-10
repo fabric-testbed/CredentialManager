@@ -14,6 +14,9 @@
    - [CLI Token Flow](#apicli)
    - [LLM Token Management](#apillm)
  - [Frontend (cm-app)](#frontend)
+   - [FABRIC Tokens Page](#pagetokens)
+   - [Storage Page](#pagestorage)
+   - [LLM Tokens Page](#pagellm)
  - [Swagger Server](#swagger)
    - [Generate a new Server Stub](#generate)
  - [Usage](#usage)
@@ -35,6 +38,8 @@ This package includes:
  - LLM token management via LiteLLM proxy integration for FABRIC AI services
  - CLI token flow for headless/remote token creation with browser-based authentication
  - React/Next.js frontend for managing tokens via a web interface
+ - A Storage page front-ending the FABRIC **Ceph Manager** service (CephFS subvolumes and S3
+   buckets, keys and quotas) — the only page that calls a service other than Credmgr
  - Uses Vouch-Proxy (with Nginx) to enable authentication using CILogon
 
 Credential Manager can resolve roles directly from CoManage via LDAP queries or via the project registry. This is a configurable option.
@@ -43,7 +48,7 @@ Credential Manager can resolve roles directly from CoManage via LDAP queries or 
 
 ## <a name="requirements"></a>Requirements
 - Python 3.9+
-- Node.js 18+ (for frontend)
+- Node.js 20+ (for the frontend — Next.js 16; the cm-app Docker build uses `node:22`)
 
 ## <a name="architecture"></a>Architecture
 
@@ -121,7 +126,7 @@ LLM tokens are managed via LiteLLM proxy. Users must be members of the configure
 
 The frontend is a Next.js application located in `cm-app/`.
 
-### FABRIC Tokens Page (`/`)
+### <a name="pagetokens"></a>FABRIC Tokens Page (`/`)
 - Create tokens with project selection (only active projects shown), configurable lifetime, scope, and comment
 - Token holders get extended lifetime limits (up to 9 weeks); non-holders limited to 4 hours
 - List all tokens with state badges, click-to-copy token hashes
@@ -129,7 +134,35 @@ The frontend is a Next.js application located in `cm-app/`.
 - Copy or download created tokens
 - Collapsible "Advanced" section for token validation
 
-### LLM Tokens Page (`/llm`)
+### <a name="pagestorage"></a>Storage Page (`/storage`)
+
+Manages FABRIC's distributed Ceph storage. Unlike the other pages this one does
+not talk to Credmgr: it calls the **Ceph Manager** service
+(`https://ceph-mgr.fabric-testbed.net`, see `apiConfig.storageApiUrl`) through the
+`/api/storage` proxy route, authenticating with the user's FABRIC token.
+
+A cluster picker selects the region; each region is an independent Ceph
+deployment, so the same identity in two regions is two separate accounts.
+
+- **POSIX Volumes** tab — CephFS subvolumes and their CephX keyrings, with the
+  mount details needed to use them.
+- **S3 Buckets** tab — the user's buckets with owner, objects, bytes used, the
+  configured quota, and versioning state, plus **Get S3 Credentials** which
+  fetches or mints an access keypair and renders a ready-to-paste `~/.s3cfg`.
+  Object data goes straight from the client to the RGW gateway; it never passes
+  through this portal.
+
+Operators — FABRIC facility administrators and **owners** of the
+`Service - FABRIC Ceph` project — additionally get every bucket on the cluster,
+Create / Delete / Quota actions, and a panel to provision S3 accounts for
+project members. The distinction is computed by `isStorageProjectOwnerRole()`,
+which accepts only the `<uuid>-po` role, matching the Ceph Manager's own check.
+The UI only hides what the server would refuse anyway — the API is the control,
+not the button.
+
+Controlled by `featureFlags.storage`.
+
+### <a name="pagellm"></a>LLM Tokens Page (`/llm`)
 - Create LLM API keys with model selection (multi-select with "Select All"), duration, and optional name/comment
 - Auto-generated configurations in tabbed view:
   - **API Key** tab — raw key for direct use
@@ -137,11 +170,24 @@ The frontend is a Next.js application located in `cm-app/`.
   - **Claude Code Config** tab — `fabric-settings.json` (copy or download)
 - List all LLM keys with spend tracking, budget limits, and expiration
 - Delete keys with confirmation dialog
-- Controlled by `featureFlags.llmTokens` in `cm-app/src/lib/config.ts` (currently disabled)
+- Controlled by `featureFlags.llmTokens`
+
+### Feature flags
+
+`cm-app/src/lib/config.ts` carries the flags that gate the optional pages:
+
+| Flag | Default in git | Page |
+|---|---|---|
+| `llmTokens` | `false` | `/llm` |
+| `storage` | `true` | `/storage` |
+
+Deployments override these in their own checkout, so what is enabled in
+production will not necessarily match the defaults above.
 
 ### Navigation
 - **FABRIC Tokens** link — always visible when logged in
 - **LLM Tokens** link — visible only when `featureFlags.llmTokens` is enabled
+- **Storage** link — visible only when `featureFlags.storage` is enabled
 
 ### Build Commands
 ```bash
