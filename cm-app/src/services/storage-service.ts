@@ -169,21 +169,40 @@ export function createS3User(
 export function deleteS3User(
   token: string,
   cluster: string,
-  uid: string
+  uid: string,
+  purgeData = false
 ) {
   return storageApi(token).delete(
+    `/s3/user/${encodeURIComponent(uid)}?cluster=${cluster}&purge_data=${purgeData}`
+  );
+}
+
+// NOTE: the route is `/keys` (plural). A secret_key is returned only by
+// createS3Key — the list endpoint deliberately withholds secrets.
+
+export function getS3User(token: string, cluster: string, uid: string) {
+  return storageApi(token).get(
     `/s3/user/${encodeURIComponent(uid)}?cluster=${cluster}`
   );
 }
 
+/**
+ * List a user's access keys.
+ *
+ * Secrets are withheld unless `includeSecret` is set. Request them to show an
+ * existing credential rather than minting a new key on every visit — otherwise
+ * keys accumulate without bound. Authorization is unchanged either way: the
+ * caller must already be the owner of `uid`, or an operator.
+ */
 export function getS3UserKeys(
   token: string,
   cluster: string,
-  uid: string
+  uid: string,
+  includeSecret = false
 ) {
-  return storageApi(token).get(
-    `/s3/user/${encodeURIComponent(uid)}/key?cluster=${cluster}`
-  );
+  let url = `/s3/user/${encodeURIComponent(uid)}/keys?cluster=${cluster}`;
+  if (includeSecret) url += `&include_secret=true`;
+  return storageApi(token).get(url);
 }
 
 export function createS3Key(
@@ -192,8 +211,8 @@ export function createS3Key(
   uid: string
 ) {
   return storageApi(token).post(
-    `/s3/user/${encodeURIComponent(uid)}/key?cluster=${cluster}`,
-    {}
+    `/s3/user/${encodeURIComponent(uid)}/keys?cluster=${cluster}`,
+    { generate: true }
   );
 }
 
@@ -204,6 +223,60 @@ export function deleteS3Key(
   accessKey: string
 ) {
   return storageApi(token).delete(
-    `/s3/user/${encodeURIComponent(uid)}/key?cluster=${cluster}&access_key=${encodeURIComponent(accessKey)}`
+    `/s3/user/${encodeURIComponent(uid)}/keys?cluster=${cluster}&access_key=${encodeURIComponent(accessKey)}`
+  );
+}
+
+// S3 Buckets
+//
+// The server scopes these by identity: a non-operator's listing is pinned to
+// their own uid, and another user's bucket answers 404. The UI mirrors that so
+// the controls match what the API will actually allow.
+
+export function listS3Buckets(token: string, cluster: string, uid?: string) {
+  let url = `/s3/bucket?cluster=${cluster}`;
+  if (uid) url += `&uid=${encodeURIComponent(uid)}`;
+  return storageApi(token).get(url);
+}
+
+export function getS3Bucket(token: string, cluster: string, bucket: string) {
+  return storageApi(token).get(
+    `/s3/bucket/${encodeURIComponent(bucket)}?cluster=${cluster}`
+  );
+}
+
+export function createS3Bucket(
+  token: string,
+  cluster: string,
+  body: {
+    bucket: string;
+    uid: string;
+    placement_rule?: string;
+    versioning?: "Enabled" | "Suspended" | "Disabled";
+  }
+) {
+  return storageApi(token).post(`/s3/bucket?cluster=${cluster}`, body);
+}
+
+export function deleteS3Bucket(
+  token: string,
+  cluster: string,
+  bucket: string,
+  purgeObjects = false
+) {
+  return storageApi(token).delete(
+    `/s3/bucket/${encodeURIComponent(bucket)}?cluster=${cluster}&purge_objects=${purgeObjects}`
+  );
+}
+
+export function setS3BucketQuota(
+  token: string,
+  cluster: string,
+  bucket: string,
+  body: { enabled: boolean; max_size_kb?: number; max_objects?: number }
+) {
+  return storageApi(token).put(
+    `/s3/bucket/${encodeURIComponent(bucket)}/quota?cluster=${cluster}`,
+    body
   );
 }

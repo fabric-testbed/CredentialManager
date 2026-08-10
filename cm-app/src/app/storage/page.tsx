@@ -31,7 +31,8 @@ import SpinnerFullPage from "@/components/spinner-full-page";
 import { useUserStatus } from "@/hooks/use-user-status";
 import { getPerson, getProjects, getAllProjectsPaginated } from "@/services/core-api-service";
 import { createIdToken } from "@/services/credential-manager-service";
-import { getStorageProject } from "@/lib/config";
+import { getStorageProject, isStorageProjectOwnerRole } from "@/lib/config";
+import { S3BucketsTab } from "@/components/s3-buckets-tab";
 import {
   getClusterInfo,
   listSubvolumeGroups,
@@ -65,6 +66,8 @@ interface ClusterInfo {
   mons: Array<{ name: string; v2: string | null; v1: string | null }>;
   mon_host: string;
   ceph_conf_minimal: string;
+  /** RGW S3 endpoints, in preference order. Absent on older Ceph Managers. */
+  s3_endpoints?: string[];
   error: string | null;
 }
 
@@ -469,12 +472,19 @@ export default function StoragePage() {
         const person = res.results[0];
         setBastionLogin(person.bastion_login || person.email?.split("@")[0] || "");
         const roles: Array<{ name: string }> = person.roles || [];
+        // Mirror the Ceph Manager's own rule: an operator is a facility admin
+        // OR an owner of the FABRIC Ceph service project. Project ownership
+        // shows up in the roles list as "<project-uuid>-po".
         const isFacOp = roles.some(
           (r) =>
             r.name === "facility-operators" ||
+            r.name === "facility-operator" ||
             r.name === "Facility Operators"
         );
-        setIsOperator(isFacOp);
+        const isCephProjectOwner = roles.some((r) =>
+          isStorageProjectOwnerRole(r.name)
+        );
+        setIsOperator(isFacOp || isCephProjectOwner);
         setRoleLoaded(true);
       } catch (ex) {
         const msg = getErrorMessage(ex, "Failed to load user profile.");
@@ -1119,6 +1129,11 @@ export default function StoragePage() {
     </Card>
   );
 
+  // RGW S3 endpoints for the selected cluster. Older Ceph Managers omit these,
+  // in which case the S3 tab shows no endpoint rather than a wrong one.
+  const s3EndpointsForCluster =
+    clusters.find((c) => c.cluster === selectedCluster)?.s3_endpoints || [];
+
   // ===== OPERATOR VIEW =====
   if (isOperator) {
     return (
@@ -1128,6 +1143,25 @@ export default function StoragePage() {
         </h1>
         {clusterSelector}
 
+        <Tabs defaultValue="posix">
+          <TabsList>
+            <TabsTrigger value="posix">POSIX Volumes</TabsTrigger>
+            <TabsTrigger value="s3">S3 Buckets</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="s3" className="space-y-4">
+            <S3BucketsTab
+              cluster={selectedCluster}
+              s3Endpoints={s3EndpointsForCluster}
+              isOperator={isOperator}
+              bastionLogin={bastionLogin}
+              projectMembers={projectMembers}
+              ensureToken={ensureToken}
+              getErrorMessage={getErrorMessage}
+            />
+          </TabsContent>
+
+          <TabsContent value="posix" className="space-y-4">
         <Tabs defaultValue="subvolumes">
           <TabsList>
             <TabsTrigger value="subvolumes">Subvolumes</TabsTrigger>
@@ -1790,6 +1824,8 @@ export default function StoragePage() {
             )}
           </TabsContent>
         </Tabs>
+          </TabsContent>
+        </Tabs>
       </div>
     );
   }
@@ -1806,6 +1842,25 @@ export default function StoragePage() {
       </h1>
       {clusterSelector}
 
+      <Tabs defaultValue="posix">
+        <TabsList>
+          <TabsTrigger value="posix">POSIX Volumes</TabsTrigger>
+          <TabsTrigger value="s3">S3 Buckets</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="s3" className="space-y-4">
+          <S3BucketsTab
+            cluster={selectedCluster}
+            s3Endpoints={s3EndpointsForCluster}
+            isOperator={false}
+            bastionLogin={bastionLogin}
+            projectMembers={[]}
+            ensureToken={ensureToken}
+            getErrorMessage={getErrorMessage}
+          />
+        </TabsContent>
+
+        <TabsContent value="posix">
       <div className="space-y-4">
         {/* CephFS Credentials */}
         <Card>
@@ -1899,6 +1954,8 @@ export default function StoragePage() {
         </Card>
 
       </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
