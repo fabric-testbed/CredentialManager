@@ -1,0 +1,14 @@
+# Keep the host's installed tree out of the build context so the `npm ci`
+# layer is what actually ends up in the image.
+node_modules
+.next
+
+# Build/tooling noise that would needlessly bust the layer cache.
+npm-debug.log*
+.env*.local
+.git
+.gitignore
+Dockerfile
+.dockerignore
+README.md
+tsconfig.tsbuildinfo
