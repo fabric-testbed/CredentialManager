@@ -28,6 +28,8 @@ share/python-wheels/
 MANIFEST
 config
 package-lock.json
+# Track the frontend lock file so Docker/CI builds are reproducible (npm ci).
+!cm-app/package-lock.json
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
