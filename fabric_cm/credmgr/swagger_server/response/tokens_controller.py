@@ -32,7 +32,8 @@ from oauthlib.oauth2.rfc6749.errors import CustomOAuth2Error
 from http.client import BAD_REQUEST
 
 from fabric_cm.credmgr.common.utils import Utils
-from fabric_cm.credmgr.core.oauth_credmgr import OAuthCredMgr, OAuthCredMgrError, TokenState
+from fabric_cm.credmgr.core.oauth_credmgr import OAuthCredMgr, OAuthCredMgrError, TokenState, \
+    MAX_TOKEN_LIFETIME_IN_HOURS
 from fabric_cm.credmgr.swagger_server.models import Tokens, Token, Status200OkNoContent, Status200OkNoContentData, \
     RevokeList, DecodedToken
 from fabric_cm.credmgr.swagger_server.models.request import Request as RequestModel  # noqa: E501
@@ -450,8 +451,8 @@ def _sanitize_cli_params(project_id, project_name, scope, lifetime, comment):
         raise ValueError("project_name contains invalid characters")
     if scope is not None and not _SCOPE_RE.match(str(scope)):
         raise ValueError("scope contains invalid characters")
-    if not isinstance(lifetime, int) or not (1 <= lifetime <= 262800):
-        raise ValueError("lifetime must be an integer between 1 and 262800")
+    if not isinstance(lifetime, int) or not (1 <= lifetime <= MAX_TOKEN_LIFETIME_IN_HOURS):
+        raise ValueError(f"lifetime must be an integer between 1 and {MAX_TOKEN_LIFETIME_IN_HOURS}")
     if comment is not None and not _COMMENT_RE.match(str(comment)):
         raise ValueError("comment contains invalid characters")
     return project_id, project_name, scope, lifetime, comment
@@ -499,6 +500,16 @@ def tokens_create_cli_get(request: Request, project_id: str = None, project_name
             except Exception:
                 LOG.warning("CLI create: failed to parse cli params cookie")
 
+        # Validate user-supplied parameters in both phases: before storing them in
+        # a cookie (phase 1) and before creating a token from direct query params
+        # or restored cookie values (phase 2).
+        try:
+            project_id, project_name, scope, lifetime, comment = _sanitize_cli_params(
+                project_id, project_name, scope, lifetime, comment)
+        except ValueError as e:
+            failure_counter.labels(HTTP_METHOD_GET, TOKENS_CREATE_CLI_URL).inc()
+            return cors_400(details=str(e))
+
         validated_redirect = _validate_localhost_redirect(redirect_uri)
         if not validated_redirect:
             failure_counter.labels(HTTP_METHOD_GET, TOKENS_CREATE_CLI_URL).inc()
@@ -515,14 +526,6 @@ def tokens_create_cli_get(request: Request, project_id: str = None, project_name
             base_url = CONFIG_OBJ.get_base_url()
             return_url = f"{base_url}/credmgr/tokens/create_cli"
             login_url = f"{base_url}/cli-login?url={quote(return_url, safe='')}"
-
-            # Validate user-supplied parameters before storing in cookie
-            try:
-                project_id, project_name, scope, lifetime, comment = _sanitize_cli_params(
-                    project_id, project_name, scope, lifetime, comment)
-            except ValueError as e:
-                failure_counter.labels(HTTP_METHOD_GET, TOKENS_CREATE_CLI_URL).inc()
-                return cors_400(details=str(e))
 
             # Save the sanitized params so we can restore them after login.
             # Base64-encode the JSON to break the taint chain from user input
