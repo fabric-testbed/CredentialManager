@@ -219,11 +219,21 @@ export default function CredentialManagerPage() {
     loadProjects();
   }, [listTokens]);
 
+  // Token lifetime limit is 9 weeks: 1512 hours / 63 days / 9 weeks.
+  const maxLifetimeForUnit = (unit: string): number => {
+    if (unit === "days") return 63;
+    if (unit === "weeks") return 9;
+    return 1512;
+  };
+
+  const clampLifetime = (value: number, unit: string): number =>
+    Math.min(Math.max(value, 1), maxLifetimeForUnit(unit));
+
   const parseTokenLifetime = (): number => {
-    if (selectLifetimeUnit === "hours") return inputLifetime;
-    if (selectLifetimeUnit === "days") return inputLifetime * 24;
-    if (selectLifetimeUnit === "weeks") return inputLifetime * 24 * 7;
-    return inputLifetime;
+    const lifetime = clampLifetime(inputLifetime, selectLifetimeUnit);
+    if (selectLifetimeUnit === "days") return lifetime * 24;
+    if (selectLifetimeUnit === "weeks") return lifetime * 24 * 7;
+    return lifetime;
   };
 
   const handleCreateToken = async (e: React.FormEvent) => {
@@ -373,10 +383,12 @@ export default function CredentialManagerPage() {
             id={`lifetime-${isService ? "service" : "fabric"}`}
             type="number"
             min={1}
-            max={selectLifetimeUnit === "hours" ? 1512 : selectLifetimeUnit === "days" ? 63 : 9}
+            max={maxLifetimeForUnit(selectLifetimeUnit)}
             disabled={!isTokenHolder}
             value={inputLifetime}
-            onChange={(e) => setInputLifetime(parseInt(e.target.value) || 1)}
+            onChange={(e) =>
+              setInputLifetime(clampLifetime(parseInt(e.target.value) || 1, selectLifetimeUnit))
+            }
           />
         </div>
         <div className="col-span-2">
@@ -385,7 +397,11 @@ export default function CredentialManagerPage() {
             id={`lifetime-unit-${isService ? "service" : "fabric"}`}
             className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             value={selectLifetimeUnit}
-            onChange={(e) => setSelectLifetimeUnit(e.target.value)}
+            onChange={(e) => {
+              const unit = e.target.value;
+              setSelectLifetimeUnit(unit);
+              setInputLifetime((prev) => clampLifetime(prev, unit));
+            }}
             disabled={!isTokenHolder}
           >
             <option value="hours">Hours</option>

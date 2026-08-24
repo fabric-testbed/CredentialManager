@@ -3,6 +3,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Request, Depends, Query, Body
 from pydantic import BaseModel
 
+from fabric_cm.credmgr.core.oauth_credmgr import MAX_TOKEN_LIFETIME_IN_HOURS
 from fabric_cm.credmgr.swagger_server.response import tokens_controller, default_controller, version_controller
 from fabric_cm.credmgr.swagger_server.dependencies import get_login_claims, get_login_or_token_claims
 from fabric_cm.credmgr.swagger_server.models.request import Request as RequestModel
@@ -37,7 +38,7 @@ def tokens_create_post(request: Request,
                        project_id: Optional[str] = Query(None),
                        project_name: Optional[str] = Query(None),
                        scope: Optional[str] = Query(None),
-                       lifetime: int = Query(4),
+                       lifetime: int = Query(4, ge=1, le=MAX_TOKEN_LIFETIME_IN_HOURS),
                        comment: Optional[str] = Query(None)):
     return tokens_controller.tokens_create_post(
         request=request, project_id=project_id, project_name=project_name,
@@ -113,7 +114,7 @@ def tokens_create_cli_get(request: Request,
                           project_id: Optional[str] = Query(None),
                           project_name: Optional[str] = Query(None),
                           scope: Optional[str] = Query(None),
-                          lifetime: int = Query(4),
+                          lifetime: int = Query(4, ge=1, le=MAX_TOKEN_LIFETIME_IN_HOURS),
                           comment: Optional[str] = Query(None),
                           redirect_uri: Optional[str] = Query(None)):
     return tokens_controller.tokens_create_cli_get(

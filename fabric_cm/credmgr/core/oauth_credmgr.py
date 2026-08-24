@@ -50,6 +50,9 @@ from http.client import INTERNAL_SERVER_ERROR, NOT_FOUND, BAD_REQUEST
 from fabric_cm.credmgr.external_apis.litellm_api import LiteLLMApi, LiteLLMApiError
 from ..common.utils import Utils
 
+# Maximum token lifetime: 9 weeks i.e. 1512 hours
+MAX_TOKEN_LIFETIME_IN_HOURS = 1512
+
 
 class OAuthCredMgrError(Exception):
     """
@@ -261,6 +264,10 @@ class OAuthCredMgr:
 
         self.validate_scope(scope=scope)
 
+        if lifetime is None or lifetime < 1 or lifetime > MAX_TOKEN_LIFETIME_IN_HOURS:
+            raise OAuthCredMgrError(f"CredMgr: Token lifetime must be between 1 and "
+                                    f"{MAX_TOKEN_LIFETIME_IN_HOURS} hours!", http_error_code=BAD_REQUEST)
+
         if project_name is None and project_id is None:
             raise OAuthCredMgrError(f"CredMgr: Either Project ID: '{project_id}' or Project Name'{project_name}' "
                                     f"must be specified")
@@ -276,7 +283,7 @@ class OAuthCredMgr:
 
         if not short:
             long_lived_tokens = self.get_tokens(project_id=project_id, user_email=user_email)
-            if long_lived_tokens is not None and len(long_lived_tokens) > CONFIG_OBJ.get_max_llt_per_project():
+            if long_lived_tokens is not None and len(long_lived_tokens) >= CONFIG_OBJ.get_max_llt_per_project():
                 raise OAuthCredMgrError(f"User: {user_email} already has {CONFIG_OBJ.get_max_llt_per_project()} "
                                         f"long lived tokens")
 
