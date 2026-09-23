@@ -15,6 +15,13 @@ export function getProjects(userID: string) {
   );
 }
 
+// A single project's detail record. Unlike the /projects list, this carries
+// project_members / project_owners / project_creators, which is how we find out
+// who actually belongs to a project.
+export function getProject(projectUuid: string) {
+  return http.get(`${getApiEndpoint()}/projects/${projectUuid}`);
+}
+
 export function getAllProjects(offset = 0, limit = 200) {
   return http.get(
     `${getApiEndpoint()}/projects?offset=${offset}&limit=${limit}`
