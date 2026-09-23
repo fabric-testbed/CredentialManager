@@ -29,7 +29,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import SpinnerFullPage from "@/components/spinner-full-page";
 import { useUserStatus } from "@/hooks/use-user-status";
-import { getPerson, getProjects, getAllProjectsPaginated } from "@/services/core-api-service";
+import { getPerson, getProject, getProjects, getAllProjectsPaginated } from "@/services/core-api-service";
 import { createIdToken } from "@/services/credential-manager-service";
 import { getStorageProject, isStorageProjectOwnerRole } from "@/lib/config";
 import { S3BucketsTab } from "@/components/s3-buckets-tab";
@@ -394,6 +394,8 @@ export default function StoragePage() {
 
   // Project members state
   const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
+  // False until the full member list has been fetched without error.
+  const [projectMembersLoaded, setProjectMembersLoaded] = useState(false);
 
   // Projects state (for per-project subvolume creation)
   const [projects, setProjects] = useState<Project[]>([]);
@@ -526,21 +528,65 @@ export default function StoragePage() {
       const PAGE_SIZE = 200;
       let offset = 0;
       let allMembers: ProjectMember[] = [];
-      let total = Infinity;
 
-      while (offset < total) {
+      // Paging here has two traps, both of which silently truncate.
+      //
+      // `offset` indexes the server's membership-UUID list, not the rows it
+      // returns: it slices sorted_uuids[offset:offset+limit] and then DROPS any
+      // row whose user has no bastion_login or whose lookup failed. So a full
+      // page routinely comes back short, and "short page means last page" ends
+      // the loop early. For the same reason `total` (the UUID count) is never
+      // reached by counting returned members, so that cannot be the condition
+      // either. Advance by the page size the server actually used, and stop on
+      // `total`, which is measured in the same units as `offset`.
+      let reportedTotal: number | undefined;
+      let sawUnboundedPage = false;
+
+      for (;;) {
         const { data: response } = await listProjectMembers(token, offset, PAGE_SIZE);
         const members: ProjectMember[] = Array.isArray(response.data)
           ? response.data
           : response.data || [];
         allMembers = allMembers.concat(members);
-        total = response.total ?? members.length;
-        offset += PAGE_SIZE;
-        // Safety: if page returned nothing, stop
-        if (members.length === 0) break;
+
+        if (typeof response.total === "number") reportedTotal = response.total;
+        const step =
+          typeof response.limit === "number" && response.limit > 0
+            ? response.limit
+            : PAGE_SIZE;
+        offset += step;
+
+        if (reportedTotal === undefined) {
+          // No total to check against: the only safe stop is an empty page, and
+          // completeness cannot be proven.
+          sawUnboundedPage = true;
+          if (members.length === 0) break;
+        } else if (offset >= reportedTotal) {
+          break;
+        }
+
+        if (offset > 100000) break; // runaway guard
       }
+
       setProjectMembers(allMembers);
+
+      // Only claim completeness when the server told us how many memberships
+      // exist and we walked past the end of that list. Members legitimately
+      // absent (no bastion_login) are a different thing from a truncated fetch,
+      // and only the latter must block a project-wide apply.
+      const complete = reportedTotal !== undefined && offset >= reportedTotal;
+      setProjectMembersLoaded(complete);
+      if (!complete) {
+        toast.warning(
+          sawUnboundedPage
+            ? "Storage user list returned no total; completeness cannot be verified."
+            : "Storage user list may be incomplete."
+        );
+      }
     } catch (ex) {
+      // Leave the flag false: an incomplete list must not be used to decide who
+      // gets capabilities.
+      setProjectMembersLoaded(false);
       toast.error(getErrorMessage(ex, "Failed to load project members."));
     }
   }, [ensureToken]);
@@ -895,13 +941,81 @@ export default function StoragePage() {
 
     // Determine which users to apply caps to
     const logins: string[] = [];
+    let skippedMembers = 0;
+    let projectLabel = "";
     if (capsTarget === "user") {
       if (!capsEntity) return;
       // capsEntity is "client.xxx" — extract the login
       logins.push(capsEntity.replace(/^client\./, ""));
     } else {
-      // Entire Project: apply to all project members
-      logins.push(...projectMembers.map((m) => m.bastion_login));
+      // Entire Project: the members of the project that OWNS this subvolume.
+      //
+      // projectMembers is NOT that list. It comes from /project/members, which
+      // the backend answers for the Ceph *service* project - i.e. everyone who
+      // has storage - so using it here granted the volume to every storage user
+      // (276 of them) instead of the handful in the project.
+      //
+      // A project subvolume lives in a group named after the project uuid, so
+      // capsGroup identifies the owner. Fetch that project, then intersect its
+      // membership with projectMembers, which is where bastion_login lives.
+      if (!capsGroup) {
+        toast.error(
+          "Select the project group for this subvolume before applying project capabilities."
+        );
+        setShowSpinner(false);
+        return;
+      }
+      if (!projectMembersLoaded) {
+        // Without the full storage-user list the intersection below would be a
+        // subset of unknown size, and applying to a subset silently is the same
+        // class of bug as applying to everyone.
+        toast.error(
+          "Storage user list is not loaded. Reload the page before applying project capabilities."
+        );
+        setShowSpinner(false);
+        return;
+      }
+      try {
+        const { data: projResp } = await getProject(capsGroup);
+        const project = (projResp.results || [])[0];
+        if (!project) throw new Error("project not found");
+
+        const memberUuids = new Set<string>(
+          [
+            ...(project.project_members || []),
+            ...(project.project_owners || []),
+            ...(project.project_creators || []),
+          ]
+            .map((m: { uuid?: string }) => m?.uuid)
+            .filter(Boolean) as string[]
+        );
+
+        const withStorage = projectMembers.filter((m) => memberUuids.has(m.uuid));
+        logins.push(...withStorage.map((m) => m.bastion_login));
+
+        // Members of the project who have no storage account cannot be granted
+        // anything here. Say so: otherwise "Entire Project" reports success
+        // while covering only part of the project.
+        skippedMembers = memberUuids.size - withStorage.length;
+        projectLabel = project.name || capsGroup;
+
+        if (logins.length === 0) {
+          // Fail closed. Falling back to "all members" is what caused the
+          // over-grant in the first place.
+          toast.error(
+            `No storage-enabled members found for ${project.name || capsGroup}. ` +
+              `Nothing was applied.`
+          );
+          setShowSpinner(false);
+          return;
+        }
+      } catch (ex) {
+        toast.error(
+          getErrorMessage(ex, "Failed to resolve project membership. Nothing was applied.")
+        );
+        setShowSpinner(false);
+        return;
+      }
     }
 
     if (logins.length === 0) {
@@ -936,10 +1050,19 @@ export default function StoragePage() {
           console.error(`Failed to apply caps for client.${login}:`, ex);
         }
       }
-      if (fail === 0) {
-        toast.success(`Capabilities applied to ${ok} user(s).`);
+      const coverage =
+        capsTarget === "project"
+          ? ` for ${projectLabel}` +
+            (skippedMembers > 0
+              ? `; ${skippedMembers} project member(s) skipped - no storage account`
+              : "")
+          : "";
+      if (fail === 0 && skippedMembers === 0) {
+        toast.success(`Capabilities applied to ${ok} user(s)${coverage}.`);
+      } else if (fail === 0) {
+        toast.warning(`Applied to ${ok} user(s)${coverage}.`);
       } else {
-        toast.warning(`Applied to ${ok} user(s), failed for ${fail}.`);
+        toast.warning(`Applied to ${ok} user(s), failed for ${fail}${coverage}.`);
       }
       setCapsEntity("");
       setCapsSubvol("");
@@ -1624,7 +1747,7 @@ export default function StoragePage() {
                       disabled={
                         !capsSubvol ||
                         (capsTarget === "user" && !capsEntity) ||
-                        (capsTarget === "project" && projectMembers.length === 0)
+                        (capsTarget === "project" && (!capsGroup || !projectMembersLoaded))
                       }
                       className="bg-fabric-primary hover:bg-fabric-primary/90 text-white"
                     >
@@ -1638,7 +1761,9 @@ export default function StoragePage() {
                   )}
                   {capsTarget === "project" && (
                     <p className="text-xs text-muted-foreground">
-                      Apply default capabilities to all {projectMembers.length} project member(s) for the selected subvolume.
+                      Apply default capabilities to the members of the project that owns
+                      the selected group{capsGroup ? ` (${formatGroupName(capsGroup)})` : ""}.
+                      Only members who already have storage are affected.
                     </p>
                   )}
                 </form>
