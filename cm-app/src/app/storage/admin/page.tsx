@@ -50,6 +50,7 @@ import { CephEntity } from "@/lib/ceph-caps";
 import {
   accessTo,
   bucketsFor,
+  memberBuckets,
   VolumeRow,
   GranteeResolution,
   Principal,
@@ -85,9 +86,27 @@ const CAPS_TEMPLATE = [
   { entity: "osd", cap: "allow rw tag cephfs metadata={fs}" },
 ];
 
-function formatBytes(bytes?: number): string {
+/**
+ * Bytes as a quota: 0 means no limit, which is Ceph's convention.
+ *
+ * Never use this for usage. An empty bucket has 0 bytes used, and rendering
+ * that as "unlimited" is not merely odd, it is the opposite of true - which is
+ * exactly what the Used column showed for an empty bucket.
+ */
+function formatQuota(bytes?: number): string {
   if (bytes === undefined) return "—";
   if (bytes === 0) return "unlimited";
+  return formatSize(bytes);
+}
+
+/** Bytes as an amount consumed. 0 is empty, and says so. */
+function formatUsage(bytes?: number): string {
+  if (bytes === undefined) return "—";
+  if (bytes === 0) return "empty";
+  return formatSize(bytes);
+}
+
+function formatSize(bytes: number): string {
   const units = ["B", "KiB", "MiB", "GiB", "TiB", "PiB"];
   let v = bytes;
   let i = 0;
@@ -212,8 +231,18 @@ export default function StorageAdminPage() {
   );
   const [memberLogins, setMemberLogins] = useState<string[]>([]);
   const bucketRows = useMemo(
-    () => (principal ? bucketsFor(principal, buckets, memberLogins) : []),
-    [principal, buckets, memberLogins]
+    () => (principal ? bucketsFor(principal, buckets) : []),
+    [principal, buckets]
+  );
+  // A project's members' own buckets. Not the project's storage - shown only
+  // when asked for, and always attributed.
+  const [showMemberBuckets, setShowMemberBuckets] = useState(false);
+  const memberBucketRows = useMemo(
+    () =>
+      principal?.kind === "project" && showMemberBuckets
+        ? memberBuckets(buckets, memberLogins)
+        : [],
+    [principal, buckets, memberLogins, showMemberBuckets]
   );
 
   // A project's membership comes from the Core API, resolved against the
@@ -477,7 +506,7 @@ export default function StorageAdminPage() {
                                   </Badge>
                                 )}
                               </TableCell>
-                              <TableCell>{formatBytes(v.bytesQuota)}</TableCell>
+                              <TableCell>{formatQuota(v.bytesQuota)}</TableCell>
                               <TableCell className="space-x-1 text-right">
                                 {principal.kind === "project" && (
                                   <Button
@@ -519,16 +548,65 @@ export default function StorageAdminPage() {
                         <Plus className="mr-1 h-3 w-3" /> Create bucket
                       </Button>
                     </div>
-                    {bucketRows.length === 0 ? (
+                    {principal.kind === "project" ? (
+                      <div className="space-y-2">
+                        <p className="text-sm text-muted-foreground">
+                          A project owns no buckets. RGW has no notion of a
+                          project, so every bucket belongs to a person — listing
+                          members&apos; buckets here would show someone&apos;s
+                          personal bucket under every project they belong to.
+                        </p>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setShowMemberBuckets((v) => !v)}
+                        >
+                          {showMemberBuckets ? "Hide" : "Show"} buckets owned by
+                          members ({memberLogins.length} member
+                          {memberLogins.length === 1 ? "" : "s"})
+                        </Button>
+                        {showMemberBuckets && (
+                          memberBucketRows.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">
+                              No member of this project owns a bucket on {cluster}.
+                            </p>
+                          ) : (
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Bucket</TableHead>
+                                  <TableHead>Owned by</TableHead>
+                                  <TableHead>Objects</TableHead>
+                                  <TableHead>Used / quota</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {memberBucketRows.map((b) => (
+                                  <TableRow key={b.name}>
+                                    <TableCell className="font-medium">{b.name}</TableCell>
+                                    <TableCell className="text-muted-foreground">
+                                      {b.viaMember}
+                                    </TableCell>
+                                    <TableCell>{b.numObjects ?? 0}</TableCell>
+                                    <TableCell>
+                                      {formatUsage(b.sizeBytes)}
+                                      {b.quotaBytes !== undefined && (
+                                        <span className="text-muted-foreground">
+                                          {" / "}
+                                          {formatQuota(b.quotaBytes)}
+                                        </span>
+                                      )}
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          )
+                        )}
+                      </div>
+                    ) : bucketRows.length === 0 ? (
                       <p className="text-sm text-muted-foreground">
                         No bucket on {cluster}.
-                        {principal.kind === "project" && (
-                          <>
-                            {" "}
-                            RGW has no notion of a project owner, so a project&apos;s
-                            buckets are its members&apos; buckets.
-                          </>
-                        )}
                       </p>
                     ) : (
                       <Table>
@@ -548,11 +626,11 @@ export default function StorageAdminPage() {
                               <TableCell className="text-muted-foreground">{b.owner}</TableCell>
                               <TableCell>{b.numObjects ?? 0}</TableCell>
                               <TableCell>
-                                {formatBytes(b.sizeBytes)}
+                                {formatUsage(b.sizeBytes)}
                                 {b.quotaBytes !== undefined && (
                                   <span className="text-muted-foreground">
                                     {" / "}
-                                    {formatBytes(b.quotaBytes)}
+                                    {formatQuota(b.quotaBytes)}
                                   </span>
                                 )}
                               </TableCell>

@@ -273,13 +273,22 @@ export interface BucketLike {
 
 const KB = 1024;
 
-/** S3 has no project ownership; a project's buckets are its members' buckets. */
+/**
+ * The buckets a principal owns.
+ *
+ * A PROJECT owns none. RGW has no notion of a project, so every bucket belongs
+ * to an individual, and treating a project's buckets as "its members' buckets"
+ * is a conflation with a visible cost: a person in ten projects has their
+ * personal bucket listed under all ten, as if each project had a claim on it.
+ * So a project returns nothing here, and the caller offers its members' buckets
+ * separately and says whose they are.
+ */
 export function bucketsFor(
   principal: Principal,
-  buckets: BucketLike[],
-  memberLogins: string[] = []
+  buckets: BucketLike[]
 ): BucketRow[] {
-  const mine = new Set(principal.kind === "user" ? [principal.login] : memberLogins);
+  if (principal.kind !== "user") return [];
+  const mine = new Set([principal.login]);
   const rows: BucketRow[] = [];
   for (const b of buckets) {
     const name = b.bucket || b.name;
@@ -293,7 +302,36 @@ export function bucketsFor(
       quotaBytes:
         b.quota?.max_size_kb !== undefined ? b.quota.max_size_kb * KB : undefined,
       numObjects: b.num_objects ?? 0,
-      viaMember: principal.kind === "project" ? owner : undefined,
+    });
+  }
+  return rows;
+}
+
+/**
+ * Buckets owned by a project's members, attributed to the person who owns them.
+ *
+ * Deliberately separate from `bucketsFor`: these are not the project's storage,
+ * and the UI must not present them as though they were. Shown on request, each
+ * row naming its owner.
+ */
+export function memberBuckets(
+  buckets: BucketLike[],
+  memberLogins: string[]
+): BucketRow[] {
+  const members = new Set(memberLogins);
+  const rows: BucketRow[] = [];
+  for (const b of buckets) {
+    const name = b.bucket || b.name;
+    const owner = b.owner || "";
+    if (!name || !members.has(owner)) continue;
+    rows.push({
+      name,
+      owner,
+      sizeBytes: (b.size_kb ?? 0) * KB,
+      quotaBytes:
+        b.quota?.max_size_kb !== undefined ? b.quota.max_size_kb * KB : undefined,
+      numObjects: b.num_objects ?? 0,
+      viaMember: owner,
     });
   }
   return rows;

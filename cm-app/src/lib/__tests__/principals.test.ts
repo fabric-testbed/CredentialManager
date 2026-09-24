@@ -12,6 +12,7 @@ import { CephEntity } from "../ceph-caps";
 import {
   accessTo,
   bucketsFor,
+  memberBuckets,
   ProjectDetail,
   projectMemberUuids,
   resolveProjectGrantees,
@@ -211,18 +212,20 @@ describe("buckets", () => {
     expect(b.quotaBytes).toBe(1048576 * 1024);
   });
 
-  it("attributes a project's buckets to the member who owns them", () => {
-    const rows = bucketsFor(
-      { kind: "project", uuid: NRIG, name: "NRIG" },
-      buckets,
-      ["alice_0001", "bob_0002"]
-    );
-    expect(rows).toHaveLength(2);
-    expect(rows[0].viaMember).toBe("alice_0001");
+  it("gives a project no buckets at all", () => {
+    // RGW has no project. Treating members' buckets as the project's would put
+    // one person's personal bucket under every project they belong to.
+    expect(bucketsFor({ kind: "project", uuid: NRIG, name: "NRIG" }, buckets)).toEqual([]);
   });
 
-  it("shows a project no buckets when it has no members with storage", () => {
-    expect(bucketsFor({ kind: "project", uuid: NRIG, name: "NRIG" }, buckets, [])).toEqual([]);
+  it("lists members' buckets separately, each attributed to its owner", () => {
+    const rows = memberBuckets(buckets, ["alice_0001", "bob_0002"]);
+    expect(rows).toHaveLength(2);
+    expect(rows.map((r) => r.viaMember).sort()).toEqual(["alice_0001", "bob_0002"]);
+  });
+
+  it("returns nothing for a project whose members own no buckets", () => {
+    expect(memberBuckets(buckets, ["nobody_0003"])).toEqual([]);
   });
 });
 
