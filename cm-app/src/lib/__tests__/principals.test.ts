@@ -195,3 +195,77 @@ describe("buckets", () => {
     expect(bucketsFor({ kind: "project", uuid: NRIG, name: "NRIG" }, buckets, [])).toEqual([]);
   });
 });
+
+
+describe("subvolumes with no group (/volumes/_nogroup)", () => {
+  // Real: on asia, kthare10_0011904101 is at
+  // /volumes/_nogroup/kthare10_0011904101/4575731b-…, while every other
+  // personal volume is under fabric_users. The GUI shows its group as "—".
+  const asia = [
+    {
+      name: "kthare10_0011904101",
+      group_name: null as unknown as undefined,
+      path: "/volumes/_nogroup/kthare10_0011904101/4575731b-189b-40fc-ba68-9dbace5423d6",
+      bytes_quota: 1073741824,
+    },
+    { name: "bill_howard_0000334495", group_name: "fabric_users" },
+  ];
+  const komal = {
+    kind: "user" as const,
+    uuid: "u-komal",
+    name: "Komal",
+    login: "kthare10_0011904101",
+  };
+
+  it("does not relabel an ungrouped volume as a user-group volume", () => {
+    const [v] = volumesFor(komal, asia);
+    expect(v.group).toBe("_nogroup");
+    expect(v.ungrouped).toBe(true);
+  });
+
+  it("still attributes it to the person it is named for", () => {
+    expect(volumesFor(komal, asia).map((v) => v.name)).toEqual([
+      "kthare10_0011904101",
+    ]);
+  });
+
+  it("does not hand an ungrouped volume to a project", () => {
+    const rows = volumesFor(
+      { kind: "project", uuid: "b9847fa1-13ef-49f9-9e07-ae6ad06cda3f", name: "p" },
+      asia
+    );
+    expect(rows).toEqual([]);
+  });
+
+  it("finds capabilities under _nogroup, not only under fabric_users", () => {
+    // Coercing the group to fabric_users files the volume under the right
+    // person and then searches the wrong path prefix, so a granted volume
+    // reads as reachable by nobody.
+    const entity: CephEntity = {
+      user_entity: "client.kthare10_0011904101",
+      capabilities: [
+        {
+          entity: "mds",
+          cap: "allow rw fsname=CEPH-FS-01 path=/volumes/_nogroup/kthare10_0011904101/4575731b",
+        },
+      ],
+    };
+    const rows = accessTo(komal, [entity], new Map());
+    expect(rows).toHaveLength(1);
+    expect(rows[0].grant.group).toBe("_nogroup");
+    expect(rows[0].grant.volume).toBe("kthare10_0011904101");
+  });
+
+  it("does not let one person's _nogroup volume appear under another person", () => {
+    const entity: CephEntity = {
+      user_entity: "client.someone_else",
+      capabilities: [
+        {
+          entity: "mds",
+          cap: "allow rw fsname=CEPH-FS-01 path=/volumes/_nogroup/someone_else/abc",
+        },
+      ],
+    };
+    expect(accessTo(komal, [entity], new Map())).toEqual([]);
+  });
+});
