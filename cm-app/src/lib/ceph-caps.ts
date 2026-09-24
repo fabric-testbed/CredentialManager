@@ -141,6 +141,41 @@ export function effectiveAccess(entity: CephEntity): EffectiveAccess[] {
   return out;
 }
 
+/**
+ * Read an exported keyring into a cephx entity.
+ *
+ * `/cluster/user/export` returns the output of `ceph auth get`, which carries
+ * the capabilities alongside the key:
+ *
+ *   [client.pruth_0031379841]
+ *       key = <secret>
+ *       caps mds = "allow rw ... path=/volumes/<proj>/nrig/<uuid>, allow rw ... path=/volumes/fabric_users/pruth_0031379841/<uuid>"
+ *       caps mon = "allow r fsname=CEPH-FS-01"
+ *
+ * This matters for the user-facing page: listing cephx entities is
+ * operator-only, but exporting your OWN keyring is not. So a user can be shown
+ * every volume they can actually reach, with its real path, from a call they
+ * are already allowed to make - no new endpoint, no widened permission.
+ */
+export function parseKeyring(text: string): CephEntity | null {
+  const entityMatch = /^\s*\[([^\]]+)\]/m.exec(text);
+  if (!entityMatch) return null;
+  const capabilities: Capability[] = [];
+  // caps <entity> = "<cap>"   - the value may contain commas and spaces.
+  const re = /^\s*caps\s+(\w+)\s*=\s*"([^"]*)"/gm;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    capabilities.push({ entity: m[1], cap: m[2] });
+  }
+  return { user_entity: entityMatch[1].trim(), capabilities };
+}
+
+/** The secret from an exported keyring, or undefined. */
+export function keyFromKeyring(text: string): string | undefined {
+  const m = /^\s*key\s*=\s*(\S+)/m.exec(text);
+  return m ? m[1] : undefined;
+}
+
 /** `client.alice_0001` -> `alice_0001`. */
 export function loginFromEntity(entity: string): string {
   return entity.replace(/^client\./, "");
