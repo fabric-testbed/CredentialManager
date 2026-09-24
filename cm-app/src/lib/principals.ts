@@ -14,6 +14,18 @@ import { CephEntity, effectiveAccess, EffectiveAccess, loginFromEntity } from ".
 
 export const USER_GROUP = "fabric_users";
 
+/**
+ * CephFS's namespace for subvolumes created with no group.
+ *
+ * Real and in use: on asia, `kthare10_0011904101` lives at
+ * `/volumes/_nogroup/kthare10_0011904101/<uuid>`, while every other personal
+ * volume is under `fabric_users`. Coercing a missing group to `fabric_users`
+ * would file it under the right person by luck and then look for its
+ * capabilities under the wrong path prefix, so the access list would come back
+ * empty for a volume that is very much granted.
+ */
+export const NO_GROUP = "_nogroup";
+
 export type PrincipalKind = "user" | "project";
 
 export interface UserPrincipal {
@@ -132,6 +144,8 @@ export interface VolumeRow {
   bytesUsed?: number;
   /** True when the volume belongs to a project rather than a person. */
   shared: boolean;
+  /** True for a subvolume with no group, living under /volumes/_nogroup. */
+  ungrouped?: boolean;
 }
 
 export interface BucketRow {
@@ -179,10 +193,12 @@ export function volumesFor(
 ): VolumeRow[] {
   const rows: VolumeRow[] = [];
   for (const s of subvolumes) {
-    const group = s.group_name || USER_GROUP;
+    // Faithful, never coerced. A missing group means _nogroup, which is a
+    // different path prefix, not a synonym for the user group.
+    const group = s.group_name || NO_GROUP;
     const isMine =
       principal.kind === "user"
-        ? group === USER_GROUP && s.name === principal.login
+        ? (group === USER_GROUP || group === NO_GROUP) && s.name === principal.login
         : group === principal.uuid;
     if (!isMine) continue;
     rows.push({
@@ -192,6 +208,7 @@ export function volumesFor(
       bytesQuota: num(s.bytes_quota),
       bytesUsed: num(s.bytes_used),
       shared: principal.kind === "project",
+      ungrouped: group === NO_GROUP,
     });
   }
   return rows;
@@ -210,12 +227,15 @@ export function accessTo(
   entities: CephEntity[],
   people: Map<string, StorageUser>
 ): AccessRow[] {
-  const group = principal.kind === "user" ? USER_GROUP : principal.uuid;
+  // A person's volumes can sit in either the user group or _nogroup, so both
+  // path prefixes have to be searched or a granted volume reads as unreachable.
+  const groups =
+    principal.kind === "user" ? [USER_GROUP, NO_GROUP] : [principal.uuid];
   const rows: AccessRow[] = [];
   for (const e of entities) {
     const login = loginFromEntity(e.user_entity);
     for (const grant of effectiveAccess(e)) {
-      if (grant.group !== group) continue;
+      if (!grant.group || !groups.includes(grant.group)) continue;
       // A personal group is shared by every user, so only the owner's own
       // volume counts as access to THIS principal's storage.
       if (principal.kind === "user" && grant.scope === "volume" && grant.volume !== principal.login) {

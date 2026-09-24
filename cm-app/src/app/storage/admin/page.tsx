@@ -57,6 +57,7 @@ import {
   listCephUsers,
   listProjectMembers,
   listS3Buckets,
+  listSubvolumeGroups,
   listSubvolumes,
 } from "@/services/storage-service";
 
@@ -148,12 +149,22 @@ export default function StorageAdminPage() {
     try {
       const token = await ensureToken();
       const fs = clusters.find((c) => c.name === cluster)?.default_fs || DEFAULT_FS;
-      const [subs, users, bks] = await Promise.all([
-        listSubvolumes(token, cluster, fs, undefined, true),
+
+      // Listing subvolumes without a group returns ONLY the ungrouped ones -
+      // on asia that is a single row out of dozens. The full picture is the
+      // no-group listing plus one request per group, merged.
+      const { data: groupResp } = await listSubvolumeGroups(token, cluster, fs);
+      const groupNames: string[] = groupResp?.data ?? [];
+
+      const [users, bks, ...subLists] = await Promise.all([
         listCephUsers(token, cluster),
         listS3Buckets(token, cluster).catch(() => ({ data: { data: [] } })),
+        listSubvolumes(token, cluster, fs, undefined, true),
+        ...groupNames.map((g) => listSubvolumes(token, cluster, fs, g, true)),
       ]);
-      setSubvolumes(subs.data?.data ?? []);
+
+      const merged = subLists.flatMap((r) => r.data?.data ?? []);
+      setSubvolumes(merged);
       setEntities(users.data?.data ?? []);
       setBuckets(bks.data?.data ?? []);
     } catch (ex) {
@@ -382,7 +393,14 @@ export default function StorageAdminPage() {
                         <TableBody>
                           {volumes.map((v) => (
                             <TableRow key={`${v.group}/${v.name}`}>
-                              <TableCell className="font-medium">{v.name}</TableCell>
+                              <TableCell className="font-medium">
+                                {v.name}
+                                {v.ungrouped && (
+                                  <Badge variant="outline" className="ml-2">
+                                    no group
+                                  </Badge>
+                                )}
+                              </TableCell>
                               <TableCell>{formatBytes(v.bytesQuota)}</TableCell>
                               <TableCell className="text-right">
                                 {principal.kind === "project" && (
