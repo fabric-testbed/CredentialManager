@@ -1,0 +1,946 @@
+{
+ "data": [
+  {
+   "user_entity": "mon.",
+   "capabilities": [
+    {
+     "cap": "allow *",
+     "entity": "mon"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.aaddison1_0000441943",
+   "capabilities": []
+  },
+  {
+   "user_entity": "client.ab823254_0000303507",
+   "capabilities": []
+  },
+  {
+   "user_entity": "client.absahin_0000118769",
+   "capabilities": []
+  },
+  {
+   "user_entity": "client.ac9t5_0000446776",
+   "capabilities": []
+  },
+  {
+   "user_entity": "client.achangdewitt_0000439072",
+   "capabilities": []
+  },
+  {
+   "user_entity": "client.achavez27_0000446569",
+   "capabilities": []
+  },
+  {
+   "user_entity": "client.aeqbal1_0000448471",
+   "capabilities": []
+  },
+  {
+   "user_entity": "client.afoong_0000441013",
+   "capabilities": []
+  },
+  {
+   "user_entity": "client.agarcia62_0000448856",
+   "capabilities": []
+  },
+  {
+   "user_entity": "client.ahasan18_0000440991",
+   "capabilities": []
+  },
+  {
+   "user_entity": "client.ajaykumar_0000102567",
+   "capabilities": []
+  },
+  {
+   "user_entity": "client.akarthigaira_0000466894",
+   "capabilities": []
+  },
+  {
+   "user_entity": "client.akh7bs_0000373333",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/akh7bs_0000373333/d9f01ad9-1335-4d51-90f0-82c5385f1042",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.alex_raketich_0000301508",
+   "capabilities": []
+  },
+  {
+   "user_entity": "client.alex_wise_0000259454",
+   "capabilities": []
+  },
+  {
+   "user_entity": "client.alexander_cruser_0000465809",
+   "capabilities": []
+  },
+  {
+   "user_entity": "client.alexander_f_martinez_0000467624",
+   "capabilities": []
+  },
+  {
+   "user_entity": "client.ali_alqarni_0000162711",
+   "capabilities": []
+  },
+  {
+   "user_entity": "client.amaulsby_0000464022",
+   "capabilities": []
+  },
+  {
+   "user_entity": "client.amithgspn_0000206833",
+   "capabilities": []
+  },
+  {
+   "user_entity": "client.anaung_0000461470",
+   "capabilities": []
+  },
+  {
+   "user_entity": "client.apipilikas_0000444352",
+   "capabilities": []
+  },
+  {
+   "user_entity": "client.arajarajan_0000417704",
+   "capabilities": []
+  },
+  {
+   "user_entity": "client.avuong3_0000447277",
+   "capabilities": []
+  },
+  {
+   "user_entity": "client.awolosewicz_0000144375",
+   "capabilities": []
+  },
+  {
+   "user_entity": "client.babay_0021920827",
+   "capabilities": []
+  },
+  {
+   "user_entity": "client.baldin_0000147304",
+   "capabilities": []
+  },
+  {
+   "user_entity": "client.benjamin_thelen_0000445144",
+   "capabilities": []
+  },
+  {
+   "user_entity": "client.bformby_0000021406",
+   "capabilities": []
+  },
+  {
+   "user_entity": "client.bill_howard_0000334495",
+   "capabilities": []
+  },
+  {
+   "user_entity": "client.charles_s_carpenter_0015626041",
+   "capabilities": []
+  },
+  {
+   "user_entity": "client.choueiri_0000118746",
+   "capabilities": []
+  },
+  {
+   "user_entity": "client.chy216_0000439299",
+   "capabilities": []
+  },
+  {
+   "user_entity": "client.cristiano_serra_0000420903",
+   "capabilities": []
+  },
+  {
+   "user_entity": "client.demersn_0000449852",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/demersn_0000449852/15982ab3-441f-416f-92ac-16447ab55942",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.ewarraic_0000011862",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/ewarraic_0000011862/ef71e8d4-2cbc-419b-a12e-7f79575ba7ba",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.faheemur_0000470023",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/faheemur_0000470023/f83c41fc-b9c8-43ef-a0cd-ad5e59e53796",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.ftm2nu_0000294465",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/ftm2nu_0000294465/0b41a910-2bbb-4736-938a-fe78899a2884",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.globus-dtn",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/c93fe500-bdc7-48d7-89c7-a3103becf5f3, allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.kthare10_0000001692",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/c93fe500-bdc7-48d7-89c7-a3103becf5f3/nrig/d112dee5-13a6-42ac-9f17-c7d80d786ad8",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.kthare10_0011904101",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/c93fe500-bdc7-48d7-89c7-a3103becf5f3/nrig/d112dee5-13a6-42ac-9f17-c7d80d786ad8",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.kyle_finkel_0000467194",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/kyle_finkel_0000467194/081621f7-8239-49fc-ad67-3d4546e05346",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.kyle_hale_0000295671",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/kyle_hale_0000295671/fb3adae1-8f24-49b0-b2fd-f50ebab0c5fb",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.kyle_wong_0000467092",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/kyle_wong_0000467092/0c8318fe-edff-463b-91d5-019ff0c25e27",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.lalbanna_0000429283",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/lalbanna_0000429283/921988ca-c73a-4b49-9ca6-9f092384270a",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.lbraunschweig_0000461465",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/lbraunschweig_0000461465/97a0d820-24b1-4ec1-aa13-7d2b118107c7",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.ldgkc_0000405262",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/ldgkc_0000405262/f10685ad-839f-4b6d-b563-80fa5347a5ac",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.levi_randall_0000467044",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/levi_randall_0000467044/d44dadcb-d458-41ce-b004-2e7978df17bf",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.lferguson_0000287022",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/lferguson_0000287022/836e3c9b-6e5f-4b55-865d-cbdd47dc3a95",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.lily_solheim_0000468153",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/lily_solheim_0000468153/2f4f2e19-c451-473e-975f-99bc0d012765",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.ljgfkt_0000445512",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/ljgfkt_0000445512/e372f907-7c03-4158-9b28-f4e3130c54ed",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.lkothuru_0000375421",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/lkothuru_0000375421/eeebb335-1291-433f-b318-dd65d7ce544e",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.lmarinve_0000011754",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/lmarinve_0000011754/9f92a48f-ee8d-412e-aba3-b437d820a261",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.lmbdnz_0000321416",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/lmbdnz_0000321416/c3fff8e0-3f9c-48f7-8994-c9b8bef1baa8",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.lngo_0000005935",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/lngo_0000005935/fb4a3101-580c-49e2-9177-a97803ae4218",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.lorenzo_pappone_0000092650",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/lorenzo_pappone_0000092650/4d9779bc-004d-469f-8bf7-0463076dfccf",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.lrose4_0000444067",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/lrose4_0000444067/fc0902d5-7ebe-45ea-af92-9e1e0bea0720",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.m_r_dijk_0000315553",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/m_r_dijk_0000315553/056aada5-9c36-4194-858c-27112b158032",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.madas_0000116520",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/madas_0000116520/56904d0d-6449-4ab3-8cc5-80cbff36695c",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.mami_hayashida_0047831601",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/mami_hayashida_0047831601/6ae4f530-9f24-4ba5-8163-b008bb1525cf",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.marcos_schwarz_0034669026",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/marcos_schwarz_0034669026/decce19d-3722-4959-a034-9b75887923ed",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.mateusnas77_0000381988",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/mateusnas77_0000381988/a74ac3b4-4fdc-4485-9f53-ec3dbdbf7ac6",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.matt_0000025612",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/matt_0000025612/4d97898c-57f5-4d3a-9d07-a5c4acaf1bd5",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.maureen_c_dougherty_0000119479",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/maureen_c_dougherty_0000119479/6f1c0535-bd2e-42ad-812b-0d43cfb403d0",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.mayani_0000002704",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/mayani_0000002704/ca2eb2b9-e5b7-4154-9bc7-66327014d478",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.mazahir_hussain_0000322066",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/mazahir_hussain_0000322066/b7e3a9a9-1dc8-4e44-a057-fa3fe9e2444d",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.mcevik_0000100641",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/mcevik_0000100641/b198a1d3-7f09-42f6-b9a4-54a0e63c86a9",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.mch84_0000280698",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/mch84_0000280698/bc29ddc1-499f-43d1-8873-790b0252fad1",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.me348264_0000356733",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/me348264_0000356733/47f06bc0-6d4b-4219-9855-1cfcf0fda72d",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.mert_0038890581",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/mert_0038890581/1195e048-93b0-475f-ad7c-ce322d7b05b4",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.mfsada_0000140106",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/mfsada_0000140106/92a6dd72-23e2-4e21-be6e-e161a108d829",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.mgonzalez18_0000446159",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/mgonzalez18_0000446159/5e36f5c6-c5b7-4755-a344-d3ba28895840",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.miles_mayer_bickel_0000468840",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/miles_mayer_bickel_0000468840/0cbfd5ec-e479-485f-bbf3-4672621ce8e4",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.milo_kolkman_0000463989",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/milo_kolkman_0000463989/7ac54fc6-037b-4212-97f4-68b2e2a9aa1a",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.mkiran_0000089196",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/mkiran_0000089196/f2da338b-5828-4910-bdbf-bde8fb22a174",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.mla_0000467888",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/mla_0000467888/adb9bde3-6164-47c0-a6c1-315f0bc696e8",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.mlaiz_0000294118",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/mlaiz_0000294118/87ef5783-2020-4980-92b2-b48359d802de",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.mmelchor1_0000443942",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/mmelchor1_0000443942/b201b736-8596-4196-9e61-208250a7592b",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.mohammad_assiri_0000468057",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/mohammad_assiri_0000468057/716d21ae-f5f8-4d18-a4a8-4a897a9f32f0",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.mortazahassa_0000459806",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/mortazahassa_0000459806/17794af8-18cb-4282-9f40-d831da349d88",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.mrahman34_0000462702",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/mrahman34_0000462702/2b43e0b2-09d9-480b-9d85-1bf59a55a820",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.mrego_0000467904",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/mrego_0000467904/20c8044d-bfab-46fd-8868-ba3212b66d6c",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.mrh241_0000443799",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/mrh241_0000443799/b4f3352f-a546-4754-a022-bddda25b9276",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.mrosario_0000375921",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/mrosario_0000375921/d117ac0f-45da-44ce-891d-f1bc1b897a3b",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.msa94_0000447657",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/msa94_0000447657/0b04c20c-3074-47d2-830d-7dbe1a4db5a8",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.mzink_0011417656",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/mzink_0011417656/70ec0ff4-285d-4683-a868-d9290340160c",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.ngrivas_0000447626",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/ngrivas_0000447626/7f3db0fe-b8fc-41d3-8efc-e6c84c1ba727",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.nishat_nayla_0000464305",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/nishat_nayla_0000464305/04c5e0e8-5158-4c14-a962-85d1160fd887",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.niukthaa_btech23_0000468914",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/niukthaa_btech23_0000468914/75d2fc63-5473-44aa-8bfd-7c69f662f83c",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.nkodali_0000466820",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/nkodali_0000466820/79efd7fd-3ce7-4020-8f7f-cdb387d9ccfc",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.noah_brownn_0000464268",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/noah_brownn_0000464268/bc014194-23e4-4888-8557-8897c0e3283d",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.noah_perry_0000215562",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/noah_perry_0000215562/17b4e486-f5e1-4759-8483-f539c1d0d89c",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.noahmunz_0000390205",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/noahmunz_0000390205/b8dae58d-08c2-441d-9e2f-b1816ac4793f",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.npu234_0000461563",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/npu234_0000461563/0eff0e8a-29ac-40f1-b50b-89aa3ca48fc4",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.nshah03_0000384887",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/nshah03_0000384887/f98ddc3a-db0d-4cc5-83a0-628ad12ada36",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.nshyamkumar_0000102914",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/nshyamkumar_0000102914/b82a7043-acf5-41f1-9908-d0362d6def24",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.nsultana1_0000019879",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/nsultana1_0000019879/a8954036-b621-466c-8f2e-753bd0d33ea2",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.nvrk4b_0000265065",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/nvrk4b_0000265065/6385e001-2ac8-490b-9ff8-63d5e1f2a798",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.nxsvks_0000031803",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/nxsvks_0000031803/3270ec8a-7731-467a-9d3d-4846a6454c95",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.olivia_bullock_0000468141",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/olivia_bullock_0000468141/cd8da276-d666-4624-9024-b812bc887ad2",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.omichel_0000436341",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/omichel_0000436341/570ad195-5ef4-42c5-a29f-f8c08848e0d5",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.paul_brotelande_0000466222",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/paul_brotelande_0000466222/ee3d0ad1-0641-43a1-8397-7f80df47a231",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.paul_ruth_0050553627",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/c93fe500-bdc7-48d7-89c7-a3103becf5f3/nrig/d112dee5-13a6-42ac-9f17-c7d80d786ad8, allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/paul_ruth_0050553627/f0eb1ef9-b168-4dce-a3e3-17669d53f3bd",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.pbaduyakubu_0000168241",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/pbaduyakubu_0000168241/ca1e8cf6-5563-412d-b20a-d9d72f4b0029",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.pgyn2_0000446551",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/pgyn2_0000446551/3640a65d-4bee-45cb-807d-dd72d597bfa1",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.philip_cummins_0000306562",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/philip_cummins_0000306562/a2fedabb-085e-4f4c-a28a-f10b8e86bee9",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.phs2dm_0000190688",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/phs2dm_0000190688/1fee9405-54aa-48e1-af06-45589b3b0f48",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.pinyi_shi_0051459218",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/pinyi_shi_0051459218/81633aff-ff6e-45ee-b657-b37f8680e7f3",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.pjw7904_0000011266",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/pjw7904_0000011266/6acf593e-9035-4871-9a06-0e09f69b9863",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.pl8n4_0000267639",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/pl8n4_0000267639/85de39f4-b5fb-4291-a74a-a628812606ab",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.pmandebvu_0000467250",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/pmandebvu_0000467250/86283ef4-202e-489d-af60-487bdd37b5f8",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.polycarpnalela_0000063714",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/polycarpnalela_0000063714/0a1dc350-a3b2-4769-9421-ac27026067ac",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.ppzfq_0000423703",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/ppzfq_0000423703/8c2498ba-3794-4dd6-abf8-75237fb4a0ef",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.praveen_rao_0051543462",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/praveen_rao_0051543462/71bbafa9-d061-4649-9b0b-4aef03675324",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.pruth_0000000529",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/pruth_0000000529/5ec8b0c3-b052-4d16-bef4-101c35fe4a60",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.pruth_0031379841",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/c93fe500-bdc7-48d7-89c7-a3103becf5f3/nrig/d112dee5-13a6-42ac-9f17-c7d80d786ad8, allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/pruth_0031379841/5ed87d57-060b-4225-944b-5d4e660d77fb",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.quanzhang_0000457635",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/quanzhang_0000457635/0056d9be-0481-49aa-8ce2-fe478fee7d52",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.raffayatiq2341_0000334007",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/raffayatiq2341_0000334007/ce1c1628-551e-48e1-8d2d-c6e2eab4da75",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.rohitjd_btech23_0000467175",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/rohitjd_btech23_0000467175/bd357102-9018-4d74-9b18-65d3227aad93",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.rverezub_0000461471",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/rverezub_0000461471/2853b8f2-6366-482e-8088-91bd3372967e",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.sajid_ahmed_0000380335",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/sajid_ahmed_0000380335/5af67ba6-ace2-41c0-a874-c052bfec9096",
+     "entity": "mds"
+    }
+   ]
+  },
+  {
+   "user_entity": "client.stealey_0000242181",
+   "capabilities": [
+    {
+     "cap": "allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/stealey_0000242181/59016bc4-d272-44bb-a2cd-c30e77c0b788",
+     "entity": "mds"
+    }
+   ]
+  }
+ ]
+}
