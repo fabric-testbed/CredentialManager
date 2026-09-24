@@ -10,7 +10,9 @@ import {
   describeAccess,
   effectiveAccess,
   isBroadGrant,
+  keyFromKeyring,
   loginFromEntity,
+  parseKeyring,
   parseClause,
   splitClauses,
 } from "../ceph-caps";
@@ -126,5 +128,45 @@ describe("edge cases that would misread as narrower than they are", () => {
   it("strips the client. prefix", () => {
     expect(loginFromEntity("client.alice_0001")).toBe("alice_0001");
     expect(loginFromEntity("alice_0001")).toBe("alice_0001");
+  });
+});
+
+
+describe("reading an exported keyring", () => {
+  // Verbatim from /cluster/user/export on west, secret redacted. Listing cephx
+  // entities is operator-only; exporting your own keyring is not, so this is
+  // how the user-facing page learns what it can reach.
+  const KEYRING = `[client.pruth_0031379841]
+\tkey = REDACTEDREDACTEDREDACTED==
+\tcaps mds = "allow rw fsname=CEPH-FS-01 path=/volumes/c93fe500-bdc7-48d7-89c7-a3103becf5f3/nrig/d112dee5-13a6-42ac-9f17-c7d80d786ad8, allow rw fsname=CEPH-FS-01 path=/volumes/fabric_users/pruth_0031379841/5ed87d57-060b-4225-944b-5d4e660d77fb"
+\tcaps mon = "allow r fsname=CEPH-FS-01"
+\tcaps osd = "allow rw tag cephfs data=CEPH-FS-01, allow rw tag cephfs metadata=CEPH-FS-01"
+
+`;
+
+  it("recovers the entity and every capability line", () => {
+    const e = parseKeyring(KEYRING)!;
+    expect(e.user_entity).toBe("client.pruth_0031379841");
+    expect(e.capabilities?.map((c) => c.entity).sort()).toEqual(["mds", "mon", "osd"]);
+  });
+
+  it("yields both reachable volumes, with their real paths", () => {
+    const access = effectiveAccess(parseKeyring(KEYRING)!);
+    expect(access.map((a) => a.volume).sort()).toEqual(["nrig", "pruth_0031379841"]);
+    // The path is what a mount command has to use. Mounting / is refused:
+    // verified on the DTN as `mount error 13 = Permission denied`.
+    expect(access.find((a) => a.volume === "nrig")?.path).toBe(
+      "/volumes/c93fe500-bdc7-48d7-89c7-a3103becf5f3/nrig/d112dee5-13a6-42ac-9f17-c7d80d786ad8"
+    );
+  });
+
+  it("does not mistake an osd tag cap for a path grant", () => {
+    const access = effectiveAccess(parseKeyring(KEYRING)!);
+    expect(access.every((a) => a.path.startsWith("/volumes/"))).toBe(true);
+  });
+
+  it("extracts the key, and returns null for text that is not a keyring", () => {
+    expect(keyFromKeyring(KEYRING)).toBe("REDACTEDREDACTEDREDACTED==");
+    expect(parseKeyring("not a keyring")).toBeNull();
   });
 });

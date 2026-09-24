@@ -582,9 +582,18 @@ export default function StorageAdminPage() {
                     rows={access}
                     projectNames={projectNames}
                     emptyMessage={
-                      principal.kind === "project"
-                        ? "No cephx key grants access to this project's volumes. Members cannot mount them in a slice."
-                        : "No cephx key grants access to this volume."
+                      // "Nobody can reach it" and "there is nothing to reach"
+                      // are different findings, and only the first is a
+                      // problem. On east, NRIG has no volume at all.
+                      volumes.length === 0
+                        ? `No volume here to grant access to. ${
+                            principal.kind === "project"
+                              ? "This project has none on"
+                              : "This person has none on"
+                          } ${cluster}.`
+                        : principal.kind === "project"
+                        ? "This project has volumes, but no cephx key grants access to them - members cannot mount them in a slice."
+                        : "This volume exists, but no cephx key grants access to it."
                     }
                   />
                 </CardContent>

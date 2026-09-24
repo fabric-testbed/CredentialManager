@@ -7,29 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-} from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import SpinnerFullPage from "@/components/spinner-full-page";
 import { useUserStatus } from "@/hooks/use-user-status";
-import { getPerson, getProject, getProjects, getAllProjectsPaginated } from "@/services/core-api-service";
+import { getPerson, getProjects, getAllProjectsPaginated } from "@/services/core-api-service";
 import { createIdToken } from "@/services/credential-manager-service";
 import { getStorageProject, isStorageProjectOwnerRole } from "@/lib/config";
 import { S3BucketsTab } from "@/components/s3-buckets-tab";
@@ -37,26 +18,23 @@ import {
   getClusterInfo,
   listSubvolumeGroups,
   listSubvolumes,
-  createOrResizeSubvolume,
-  deleteSubvolume,
   listCephUsers,
-  applyUserCaps,
   exportUserKeyrings,
-  deleteCephUser,
   listProjectMembers,
 } from "@/services/storage-service";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Copy,
   Download,
-  RefreshCw,
-  Trash2,
-  Plus,
-  Search,
-  KeyRound,
   FolderDown,
 } from "lucide-react";
 import JSZip from "jszip";
+import {
+  effectiveAccess,
+  isBroadGrant,
+  parseKeyring as parseCephKeyring,
+} from "@/lib/ceph-caps";
+import { NO_GROUP, USER_GROUP } from "@/lib/principals";
 
 // Types
 
@@ -115,15 +93,6 @@ function getErrorMessage(error: unknown, fallback: string): string {
     // fall through
   }
   return fallback;
-}
-
-function formatBytes(bytes: number | string | undefined): string {
-  if (bytes === undefined || bytes === "infinite" || bytes === null) return "unlimited";
-  const n = typeof bytes === "string" ? parseInt(bytes) : bytes;
-  if (isNaN(n) || n === 0) return "0 B";
-  const units = ["B", "KiB", "MiB", "GiB", "TiB"];
-  const i = Math.floor(Math.log(n) / Math.log(1024));
-  return `${(n / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
 }
 
 async function copyToClipboard(text: string) {
@@ -407,13 +376,6 @@ export default function StoragePage() {
   const projectNameMap = new Map(projects.map((p) => [p.uuid, p.name]));
 
   // Format a group identifier for display: show project name if available
-  const formatGroupName = (groupId: string | undefined): string => {
-    if (!groupId) return "—";
-    const projectName = projectNameMap.get(groupId);
-    if (projectName) return `${projectName} (${groupId.slice(0, 8)}...)`;
-    return groupId;
-  };
-
   // Normal user state
   const [myKeyring, setMyKeyring] = useState("");
   // Token management
@@ -760,322 +722,9 @@ export default function StoragePage() {
   // Subvolume selection helpers
   const subvolKey = (sv: SubvolumeInfo) => `${sv.group || ""}::${sv.name}`;
 
-  const toggleSubvolume = (key: string) => {
-    setSelectedSubvolumes((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-  };
-
-  const toggleAllSubvolumes = () => {
-    if (selectedSubvolumes.size === subvolumes.length) {
-      setSelectedSubvolumes(new Set());
-    } else {
-      setSelectedSubvolumes(new Set(subvolumes.map(subvolKey)));
-    }
-  };
-
   // CephX user selection helpers
-  const toggleCephUser = (entity: string) => {
-    setSelectedCephUsers((prev) => {
-      const next = new Set(prev);
-      if (next.has(entity)) next.delete(entity);
-      else next.add(entity);
-      return next;
-    });
-  };
-
-  const toggleAllCephUsers = () => {
-    if (selectedCephUsers.size === filteredCephUsers.length) {
-      setSelectedCephUsers(new Set());
-    } else {
-      setSelectedCephUsers(new Set(filteredCephUsers.map((u) => u.entity)));
-    }
-  };
-
   // Batch delete handlers
-  const handleBatchDeleteSubvolumes = async () => {
-    if (selectedSubvolumes.size === 0) return;
-    setShowSpinner(true);
-    setSpinnerMessage(`Deleting ${selectedSubvolumes.size} subvolume(s)...`);
-    let ok = 0;
-    let fail = 0;
-    try {
-      const token = await ensureToken();
-      for (const key of selectedSubvolumes) {
-        const sepIdx = key.indexOf("::");
-        const group = key.slice(0, sepIdx) || undefined;
-        const name = key.slice(sepIdx + 2);
-        try {
-          await deleteSubvolume(token, selectedCluster, DEFAULT_VOL, name, group);
-          ok++;
-        } catch (ex) {
-          fail++;
-          console.error(`Failed to delete subvolume ${name}:`, ex);
-        }
-      }
-      if (fail === 0) {
-        toast.success(`Deleted ${ok} subvolume(s).`);
-      } else {
-        toast.warning(`Deleted ${ok} subvolume(s), failed for ${fail}.`);
-      }
-      setSelectedSubvolumes(new Set());
-      loadSubvolumes(selectedGroup || undefined);
-    } catch (ex) {
-      toast.error(getErrorMessage(ex, "Batch delete failed."));
-    } finally {
-      setShowSpinner(false);
-      setSpinnerMessage("");
-    }
-  };
-
-  const handleBatchDeleteCephUsers = async () => {
-    if (selectedCephUsers.size === 0) return;
-    setShowSpinner(true);
-    setSpinnerMessage(`Deleting ${selectedCephUsers.size} user(s)...`);
-    let ok = 0;
-    let fail = 0;
-    try {
-      const token = await ensureToken();
-      for (const entity of selectedCephUsers) {
-        try {
-          await deleteCephUser(token, selectedCluster, entity);
-          ok++;
-        } catch (ex) {
-          fail++;
-          console.error(`Failed to delete user ${entity}:`, ex);
-        }
-      }
-      if (fail === 0) {
-        toast.success(`Deleted ${ok} user(s).`);
-      } else {
-        toast.warning(`Deleted ${ok} user(s), failed for ${fail}.`);
-      }
-      setSelectedCephUsers(new Set());
-      loadCephUsers();
-    } catch (ex) {
-      toast.error(getErrorMessage(ex, "Batch delete failed."));
-    } finally {
-      setShowSpinner(false);
-      setSpinnerMessage("");
-    }
-  };
-
-  const handleCreateSubvolume = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newSubvolName) return;
-    setShowSpinner(true);
-    setSpinnerMessage("Creating subvolume...");
-    try {
-      const token = await ensureToken();
-      // Per-User: no group; Per-Project: group from dropdown
-      const groupName = subvolScope === "user" ? undefined : (newSubvolGroup || undefined);
-      await createOrResizeSubvolume(token, selectedCluster, DEFAULT_VOL, {
-        subvol_name: newSubvolName,
-        group_name: groupName,
-        size: newSubvolSizeGiB * 1024 * 1024 * 1024,
-        mode: "0777",
-      });
-      toast.success(`Subvolume "${newSubvolName}" created.`);
-      setNewSubvolName("");
-      loadSubvolumes(selectedGroup || undefined);
-    } catch (ex) {
-      toast.error(getErrorMessage(ex, "Failed to create subvolume."));
-    } finally {
-      setShowSpinner(false);
-      setSpinnerMessage("");
-    }
-  };
-
-  const handleResizeSubvolume = async () => {
-    if (!resizeSubvol) return;
-    setShowSpinner(true);
-    setSpinnerMessage("Resizing subvolume...");
-    try {
-      const token = await ensureToken();
-      await createOrResizeSubvolume(token, selectedCluster, DEFAULT_VOL, {
-        subvol_name: resizeSubvol.name,
-        group_name: resizeSubvol.group || undefined,
-        size: resizeSizeGiB * 1024 * 1024 * 1024,
-      });
-      toast.success(`Subvolume "${resizeSubvol.name}" resized.`);
-      setResizeSubvol(null);
-      loadSubvolumes(selectedGroup || undefined);
-    } catch (ex) {
-      toast.error(getErrorMessage(ex, "Failed to resize subvolume."));
-    } finally {
-      setShowSpinner(false);
-      setSpinnerMessage("");
-    }
-  };
-
-  const handleDeleteSubvolume = async (sv: SubvolumeInfo) => {
-    setShowSpinner(true);
-    setSpinnerMessage("Deleting subvolume...");
-    try {
-      const token = await ensureToken();
-      await deleteSubvolume(
-        token,
-        selectedCluster,
-        DEFAULT_VOL,
-        sv.name,
-        sv.group || undefined
-      );
-      toast.success(`Subvolume "${sv.name}" deleted.`);
-      loadSubvolumes(selectedGroup || undefined);
-    } catch (ex) {
-      toast.error(getErrorMessage(ex, "Failed to delete subvolume."));
-    } finally {
-      setShowSpinner(false);
-      setSpinnerMessage("");
-    }
-  };
-
   // Apply CephX caps (single user or entire project)
-  const handleApplyCaps = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!capsSubvol) return;
-    setShowSpinner(true);
-
-    // Determine which users to apply caps to
-    const logins: string[] = [];
-    let skippedMembers = 0;
-    let projectLabel = "";
-    if (capsTarget === "user") {
-      if (!capsEntity) return;
-      // capsEntity is "client.xxx" — extract the login
-      logins.push(capsEntity.replace(/^client\./, ""));
-    } else {
-      // Entire Project: the members of the project that OWNS this subvolume.
-      //
-      // projectMembers is NOT that list. It comes from /project/members, which
-      // the backend answers for the Ceph *service* project - i.e. everyone who
-      // has storage - so using it here granted the volume to every storage user
-      // (276 of them) instead of the handful in the project.
-      //
-      // A project subvolume lives in a group named after the project uuid, so
-      // capsGroup identifies the owner. Fetch that project, then intersect its
-      // membership with projectMembers, which is where bastion_login lives.
-      if (!capsGroup) {
-        toast.error(
-          "Select the project group for this subvolume before applying project capabilities."
-        );
-        setShowSpinner(false);
-        return;
-      }
-      if (!projectMembersLoaded) {
-        // Without the full storage-user list the intersection below would be a
-        // subset of unknown size, and applying to a subset silently is the same
-        // class of bug as applying to everyone.
-        toast.error(
-          "Storage user list is not loaded. Reload the page before applying project capabilities."
-        );
-        setShowSpinner(false);
-        return;
-      }
-      try {
-        const { data: projResp } = await getProject(capsGroup);
-        const project = (projResp.results || [])[0];
-        if (!project) throw new Error("project not found");
-
-        const memberUuids = new Set<string>(
-          [
-            ...(project.project_members || []),
-            ...(project.project_owners || []),
-            ...(project.project_creators || []),
-          ]
-            .map((m: { uuid?: string }) => m?.uuid)
-            .filter(Boolean) as string[]
-        );
-
-        const withStorage = projectMembers.filter((m) => memberUuids.has(m.uuid));
-        logins.push(...withStorage.map((m) => m.bastion_login));
-
-        // Members of the project who have no storage account cannot be granted
-        // anything here. Say so: otherwise "Entire Project" reports success
-        // while covering only part of the project.
-        skippedMembers = memberUuids.size - withStorage.length;
-        projectLabel = project.name || capsGroup;
-
-        if (logins.length === 0) {
-          // Fail closed. Falling back to "all members" is what caused the
-          // over-grant in the first place.
-          toast.error(
-            `No storage-enabled members found for ${project.name || capsGroup}. ` +
-              `Nothing was applied.`
-          );
-          setShowSpinner(false);
-          return;
-        }
-      } catch (ex) {
-        toast.error(
-          getErrorMessage(ex, "Failed to resolve project membership. Nothing was applied.")
-        );
-        setShowSpinner(false);
-        return;
-      }
-    }
-
-    if (logins.length === 0) {
-      toast.error("No users to apply capabilities to.");
-      setShowSpinner(false);
-      return;
-    }
-
-    setSpinnerMessage(`Applying capabilities to ${logins.length} user(s)...`);
-    let ok = 0;
-    let fail = 0;
-    try {
-      const token = await ensureToken();
-      for (const login of logins) {
-        try {
-          await applyUserCaps(token, selectedCluster, {
-            user_entity: `client.${login}`,
-            template_capabilities: DEFAULT_CAPS_TEMPLATE,
-            renders: [
-              {
-                fs_name: DEFAULT_VOL,
-                subvol_name: capsSubvol,
-                group_name: capsGroup || undefined,
-              },
-            ],
-            sync_across_clusters: true,
-            merge_strategy: "multi",
-          });
-          ok++;
-        } catch (ex) {
-          fail++;
-          console.error(`Failed to apply caps for client.${login}:`, ex);
-        }
-      }
-      const coverage =
-        capsTarget === "project"
-          ? ` for ${projectLabel}` +
-            (skippedMembers > 0
-              ? `; ${skippedMembers} project member(s) skipped - no storage account`
-              : "")
-          : "";
-      if (fail === 0 && skippedMembers === 0) {
-        toast.success(`Capabilities applied to ${ok} user(s)${coverage}.`);
-      } else if (fail === 0) {
-        toast.warning(`Applied to ${ok} user(s)${coverage}.`);
-      } else {
-        toast.warning(`Applied to ${ok} user(s), failed for ${fail}${coverage}.`);
-      }
-      setCapsEntity("");
-      setCapsSubvol("");
-      setCapsGroup("");
-      loadCephUsers();
-    } catch (ex) {
-      toast.error(getErrorMessage(ex, "Failed to apply capabilities."));
-    } finally {
-      setShowSpinner(false);
-      setSpinnerMessage("");
-    }
-  };
-
   // ----- Operator: CephX Users -----
 
   const loadCephUsers = useCallback(async () => {
@@ -1112,54 +761,6 @@ export default function StoragePage() {
     }
     // No keyring found for this entity on this cluster
     return "";
-  };
-
-  const handleExportKeyring = async (entity: string) => {
-    try {
-      const token = await ensureToken();
-      const { data: response } = await exportUserKeyrings(token, selectedCluster, [entity]);
-      const keyring = extractKeyring(response, entity);
-      await copyToClipboard(keyring);
-    } catch (ex) {
-      toast.error(getErrorMessage(ex, "Failed to export keyring."));
-    }
-  };
-
-  const handleDownloadBundle = async (entity: string) => {
-    try {
-      const token = await ensureToken();
-      const { data: response } = await exportUserKeyrings(token, selectedCluster, [entity]);
-      const keyring = extractKeyring(response, entity);
-
-      // Get ceph.conf from cluster info
-      const currentCluster = clusters.find((c) => c.cluster === selectedCluster);
-      const cephConf = currentCluster?.ceph_conf_minimal;
-      if (!cephConf) {
-        toast.error("Cluster config (ceph.conf) not available.");
-        return;
-      }
-
-      await generateAndDownloadBundle(selectedCluster, cephConf, keyring);
-      toast.success(`Bundle downloaded for ${entity}.`);
-    } catch (ex) {
-      toast.error(getErrorMessage(ex, "Failed to generate bundle."));
-    }
-  };
-
-  const handleDeleteCephUser = async (entity: string) => {
-    setShowSpinner(true);
-    setSpinnerMessage("Deleting user...");
-    try {
-      const token = await ensureToken();
-      await deleteCephUser(token, selectedCluster, entity);
-      toast.success(`User "${entity}" deleted.`);
-      loadCephUsers();
-    } catch (ex) {
-      toast.error(getErrorMessage(ex, "Failed to delete user."));
-    } finally {
-      setShowSpinner(false);
-      setSpinnerMessage("");
-    }
   };
 
   // ----- Normal User: My Credentials -----
@@ -1257,714 +858,62 @@ export default function StoragePage() {
   const s3EndpointsForCluster =
     clusters.find((c) => c.cluster === selectedCluster)?.s3_endpoints || [];
 
-  // ===== OPERATOR VIEW =====
-  if (isOperator) {
-    return (
-      <div className="container mx-auto min-h-[80vh] mt-8 mb-8 px-4">
-        <h1 className="text-xl font-semibold text-fabric-dark mb-4">
-          Storage Management
-        </h1>
-        {clusterSelector}
+  // The operator view moved to /storage/admin, which is organised principal ->
+  // storage -> access. This page is now "my storage" for everyone, operators
+  // included - they have volumes of their own like anyone else, and the banner
+  // below is how they get there.
 
-        <Tabs defaultValue="posix">
-          <TabsList>
-            <TabsTrigger value="posix">POSIX Volumes</TabsTrigger>
-            <TabsTrigger value="s3">S3 Buckets</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="s3" className="space-y-4">
-            <S3BucketsTab
-              cluster={selectedCluster}
-              s3Endpoints={s3EndpointsForCluster}
-              isOperator={isOperator}
-              bastionLogin={bastionLogin}
-              projectMembers={projectMembers}
-              ensureToken={ensureToken}
-              getErrorMessage={getErrorMessage}
-            />
-          </TabsContent>
-
-          <TabsContent value="posix" className="space-y-4">
-        <Tabs defaultValue="subvolumes">
-          <TabsList>
-            <TabsTrigger value="subvolumes">Subvolumes</TabsTrigger>
-            <TabsTrigger value="cephx">CephX Users</TabsTrigger>
-          </TabsList>
-
-          {/* ===== SUBVOLUMES TAB ===== */}
-          <TabsContent value="subvolumes" className="space-y-4">
-            {/* Group selector */}
-            <div className="flex items-center gap-3">
-              <div>
-                <Label htmlFor="group-filter">Group</Label>
-                <select
-                  id="group-filter"
-                  className="flex h-9 w-48 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
-                  value={selectedGroup}
-                  onChange={(e) => setSelectedGroup(e.target.value)}
-                >
-                  <option value="">All groups</option>
-                  {groups.map((g) => (
-                    <option key={g} value={g}>
-                      {formatGroupName(g)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-5"
-                onClick={() => {
-                  loadGroups();
-                  loadSubvolumes(selectedGroup || undefined);
-                }}
-              >
-                <RefreshCw className="h-4 w-4 mr-1" /> Refresh
-              </Button>
-            </div>
-
-            {/* Batch action bar for subvolumes */}
-            {selectedSubvolumes.size > 0 && (
-              <div className="flex items-center gap-3 rounded-md border bg-muted/50 px-4 py-2">
-                <span className="text-sm font-medium">
-                  {selectedSubvolumes.size} selected
-                </span>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="border-fabric-danger text-fabric-danger"
-                    >
-                      <Trash2 className="h-3 w-3 mr-1" /> Delete Selected
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Delete {selectedSubvolumes.size} Subvolume(s)</AlertDialogTitle>
-                      <AlertDialogDescription asChild>
-                        <div>
-                          <p>This will permanently delete the following subvolumes:</p>
-                          <ul className="mt-2 max-h-40 overflow-auto text-xs font-mono list-disc pl-4">
-                            {[...selectedSubvolumes].map((key) => {
-                              const sepIdx = key.indexOf("::");
-                              const name = key.slice(sepIdx + 2);
-                              return <li key={key}>{name}</li>;
-                            })}
-                          </ul>
-                        </div>
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={handleBatchDeleteSubvolumes}
-                        className="bg-destructive text-white"
-                      >
-                        Delete {selectedSubvolumes.size} Subvolume(s)
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSelectedSubvolumes(new Set())}
-                >
-                  Clear Selection
-                </Button>
-              </div>
-            )}
-
-            {/* Subvolume table */}
-            {subvolumes.length > 0 ? (
-              <div className="rounded-md border overflow-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>
-                        <Checkbox
-                          checked={
-                            subvolumes.length > 0 &&
-                            selectedSubvolumes.size === subvolumes.length
-                          }
-                          data-indeterminate={
-                            selectedSubvolumes.size > 0 &&
-                            selectedSubvolumes.size < subvolumes.length
-                          }
-                          onCheckedChange={toggleAllSubvolumes}
-                          aria-label="Select all subvolumes"
-                        />
-                      </TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Group</TableHead>
-                      <TableHead>Quota</TableHead>
-                      <TableHead>Used</TableHead>
-                      <TableHead>State</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {subvolumes.map((sv) => {
-                      const key = subvolKey(sv);
-                      return (
-                      <TableRow key={`${sv.group || ""}-${sv.name}`} data-state={selectedSubvolumes.has(key) ? "selected" : undefined}>
-                        <TableCell>
-                          <Checkbox
-                            checked={selectedSubvolumes.has(key)}
-                            onCheckedChange={() => toggleSubvolume(key)}
-                            aria-label={`Select ${sv.name}`}
-                          />
-                        </TableCell>
-                        <TableCell className="font-mono text-sm">
-                          {sv.name}
-                        </TableCell>
-                        <TableCell>{formatGroupName(sv.group)}</TableCell>
-                        <TableCell>{formatBytes(sv.bytes_quota)}</TableCell>
-                        <TableCell>{formatBytes(sv.bytes_used)}</TableCell>
-                        <TableCell>
-                          <Badge
-                            className={
-                              sv.state === "complete"
-                                ? "bg-fabric-success text-white"
-                                : "bg-fabric-warning text-white"
-                            }
-                          >
-                            {sv.state || "unknown"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setResizeSubvol(sv);
-                                setResizeSizeGiB(
-                                  sv.bytes_quota && sv.bytes_quota !== "infinite"
-                                    ? Math.ceil(
-                                        (typeof sv.bytes_quota === "string"
-                                          ? parseInt(sv.bytes_quota)
-                                          : sv.bytes_quota) /
-                                          (1024 * 1024 * 1024)
-                                      )
-                                    : 10
-                                );
-                              }}
-                            >
-                              Resize
-                            </Button>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="border-fabric-danger text-fabric-danger"
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>
-                                    Delete Subvolume
-                                  </AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Delete subvolume &quot;{sv.name}&quot;
-                                    {sv.group ? ` from group "${formatGroupName(sv.group)}"` : ""}
-                                    ? This cannot be undone.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => handleDeleteSubvolume(sv)}
-                                    className="bg-destructive text-white"
-                                  >
-                                    Delete
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            ) : (
-              <div className="bg-fabric-primary/10 border border-fabric-primary/30 text-fabric-dark rounded p-4">
-                No subvolumes found.
-              </div>
-            )}
-
-            {/* Resize dialog */}
-            {resizeSubvol && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm">
-                    Resize: {resizeSubvol.name}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-end gap-3">
-                    <div>
-                      <Label>New Size (GiB)</Label>
-                      <Input
-                        type="number"
-                        min={1}
-                        value={resizeSizeGiB}
-                        onChange={(e) =>
-                          setResizeSizeGiB(parseInt(e.target.value) || 1)
-                        }
-                        className="w-32"
-                      />
-                    </div>
-                    <Button
-                      onClick={handleResizeSubvolume}
-                      className="bg-fabric-primary hover:bg-fabric-primary-dark text-white"
-                    >
-                      Resize
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setResizeSubvol(null)}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Create subvolume form */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm">Create Subvolume</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <form
-                  onSubmit={handleCreateSubvolume}
-                  className="space-y-3"
-                >
-                  <div className="flex items-end gap-3">
-                    <div>
-                      <Label>Scope</Label>
-                      <select
-                        className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
-                        value={subvolScope}
-                        onChange={(e) => {
-                          const scope = e.target.value as "user" | "project";
-                          setSubvolScope(scope);
-                          setNewSubvolName("");
-                          setNewSubvolGroup("");
-                        }}
-                      >
-                        <option value="user">Per-User</option>
-                        <option value="project">Per-Project</option>
-                      </select>
-                    </div>
-
-                    {subvolScope === "user" ? (
-                      <div>
-                        <Label>User</Label>
-                        <select
-                          className="flex h-9 w-48 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
-                          value={newSubvolName}
-                          onChange={(e) => setNewSubvolName(e.target.value)}
-                        >
-                          <option value="">Select user...</option>
-                          {projectMembers.map((m) => (
-                            <option key={m.uuid} value={m.bastion_login}>
-                              {m.bastion_login}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    ) : (
-                      <>
-                        <div>
-                          <Label>Project</Label>
-                          <select
-                            className="flex h-9 w-64 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
-                            value={newSubvolGroup}
-                            onChange={(e) => setNewSubvolGroup(e.target.value)}
-                          >
-                            <option value="">Select project...</option>
-                            {projects.map((p) => (
-                              <option key={p.uuid} value={p.uuid}>
-                                {p.name} ({p.uuid.slice(0, 8)}...)
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
-                          <Label>Subvolume Name</Label>
-                          <Input
-                            placeholder="subvol-name"
-                            value={newSubvolName}
-                            onChange={(e) => setNewSubvolName(e.target.value)}
-                            className="w-48"
-                          />
-                        </div>
-                      </>
-                    )}
-
-                    <div>
-                      <Label>Size (GiB)</Label>
-                      <Input
-                        type="number"
-                        min={1}
-                        value={newSubvolSizeGiB}
-                        onChange={(e) =>
-                          setNewSubvolSizeGiB(parseInt(e.target.value) || 1)
-                        }
-                        className="w-24"
-                      />
-                    </div>
-                    <Button
-                      type="submit"
-                      disabled={!newSubvolName || (subvolScope === "project" && !newSubvolGroup)}
-                      className="bg-fabric-success hover:bg-fabric-success/90 text-white"
-                    >
-                      <Plus className="h-4 w-4 mr-1" /> Create
-                    </Button>
-                  </div>
-                  {subvolScope === "user" && (
-                    <p className="text-xs text-muted-foreground">
-                      Per-User: subvolume name = bastion login, no group.
-                    </p>
-                  )}
-                  {subvolScope === "project" && (
-                    <p className="text-xs text-muted-foreground">
-                      Per-Project: group = project UUID, provide a subvolume name (e.g. slugified project name).
-                    </p>
-                  )}
-                </form>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* ===== CEPHX USERS TAB ===== */}
-          <TabsContent value="cephx" className="space-y-4">
-            {/* Apply CephX Caps */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm">
-                  Apply User Capabilities
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <form
-                  onSubmit={handleApplyCaps}
-                  className="space-y-3"
-                >
-                  <div className="flex items-end gap-3 flex-wrap">
-                    <div>
-                      <Label>Target</Label>
-                      <select
-                        className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
-                        value={capsTarget}
-                        onChange={(e) => {
-                          setCapsTarget(e.target.value as "user" | "project");
-                          setCapsEntity("");
-                        }}
-                      >
-                        <option value="user">Single User</option>
-                        <option value="project">Entire Project</option>
-                      </select>
-                    </div>
-
-                    {capsTarget === "user" && (
-                      <div>
-                        <Label>User Entity</Label>
-                        <select
-                          className="flex h-9 w-48 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
-                          value={capsEntity}
-                          onChange={(e) => setCapsEntity(e.target.value)}
-                        >
-                          <option value="">Select user...</option>
-                          {projectMembers.map((m) => (
-                            <option key={m.uuid} value={`client.${m.bastion_login}`}>
-                              client.{m.bastion_login}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
-
-                    <div>
-                      <Label>Subvolume</Label>
-                      <select
-                        className="flex h-9 w-64 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
-                        value={capsSubvol ? `${capsGroup || ""}::${capsSubvol}` : ""}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          if (!val) {
-                            setCapsSubvol("");
-                            setCapsGroup("");
-                            return;
-                          }
-                          // Value format: "group::name"
-                          const sepIdx = val.indexOf("::");
-                          const grp = val.slice(0, sepIdx);
-                          const name = val.slice(sepIdx + 2);
-                          setCapsSubvol(name);
-                          setCapsGroup(grp);
-                        }}
-                      >
-                        <option value="">Select subvolume...</option>
-                        {allSubvolumes.map((sv) => (
-                          <option
-                            key={`${sv.group || ""}-${sv.name}`}
-                            value={`${sv.group || ""}::${sv.name}`}
-                          >
-                            {sv.name}{sv.group ? ` [${formatGroupName(sv.group)}]` : ""}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <Label>Group</Label>
-                      <select
-                        className="flex h-9 w-48 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
-                        value={capsGroup}
-                        onChange={(e) => setCapsGroup(e.target.value)}
-                      >
-                        <option value="">None</option>
-                        {groups.map((g) => (
-                          <option key={g} value={g}>
-                            {formatGroupName(g)}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <Button
-                      type="submit"
-                      disabled={
-                        !capsSubvol ||
-                        (capsTarget === "user" && !capsEntity) ||
-                        (capsTarget === "project" && (!capsGroup || !projectMembersLoaded))
-                      }
-                      className="bg-fabric-primary hover:bg-fabric-primary/90 text-white"
-                    >
-                      Apply Caps
-                    </Button>
-                  </div>
-                  {capsTarget === "user" && (
-                    <p className="text-xs text-muted-foreground">
-                      Apply default capabilities to a single user for the selected subvolume.
-                    </p>
-                  )}
-                  {capsTarget === "project" && (
-                    <p className="text-xs text-muted-foreground">
-                      Apply default capabilities to the members of the project that owns
-                      the selected group{capsGroup ? ` (${formatGroupName(capsGroup)})` : ""}.
-                      Only members who already have storage are affected.
-                    </p>
-                  )}
-                </form>
-              </CardContent>
-            </Card>
-
-            <div className="flex items-center gap-3">
-              <div className="relative flex-1 max-w-sm">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search users..."
-                  value={userSearch}
-                  onChange={(e) => setUserSearch(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={loadCephUsers}
-              >
-                <RefreshCw className="h-4 w-4 mr-1" /> Refresh
-              </Button>
-            </div>
-
-            {/* Batch action bar for CephX users */}
-            {selectedCephUsers.size > 0 && (
-              <div className="flex items-center gap-3 rounded-md border bg-muted/50 px-4 py-2">
-                <span className="text-sm font-medium">
-                  {selectedCephUsers.size} selected
-                </span>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="border-fabric-danger text-fabric-danger"
-                    >
-                      <Trash2 className="h-3 w-3 mr-1" /> Delete Selected
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Delete {selectedCephUsers.size} User(s)</AlertDialogTitle>
-                      <AlertDialogDescription asChild>
-                        <div>
-                          <p>This will permanently delete the following users and revoke all their access:</p>
-                          <ul className="mt-2 max-h-40 overflow-auto text-xs font-mono list-disc pl-4">
-                            {[...selectedCephUsers].map((entity) => (
-                              <li key={entity}>{entity}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={handleBatchDeleteCephUsers}
-                        className="bg-destructive text-white"
-                      >
-                        Delete {selectedCephUsers.size} User(s)
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSelectedCephUsers(new Set())}
-                >
-                  Clear Selection
-                </Button>
-              </div>
-            )}
-
-            {filteredCephUsers.length > 0 ? (
-              <div className="rounded-md border overflow-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>
-                        <Checkbox
-                          checked={
-                            filteredCephUsers.length > 0 &&
-                            selectedCephUsers.size === filteredCephUsers.length
-                          }
-                          data-indeterminate={
-                            selectedCephUsers.size > 0 &&
-                            selectedCephUsers.size < filteredCephUsers.length
-                          }
-                          onCheckedChange={toggleAllCephUsers}
-                          aria-label="Select all users"
-                        />
-                      </TableHead>
-                      <TableHead>Entity</TableHead>
-                      <TableHead>Capabilities</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredCephUsers.map((user) => (
-                      <TableRow key={user.entity} data-state={selectedCephUsers.has(user.entity) ? "selected" : undefined}>
-                        <TableCell>
-                          <Checkbox
-                            checked={selectedCephUsers.has(user.entity)}
-                            onCheckedChange={() => toggleCephUser(user.entity)}
-                            aria-label={`Select ${user.entity}`}
-                          />
-                        </TableCell>
-                        <TableCell className="font-mono text-sm">
-                          {user.entity}
-                        </TableCell>
-                        <TableCell className="text-xs max-w-md truncate">
-                          {user.caps
-                            ? Object.entries(user.caps)
-                                .map(([k, v]) => `${k}: ${v}`)
-                                .join("; ")
-                            : "—"}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleExportKeyring(user.entity)}
-                              title="Copy keyring to clipboard"
-                            >
-                              <KeyRound className="h-3 w-3 mr-1" /> Export
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleDownloadBundle(user.entity)}
-                              title="Download ceph.conf, keyring, secret, and mount script as a zip"
-                            >
-                              <FolderDown className="h-3 w-3 mr-1" /> Bundle
-                            </Button>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="border-fabric-danger text-fabric-danger"
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>
-                                    Delete User
-                                  </AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Delete user &quot;{user.entity}&quot;? This
-                                    will revoke all access.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() =>
-                                      handleDeleteCephUser(user.entity)
-                                    }
-                                    className="bg-destructive text-white"
-                                  >
-                                    Delete
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            ) : (
-              <div className="bg-fabric-primary/10 border border-fabric-primary/30 text-fabric-dark rounded p-4">
-                {userSearch ? "No matching users." : "No users found."}
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
-          </TabsContent>
-        </Tabs>
-      </div>
-    );
-  }
 
   // ===== NORMAL USER VIEW =====
-  const currentCluster = clusters.find((c) => c.cluster === selectedCluster);
-  const monHost = currentCluster?.mon_host || "";
   const userEntity = `client.${bastionLogin}`;
+
+  // What this person can actually reach, read out of their own keyring.
+  //
+  // Listing cephx entities is operator-only, but the keyring this page already
+  // exports carries the mds caps, and those caps ARE the answer: one clause per
+  // grant, each naming an exact path. The page used to show a single command
+  // mounting the filesystem ROOT, which a path-restricted key is refused for -
+  // verified against a live client as `mount error 13 = Permission denied`,
+  // while the same key mounting its granted path succeeds and lists 86 entries.
+  // So the command shown here had never worked, while the bundle's script -
+  // built from these same paths - always had.
+  const myVolumes = (() => {
+    if (!myKeyring) return [];
+    const entity = parseCephKeyring(myKeyring);
+    if (!entity) return [];
+    return effectiveAccess(entity).map((g) => {
+      const wide = isBroadGrant(g);
+      const personal = g.group === USER_GROUP || g.group === NO_GROUP;
+      const label = personal
+        ? wide
+          ? "All personal volumes"
+          : "Your personal volume"
+        : wide
+        ? `Every volume in project ${g.group}`
+        : `${g.volume} (project volume)`;
+      return {
+        path: g.path,
+        fsname: g.fsname || "CEPH-FS-01",
+        label,
+        wide,
+        mountName: g.volume || slugFromPath(g.path),
+      };
+    });
+  })();
 
   return (
     <div className="container mx-auto min-h-[80vh] mt-8 mb-8 px-4">
-      <h1 className="text-xl font-semibold text-fabric-dark mb-4">
-        My Storage Credentials
-      </h1>
+      <h1 className="text-xl font-semibold text-fabric-dark mb-4">My Storage</h1>
+      {isOperator && (
+        <div className="mb-4 rounded border border-fabric-primary/30 bg-fabric-primary/5 p-3 text-sm">
+          This page shows your own storage. To administer other people&apos;s, go
+          to{" "}
+          <a className="underline" href="/storage/admin">
+            Storage Admin
+          </a>
+          .
+        </div>
+      )}
       {clusterSelector}
 
       <Tabs defaultValue="posix">
@@ -2048,26 +997,52 @@ export default function StoragePage() {
                   </Button>
                 </div>
 
-                <div>
+                <div className="space-y-3">
                   <Label className="text-xs text-muted-foreground">
-                    Mount command
+                    Volumes you can reach on {selectedCluster}
                   </Label>
-                  <pre className="bg-muted p-3 rounded text-xs overflow-auto mt-1">
-{`sudo mount -t ceph ${monHost}:6789:/ /mnt/ceph \\
-  -o name=${bastionLogin},secretfile=/etc/ceph/keyring`}
-                  </pre>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="mt-1"
-                    onClick={() =>
-                      copyToClipboard(
-                        `sudo mount -t ceph ${monHost}:6789:/ /mnt/ceph -o name=${bastionLogin},secretfile=/etc/ceph/keyring`
-                      )
-                    }
-                  >
-                    <Copy className="h-3 w-3 mr-1" /> Copy
-                  </Button>
+                  {myVolumes.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      Your key grants no filesystem paths on this cluster, so
+                      there is nothing to mount here.
+                    </p>
+                  ) : (
+                    myVolumes.map((v) => (
+                      <div key={v.path} className="rounded border p-2">
+                        <div className="text-sm font-medium">
+                          {v.label}
+                          {v.wide && (
+                            <span className="ml-2 text-xs text-amber-700">
+                              (every volume in this group)
+                            </span>
+                          )}
+                        </div>
+                        <pre className="bg-muted p-3 rounded text-xs overflow-auto mt-1">
+{`sudo mount -t ceph :${v.path} /mnt/${v.mountName} \\
+  -o name=${bastionLogin},secretfile=/etc/ceph/${bastionLogin}.secret,fs=${v.fsname}`}
+                        </pre>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="mt-1"
+                          onClick={() =>
+                            copyToClipboard(
+                              `sudo mount -t ceph :${v.path} /mnt/${v.mountName} -o name=${bastionLogin},secretfile=/etc/ceph/${bastionLogin}.secret,fs=${v.fsname}`
+                            )
+                          }
+                        >
+                          <Copy className="h-3 w-3 mr-1" /> Copy
+                        </Button>
+                      </div>
+                    ))
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    The path is not decoration: your key is restricted to it, so
+                    mounting the filesystem root is refused with{" "}
+                    <span className="font-mono">mount error 13</span>. The
+                    downloadable bundle contains a script that does all of this,
+                    including placing the secret file.
+                  </p>
                 </div>
               </>
             ) : (
