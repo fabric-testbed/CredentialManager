@@ -152,6 +152,7 @@ export interface BucketRow {
   name: string;
   owner: string;
   sizeBytes?: number;
+  quotaBytes?: number;
   numObjects?: number;
   /** Whose bucket it is, when shown under a project. */
   viaMember?: string;
@@ -252,10 +253,30 @@ export function accessTo(
   return rows;
 }
 
+/**
+ * A bucket as `/s3/bucket` returns it.
+ *
+ * Usage is `size_kb`, and it is ABSENT on an empty bucket rather than zero -
+ * so undefined means "nothing written yet", not "unknown". The quota lives
+ * under `quota.max_size_kb`. Reading a `size` field that the endpoint does not
+ * send renders every bucket as having no size at all, which is what the column
+ * did before this shape was checked against a live response.
+ */
+export interface BucketLike {
+  bucket?: string;
+  name?: string;
+  owner?: string;
+  size_kb?: number;
+  num_objects?: number;
+  quota?: { enabled?: boolean; max_size_kb?: number };
+}
+
+const KB = 1024;
+
 /** S3 has no project ownership; a project's buckets are its members' buckets. */
 export function bucketsFor(
   principal: Principal,
-  buckets: Array<{ bucket?: string; name?: string; owner?: string; size?: number; num_objects?: number }>,
+  buckets: BucketLike[],
   memberLogins: string[] = []
 ): BucketRow[] {
   const mine = new Set(principal.kind === "user" ? [principal.login] : memberLogins);
@@ -267,8 +288,11 @@ export function bucketsFor(
     rows.push({
       name,
       owner,
-      sizeBytes: b.size,
-      numObjects: b.num_objects,
+      // An empty bucket sends no size_kb at all; report 0, not unknown.
+      sizeBytes: (b.size_kb ?? 0) * KB,
+      quotaBytes:
+        b.quota?.max_size_kb !== undefined ? b.quota.max_size_kb * KB : undefined,
+      numObjects: b.num_objects ?? 0,
       viaMember: principal.kind === "project" ? owner : undefined,
     });
   }

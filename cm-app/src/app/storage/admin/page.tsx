@@ -327,8 +327,11 @@ export default function StorageAdminPage() {
     try {
       const token = await ensureToken();
       const { data } = await exportUserKeyrings(token, cluster, [entity]);
-      const rows: Array<{ entity?: string; keyring?: string }> = data?.data ?? [];
-      const text = rows.find((r) => r.entity === entity)?.keyring;
+      // { clusters: { <cluster>: { <entity>: "<keyring text>" } } } - NOT the
+      // `data` envelope the other endpoints use. Reading `data.data` here meant
+      // the export always reported "no keyring", for a call that had succeeded.
+      const byCluster = (data?.clusters ?? {}) as Record<string, Record<string, string>>;
+      const text = byCluster[cluster]?.[entity];
       if (!text) {
         toast.error(`No keyring for ${entity} on ${cluster}.`);
         return;
@@ -533,7 +536,8 @@ export default function StorageAdminPage() {
                           <TableRow>
                             <TableHead>Bucket</TableHead>
                             <TableHead>Owner</TableHead>
-                            <TableHead>Size</TableHead>
+                            <TableHead>Objects</TableHead>
+                            <TableHead>Used / quota</TableHead>
                             <TableHead />
                           </TableRow>
                         </TableHeader>
@@ -542,7 +546,16 @@ export default function StorageAdminPage() {
                             <TableRow key={b.name}>
                               <TableCell className="font-medium">{b.name}</TableCell>
                               <TableCell className="text-muted-foreground">{b.owner}</TableCell>
-                              <TableCell>{formatBytes(b.sizeBytes)}</TableCell>
+                              <TableCell>{b.numObjects ?? 0}</TableCell>
+                              <TableCell>
+                                {formatBytes(b.sizeBytes)}
+                                {b.quotaBytes !== undefined && (
+                                  <span className="text-muted-foreground">
+                                    {" / "}
+                                    {formatBytes(b.quotaBytes)}
+                                  </span>
+                                )}
+                              </TableCell>
                               <TableCell className="text-right">
                                 <Button
                                   size="sm"

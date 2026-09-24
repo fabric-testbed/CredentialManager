@@ -169,16 +169,46 @@ describe("who can reach a principal's storage", () => {
 });
 
 describe("buckets", () => {
+  // Verbatim shape from /s3/bucket on east. Usage is `size_kb`, and it is
+  // ABSENT on an empty bucket rather than zero.
   const buckets = [
-    { bucket: "alice-data", owner: "alice_0001", size: 100 },
-    { bucket: "bob-data", owner: "bob_0002" },
+    {
+      name: "komal2",
+      owner: "alice_0001",
+      num_objects: 1,
+      size_kb: 4,
+      quota: { enabled: true, max_size_kb: 5242880 },
+    },
+    { name: "komal1", owner: "bob_0002", quota: { enabled: true, max_size_kb: 1048576 } },
   ];
 
   it("gives a person their own buckets", () => {
     expect(
       bucketsFor({ kind: "user", uuid: "u", name: "A", login: "alice_0001" }, buckets)
         .map((b) => b.name)
-    ).toEqual(["alice-data"]);
+    ).toEqual(["komal2"]);
+  });
+
+  it("reads usage from size_kb, not a `size` field the API never sends", () => {
+    const [b] = bucketsFor(
+      { kind: "user", uuid: "u", name: "A", login: "alice_0001" },
+      buckets
+    );
+    expect(b.sizeBytes).toBe(4 * 1024);
+    expect(b.quotaBytes).toBe(5242880 * 1024);
+    expect(b.numObjects).toBe(1);
+  });
+
+  it("reports an empty bucket as empty, not as unknown", () => {
+    // komal1 sends no size_kb at all. That means nothing has been written,
+    // which is a different statement from "we could not find out".
+    const [b] = bucketsFor(
+      { kind: "user", uuid: "u", name: "B", login: "bob_0002" },
+      buckets
+    );
+    expect(b.sizeBytes).toBe(0);
+    expect(b.numObjects).toBe(0);
+    expect(b.quotaBytes).toBe(1048576 * 1024);
   });
 
   it("attributes a project's buckets to the member who owns them", () => {
