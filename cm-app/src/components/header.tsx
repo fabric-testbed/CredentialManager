@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { featureFlags } from "@/lib/config";
+import { useStorageOperator } from "@/hooks/use-storage-operator";
 
 interface HeaderProps {
   cmUserStatus: string;
@@ -12,6 +13,7 @@ interface HeaderProps {
 
 export default function Header({ cmUserStatus }: HeaderProps) {
   const pathname = usePathname();
+  const isStorageOperator = useStorageOperator(cmUserStatus === "active");
 
   const handleLogin = () => {
     sessionStorage.removeItem("cmUserStatus");
@@ -69,12 +71,26 @@ export default function Header({ cmUserStatus }: HeaderProps) {
               href="/storage"
               className={cn(
                 "px-3 py-1 text-sm rounded no-underline",
+                // Exact match: /storage/admin must not light up both links.
                 pathname === "/storage"
                   ? "bg-fabric-primary text-white"
                   : "border border-fabric-primary text-fabric-primary hover:bg-fabric-primary/10"
               )}
             >
               Storage
+            </Link>
+          )}
+          {featureFlags.storage && isStorageOperator && (
+            <Link
+              href="/storage/admin"
+              className={cn(
+                "px-3 py-1 text-sm rounded no-underline",
+                pathname === "/storage/admin"
+                  ? "bg-fabric-primary text-white"
+                  : "border border-fabric-primary text-fabric-primary hover:bg-fabric-primary/10"
+              )}
+            >
+              Storage Admin
             </Link>
           )}
         </div>

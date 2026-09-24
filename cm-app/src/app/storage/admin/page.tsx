@@ -61,7 +61,8 @@ import {
   listSubvolumes,
 } from "@/services/storage-service";
 
-const DEFAULT_FS = "CEPH-FS-01";
+/** The CephFS volume name. Not returned by /cluster/info; constant everywhere. */
+const FS_NAME = "CEPH-FS-01";
 
 /** Same template the existing storage page applies, so grants are identical. */
 const CAPS_TEMPLATE = [
@@ -148,7 +149,7 @@ export default function StorageAdminPage() {
     setLoading(true);
     try {
       const token = await ensureToken();
-      const fs = clusters.find((c) => c.name === cluster)?.default_fs || DEFAULT_FS;
+      const fs = FS_NAME;
 
       // Listing subvolumes without a group returns ONLY the ungrouped ones -
       // on asia that is a single row out of dozens. The full picture is the
@@ -230,7 +231,7 @@ export default function StorageAdminPage() {
     setApplying(true);
     try {
       const token = await ensureToken();
-      const fs = clusters.find((c) => c.name === cluster)?.default_fs || DEFAULT_FS;
+      const fs = FS_NAME;
       const logins = resolution.granted.map((g) => g.bastion_login);
 
       // One request per person - the endpoint takes a single user_entity - so
@@ -308,8 +309,8 @@ export default function StorageAdminPage() {
             </SelectTrigger>
             <SelectContent>
               {clusters.map((c) => (
-                <SelectItem key={c.name} value={c.name}>
-                  {c.name}
+                <SelectItem key={c.cluster} value={c.cluster}>
+                  {c.cluster}
                 </SelectItem>
               ))}
             </SelectContent>

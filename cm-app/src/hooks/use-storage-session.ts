@@ -20,10 +20,21 @@ import { getClusterInfo } from "@/services/storage-service";
 
 const TOKEN_LIFETIME_MS = 30 * 60 * 1000;
 
+/**
+ * A row of `/cluster/info`, as the service actually returns it.
+ *
+ * The field is `cluster`, not `name`, and there is no `default_fs` - the
+ * filesystem name is a constant on the client side. An invented shape
+ * typechecks perfectly and then renders "No volume on ." against an empty
+ * dropdown, because nothing validates a response against its interface.
+ */
 export interface ClusterInfo {
-  name: string;
-  default_fs?: string;
+  cluster: string;
+  fsid?: string;
+  mon_host?: string;
+  ceph_conf_minimal?: string;
   s3_endpoints?: string[];
+  error?: string | null;
 }
 
 export function errorMessage(error: unknown, fallback: string): string {
@@ -105,7 +116,7 @@ export function useStorageSession(enabled: boolean) {
         if (cancelled) return;
         const rows: ClusterInfo[] = data?.data ?? [];
         setClusters(rows);
-        setCluster((c) => c || rows[0]?.name || "");
+        setCluster((c) => c || rows[0]?.cluster || "");
       } catch (ex) {
         toast.error(errorMessage(ex, "Failed to load clusters."));
       }
