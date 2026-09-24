@@ -5,24 +5,18 @@ import { toast } from "sonner";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import SpinnerFullPage from "@/components/spinner-full-page";
 import { useUserStatus } from "@/hooks/use-user-status";
-import { getPerson, getProjects, getAllProjectsPaginated } from "@/services/core-api-service";
+import { getPerson } from "@/services/core-api-service";
 import { createIdToken } from "@/services/credential-manager-service";
 import { getStorageProject, isStorageProjectOwnerRole } from "@/lib/config";
 import { S3BucketsTab } from "@/components/s3-buckets-tab";
 import {
   getClusterInfo,
-  listSubvolumeGroups,
-  listSubvolumes,
-  listCephUsers,
   exportUserKeyrings,
-  listProjectMembers,
 } from "@/services/storage-service";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Copy,
   Download,
@@ -47,34 +41,6 @@ interface ClusterInfo {
   /** RGW S3 endpoints, in preference order. Absent on older Ceph Managers. */
   s3_endpoints?: string[];
   error: string | null;
-}
-
-interface SubvolumeInfo {
-  name: string;
-  group?: string;
-  bytes_quota?: number | string;
-  bytes_used?: number;
-  state?: string;
-  path?: string;
-}
-
-interface CephUser {
-  entity: string;
-  caps?: Record<string, string>;
-  key?: string;
-}
-
-interface ProjectMember {
-  uuid: string;
-  bastion_login: string;
-  membership_types: string[];
-}
-
-interface Project {
-  uuid: string;
-  name: string;
-  active: boolean;
-  project_type?: string;
 }
 
 // Utility
@@ -110,6 +76,26 @@ async function copyToClipboard(text: string) {
     document.body.removeChild(textarea);
     toast.success("Copied to clipboard.");
   }
+}
+
+/**
+ * Pull one keyring out of an export response.
+ *
+ * `/cluster/user/export` answers { clusters: { <cluster>: { <entity>: text } } },
+ * which is not the `data` envelope the other endpoints use - reading `data.data`
+ * here yields nothing for a call that succeeded.
+ *
+ * At module scope so it closes over nothing and is not a hook dependency.
+ */
+function extractKeyring(
+  response: Record<string, unknown>,
+  cluster: string,
+  entity: string
+): string {
+  const clustersMap = response.clusters as
+    | Record<string, Record<string, string>>
+    | undefined;
+  return clustersMap?.[cluster]?.[entity] ?? "";
 }
 
 function downloadFile(filename: string, content: string, mime = "text/plain") {
@@ -311,12 +297,6 @@ async function generateAndDownloadBundle(
 const DEFAULT_VOL = "CEPH-FS-01";
 
 // Default CephX capabilities template
-const DEFAULT_CAPS_TEMPLATE = [
-  { entity: "mon", cap: "allow r fsname={fs}" },
-  { entity: "mds", cap: "allow rw fsname={fs} path={path}" },
-  { entity: "osd", cap: "allow rw tag cephfs data={fs}" },
-  { entity: "osd", cap: "allow rw tag cephfs metadata={fs}" },
-];
 
 export default function StoragePage() {
   const { cmUserStatus } = useUserStatus();
@@ -333,47 +313,23 @@ export default function StoragePage() {
   const [selectedCluster, setSelectedCluster] = useState("");
 
   // Loading
-  const [showSpinner, setShowSpinner] = useState(false);
-  const [spinnerMessage, setSpinnerMessage] = useState("");
 
   // Subvolume state
-  const [groups, setGroups] = useState<string[]>([]);
-  const [selectedGroup, setSelectedGroup] = useState("");
-  const [subvolumes, setSubvolumes] = useState<SubvolumeInfo[]>([]);
-  const [allSubvolumes, setAllSubvolumes] = useState<SubvolumeInfo[]>([]);
-  const [newSubvolName, setNewSubvolName] = useState("");
-  const [newSubvolGroup, setNewSubvolGroup] = useState("");
-  const [newSubvolSizeGiB, setNewSubvolSizeGiB] = useState(10);
-  const [resizeSubvol, setResizeSubvol] = useState<SubvolumeInfo | null>(null);
-  const [resizeSizeGiB, setResizeSizeGiB] = useState(10);
 
   // CephX caps apply state
-  const [capsEntity, setCapsEntity] = useState("");
-  const [capsSubvol, setCapsSubvol] = useState("");
-  const [capsGroup, setCapsGroup] = useState("");
-  const [capsTarget, setCapsTarget] = useState<"user" | "project">("user");
 
   // CephX users state
-  const [cephUsers, setCephUsers] = useState<CephUser[]>([]);
-  const [userSearch, setUserSearch] = useState("");
 
   // Multi-select state
-  const [selectedSubvolumes, setSelectedSubvolumes] = useState<Set<string>>(new Set());
-  const [selectedCephUsers, setSelectedCephUsers] = useState<Set<string>>(new Set());
 
   // Project members state
-  const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
   // False until the full member list has been fetched without error.
-  const [projectMembersLoaded, setProjectMembersLoaded] = useState(false);
 
   // Projects state (for per-project subvolume creation)
-  const [projects, setProjects] = useState<Project[]>([]);
 
   // Subvolume creation mode: per-user or per-project
-  const [subvolScope, setSubvolScope] = useState<"user" | "project">("user");
 
   // Build a lookup from project UUID → project name
-  const projectNameMap = new Map(projects.map((p) => [p.uuid, p.name]));
 
   // Format a group identifier for display: show project name if available
   // Normal user state
@@ -484,106 +440,16 @@ export default function StoragePage() {
   }, [roleLoaded, cmUserStatus]);
 
   // Load project members (operator only) — fetches all pages
-  const loadProjectMembers = useCallback(async () => {
-    try {
-      const token = await ensureToken();
-      const PAGE_SIZE = 200;
-      let offset = 0;
-      let allMembers: ProjectMember[] = [];
-
-      // Paging here has two traps, both of which silently truncate.
-      //
-      // `offset` indexes the server's membership-UUID list, not the rows it
-      // returns: it slices sorted_uuids[offset:offset+limit] and then DROPS any
-      // row whose user has no bastion_login or whose lookup failed. So a full
-      // page routinely comes back short, and "short page means last page" ends
-      // the loop early. For the same reason `total` (the UUID count) is never
-      // reached by counting returned members, so that cannot be the condition
-      // either. Advance by the page size the server actually used, and stop on
-      // `total`, which is measured in the same units as `offset`.
-      let reportedTotal: number | undefined;
-      let sawUnboundedPage = false;
-
-      for (;;) {
-        const { data: response } = await listProjectMembers(token, offset, PAGE_SIZE);
-        const members: ProjectMember[] = Array.isArray(response.data)
-          ? response.data
-          : response.data || [];
-        allMembers = allMembers.concat(members);
-
-        if (typeof response.total === "number") reportedTotal = response.total;
-        const step =
-          typeof response.limit === "number" && response.limit > 0
-            ? response.limit
-            : PAGE_SIZE;
-        offset += step;
-
-        if (reportedTotal === undefined) {
-          // No total to check against: the only safe stop is an empty page, and
-          // completeness cannot be proven.
-          sawUnboundedPage = true;
-          if (members.length === 0) break;
-        } else if (offset >= reportedTotal) {
-          break;
-        }
-
-        if (offset > 100000) break; // runaway guard
-      }
-
-      setProjectMembers(allMembers);
-
-      // Only claim completeness when the server told us how many memberships
-      // exist and we walked past the end of that list. Members legitimately
-      // absent (no bastion_login) are a different thing from a truncated fetch,
-      // and only the latter must block a project-wide apply.
-      const complete = reportedTotal !== undefined && offset >= reportedTotal;
-      setProjectMembersLoaded(complete);
-      if (!complete) {
-        toast.warning(
-          sawUnboundedPage
-            ? "Storage user list returned no total; completeness cannot be verified."
-            : "Storage user list may be incomplete."
-        );
-      }
-    } catch (ex) {
-      // Leave the flag false: an incomplete list must not be used to decide who
-      // gets capabilities.
-      setProjectMembersLoaded(false);
-      toast.error(getErrorMessage(ex, "Failed to load project members."));
-    }
-  }, [ensureToken]);
-
   // Load active projects (for per-project subvolume creation)
   // Operators see all projects (paginated); normal users see only their own.
-  const loadProjects = useCallback(async () => {
-    try {
-      const userId = sessionStorage.getItem("cmUserID");
-      if (!userId) return;
-      let results: Project[];
-      if (isOperator) {
-        results = (await getAllProjectsPaginated()) as Project[];
-      } else {
-        const { data: projRes } = await getProjects(userId);
-        results = projRes.results || [];
-      }
-      const allProjects: Project[] = results
-        .filter((p: Project) => p.active && p.project_type !== "service")
-        .sort((a: Project, b: Project) => a.name.localeCompare(b.name));
-      setProjects(allProjects);
-    } catch (ex) {
-      toast.error(getErrorMessage(ex, "Failed to load projects."));
-    }
-  }, [isOperator]);
-
   // Load data when cluster changes
   useEffect(() => {
     if (!selectedCluster || !roleLoaded) return;
-    if (isOperator) {
-      loadGroups();
-      loadCephUsers();
-      loadProjectMembers();
-      loadProjects();
-    } else {
+    // Only the caller's own credentials. The operator data this page used to
+    // prefetch - every cephx entity, every subvolume, every project, and the
+    // paged member list - is the admin page's business now, and fetching it
+    // here cost an operator four large requests for something nothing rendered.
+    {
       loadMyCredentials();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -591,178 +457,15 @@ export default function StoragePage() {
 
   // ----- Operator: Subvolumes -----
 
-  const loadGroups = useCallback(async () => {
-    try {
-      const token = await ensureToken();
-      const { data: response } = await listSubvolumeGroups(token, selectedCluster, DEFAULT_VOL);
-      const rawGroups = Array.isArray(response.data) ? response.data : response.data || [];
-      // Normalize: Dashboard may return objects {name, info} instead of strings
-      const groupList: string[] = rawGroups.map((g: unknown) =>
-        typeof g === "string" ? g : (g as Record<string, unknown>).name as string || String(g)
-      );
-      setGroups(groupList);
-    } catch (ex) {
-      toast.error(getErrorMessage(ex, "Failed to load subvolume groups."));
-    }
-  }, [selectedCluster, ensureToken]);
-
   // Parse raw subvolume API response into SubvolumeInfo[]
-  const parseSubvolumes = (rawList: unknown[]): SubvolumeInfo[] => {
-    return rawList.map((item: unknown) => {
-      if (typeof item === "string") return { name: item } as SubvolumeInfo;
-      const obj = item as Record<string, unknown>;
-      const info = (obj.info as Record<string, unknown>) || {};
-      return {
-        name: (obj.name as string) || "",
-        group: (obj.group_name as string) || (obj.group as string) || undefined,
-        bytes_quota: (info.bytes_quota ?? obj.bytes_quota ?? undefined) as number | string | undefined,
-        bytes_used: (info.bytes_used ?? obj.bytes_used ?? undefined) as number | undefined,
-        state: (info.state as string) ?? (obj.state as string) ?? undefined,
-        path: (info.path as string) ?? (obj.path as string) ?? undefined,
-      } as SubvolumeInfo;
-    });
-  };
-
-  const loadSubvolumes = useCallback(
-    async (group?: string) => {
-      try {
-        const token = await ensureToken();
-
-        if (group) {
-          // Load subvolumes for a specific group
-          const { data: response } = await listSubvolumes(
-            token, selectedCluster, DEFAULT_VOL, group, true
-          );
-          const rawList = Array.isArray(response.data) ? response.data : response.data || [];
-          setSubvolumes(parseSubvolumes(rawList));
-        } else {
-          // "All groups": fetch default (no-group) + each known group in parallel
-          const fetches = [
-            listSubvolumes(token, selectedCluster, DEFAULT_VOL, undefined, true),
-            ...groups.map((g) =>
-              listSubvolumes(token, selectedCluster, DEFAULT_VOL, g, true)
-            ),
-          ];
-          const results = await Promise.allSettled(fetches);
-          const merged: SubvolumeInfo[] = [];
-          for (const result of results) {
-            if (result.status === "fulfilled") {
-              const rawList = Array.isArray(result.value.data.data)
-                ? result.value.data.data
-                : result.value.data.data || [];
-              merged.push(...parseSubvolumes(rawList));
-            }
-          }
-          setSubvolumes(merged);
-          setAllSubvolumes(merged);
-        }
-      } catch (ex) {
-        toast.error(getErrorMessage(ex, "Failed to load subvolumes."));
-      }
-    },
-    [selectedCluster, ensureToken, groups]
-  );
-
-  // Load all subvolumes across all groups (for CephX caps dropdown)
-  const loadAllSubvolumes = useCallback(
-    async () => {
-      try {
-        const token = await ensureToken();
-        const fetches = [
-          listSubvolumes(token, selectedCluster, DEFAULT_VOL, undefined, true),
-          ...groups.map((g) =>
-            listSubvolumes(token, selectedCluster, DEFAULT_VOL, g, true)
-          ),
-        ];
-        const results = await Promise.allSettled(fetches);
-        const merged: SubvolumeInfo[] = [];
-        for (const result of results) {
-          if (result.status === "fulfilled") {
-            const rawList = Array.isArray(result.value.data.data)
-              ? result.value.data.data
-              : result.value.data.data || [];
-            merged.push(...parseSubvolumes(rawList));
-          }
-        }
-        setAllSubvolumes(merged);
-      } catch (ex) {
-        toast.error(getErrorMessage(ex, "Failed to load all subvolumes."));
-      }
-    },
-    [selectedCluster, ensureToken, groups]
-  );
-
-  useEffect(() => {
-    if (selectedCluster && isOperator) {
-      loadSubvolumes(selectedGroup || undefined);
-    }
-  }, [selectedGroup, selectedCluster, isOperator, loadSubvolumes]);
-
-  // Keep allSubvolumes updated when groups are loaded
-  useEffect(() => {
-    if (selectedCluster && isOperator && groups.length > 0) {
-      loadAllSubvolumes();
-    }
-  }, [selectedCluster, isOperator, groups, loadAllSubvolumes]);
-
-  const filteredCephUsers = cephUsers.filter((u) =>
-    (u.entity || "").toLowerCase().includes(userSearch.toLowerCase())
-  );
-
-  // Clear subvolume selection when data changes
-  useEffect(() => {
-    setSelectedSubvolumes(new Set());
-  }, [selectedGroup, selectedCluster, subvolumes]);
-
-  // Clear CephX user selection when data changes
-  useEffect(() => {
-    setSelectedCephUsers(new Set());
-  }, [selectedCluster, cephUsers]);
-
   // Subvolume selection helpers
-  const subvolKey = (sv: SubvolumeInfo) => `${sv.group || ""}::${sv.name}`;
 
   // CephX user selection helpers
   // Batch delete handlers
   // Apply CephX caps (single user or entire project)
   // ----- Operator: CephX Users -----
 
-  const loadCephUsers = useCallback(async () => {
-    try {
-      const token = await ensureToken();
-      const { data: response } = await listCephUsers(token, selectedCluster);
-      const rawUsers = Array.isArray(response.data) ? response.data : response.data || [];
-      // Map API shape (user_entity, capabilities[]) to frontend shape (entity, caps{})
-      const users: CephUser[] = rawUsers.map((u: Record<string, unknown>) => {
-        const caps: Record<string, string> = {};
-        const capabilities = (u.capabilities as Array<{ entity: string; cap: string } | null>) || [];
-        for (const c of capabilities) {
-          if (c && c.entity && c.cap) {
-            caps[c.entity] = caps[c.entity] ? `${caps[c.entity]}; ${c.cap}` : c.cap;
-          }
-        }
-        return {
-          entity: (u.user_entity as string) || (u.entity as string) || "",
-          caps: Object.keys(caps).length > 0 ? caps : undefined,
-        };
-      });
-      setCephUsers(users);
-    } catch (ex) {
-      toast.error(getErrorMessage(ex, "Failed to load storage users."));
-    }
-  }, [selectedCluster, ensureToken]);
-
   // Extract keyring text from export API response
-  const extractKeyring = (response: Record<string, unknown>, entity: string): string => {
-    // Shape: { clusters: { cluster: { entity: keyring_text } }, ... }
-    const clustersMap = response.clusters as Record<string, Record<string, string>> | undefined;
-    if (clustersMap?.[selectedCluster]?.[entity]) {
-      return clustersMap[selectedCluster][entity];
-    }
-    // No keyring found for this entity on this cluster
-    return "";
-  };
-
   // ----- Normal User: My Credentials -----
 
   const loadMyCredentials = useCallback(async () => {
@@ -775,7 +478,7 @@ export default function StoragePage() {
       // Export keyring
       try {
         const { data: response } = await exportUserKeyrings(token, selectedCluster, [entity]);
-        const keyring = extractKeyring(response, entity);
+        const keyring = extractKeyring(response, selectedCluster, entity);
         setMyKeyring(keyring);
       } catch {
         setMyKeyring("");
@@ -807,14 +510,6 @@ export default function StoragePage() {
     return (
       <div className="container mx-auto min-h-[80vh] mt-8 mb-8 px-4">
         <SpinnerFullPage showSpinner text="Loading user profile..." />
-      </div>
-    );
-  }
-
-  if (showSpinner) {
-    return (
-      <div className="container mx-auto min-h-[80vh] mt-8 mb-8">
-        <SpinnerFullPage showSpinner text={spinnerMessage} />
       </div>
     );
   }
@@ -862,7 +557,6 @@ export default function StoragePage() {
   // storage -> access. This page is now "my storage" for everyone, operators
   // included - they have volumes of their own like anyone else, and the banner
   // below is how they get there.
-
 
   // ===== NORMAL USER VIEW =====
   const userEntity = `client.${bastionLogin}`;
