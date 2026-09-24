@@ -19,7 +19,7 @@
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { HardDrive, RefreshCw, ShieldCheck } from "lucide-react";
+import { Download, HardDrive, Plus, RefreshCw, ShieldCheck, Trash2 } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -35,6 +35,13 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 import { ApplyPreviewDialog } from "@/components/storage/apply-preview-dialog";
+import {
+  CreateBucketDialog,
+  CreateVolumeDialog,
+  DeleteVolumeDialog,
+  ResizeVolumeDialog,
+  groupFor,
+} from "@/components/storage/storage-actions";
 import { EffectiveAccess } from "@/components/storage/effective-access";
 import { PrincipalPicker, ProjectOption } from "@/components/storage/principal-picker";
 import { errorMessage, useStorageSession } from "@/hooks/use-storage-session";
@@ -43,6 +50,7 @@ import { CephEntity } from "@/lib/ceph-caps";
 import {
   accessTo,
   bucketsFor,
+  VolumeRow,
   GranteeResolution,
   Principal,
   ProjectDetail,
@@ -54,6 +62,11 @@ import { fetchStorageUsers } from "@/lib/storage-users";
 import { getAllProjectsPaginated, getProject } from "@/services/core-api-service";
 import {
   applyUserCaps,
+  createOrResizeSubvolume,
+  createS3Bucket,
+  deleteS3Bucket,
+  deleteSubvolume,
+  exportUserKeyrings,
   listCephUsers,
   listProjectMembers,
   listS3Buckets,
@@ -104,6 +117,11 @@ export default function StorageAdminPage() {
   >([]);
   const [loading, setLoading] = useState(false);
 
+  const [createOpen, setCreateOpen] = useState(false);
+  const [resizeVol, setResizeVol] = useState<VolumeRow | null>(null);
+  const [deleteVol, setDeleteVol] = useState<VolumeRow | null>(null);
+  const [bucketOpen, setBucketOpen] = useState(false);
+  const [acting, setActing] = useState(false);
   const [grantOpen, setGrantOpen] = useState(false);
   const [grantVolume, setGrantVolume] = useState<{ name: string; group: string } | null>(null);
   const [resolution, setResolution] = useState<GranteeResolution | null>(null);
@@ -173,7 +191,7 @@ export default function StorageAdminPage() {
     } finally {
       setLoading(false);
     }
-  }, [cluster, clusters, ensureToken]);
+  }, [cluster, ensureToken]);
 
   useEffect(() => {
     if (active && roleLoaded && isOperator) loadPrincipals();
@@ -276,7 +294,56 @@ export default function StorageAdminPage() {
     } finally {
       setApplying(false);
     }
-  }, [grantVolume, resolution, cluster, clusters, ensureToken, loadCluster]);
+  }, [grantVolume, resolution, cluster, ensureToken, loadCluster]);
+
+  const runAction = useCallback(
+    async (what: string, fn: (token: string) => Promise<unknown>, done?: () => void) => {
+      setActing(true);
+      try {
+        const token = await ensureToken();
+        await fn(token);
+        toast.success(what);
+        done?.();
+        await loadCluster();
+      } catch (ex) {
+        toast.error(errorMessage(ex, `Failed: ${what}`));
+      } finally {
+        setActing(false);
+      }
+    },
+    [ensureToken, loadCluster]
+  );
+
+  /**
+   * Download a person's cephx keyring.
+   *
+   * Only for a person: a project has no cephx entity of its own. Access to a
+   * project's volumes is granted to each member's own key, which is why the
+   * access list above is a list of people rather than one shared credential.
+   */
+  const exportKeyring = useCallback(async () => {
+    if (principal?.kind !== "user") return;
+    const entity = `client.${principal.login}`;
+    try {
+      const token = await ensureToken();
+      const { data } = await exportUserKeyrings(token, cluster, [entity]);
+      const rows: Array<{ entity?: string; keyring?: string }> = data?.data ?? [];
+      const text = rows.find((r) => r.entity === entity)?.keyring;
+      if (!text) {
+        toast.error(`No keyring for ${entity} on ${cluster}.`);
+        return;
+      }
+      const blob = new Blob([text], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `ceph.${entity}.keyring`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (ex) {
+      toast.error(errorMessage(ex, "Failed to export the keyring."));
+    }
+  }, [principal, cluster, ensureToken]);
 
   // ---- render -------------------------------------------------------------
   if (!roleLoaded) return <div className="p-6 text-sm">Loading…</div>;
@@ -375,9 +442,14 @@ export default function StorageAdminPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <section>
-                    <h3 className="mb-2 flex items-center gap-1 text-sm font-medium">
-                      <HardDrive className="h-3 w-3" /> CephFS volumes
-                    </h3>
+                    <div className="mb-2 flex items-center justify-between">
+                      <h3 className="flex items-center gap-1 text-sm font-medium">
+                        <HardDrive className="h-3 w-3" /> CephFS volumes
+                      </h3>
+                      <Button size="sm" variant="outline" onClick={() => setCreateOpen(true)}>
+                        <Plus className="mr-1 h-3 w-3" /> Create volume
+                      </Button>
+                    </div>
                     {volumes.length === 0 ? (
                       <p className="text-sm text-muted-foreground">
                         No volume on {cluster}.
@@ -403,7 +475,7 @@ export default function StorageAdminPage() {
                                 )}
                               </TableCell>
                               <TableCell>{formatBytes(v.bytesQuota)}</TableCell>
-                              <TableCell className="text-right">
+                              <TableCell className="space-x-1 text-right">
                                 {principal.kind === "project" && (
                                   <Button
                                     size="sm"
@@ -418,6 +490,17 @@ export default function StorageAdminPage() {
                                     Grant to members…
                                   </Button>
                                 )}
+                                <Button size="sm" variant="outline" onClick={() => setResizeVol(v)}>
+                                  Resize
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-destructive"
+                                  onClick={() => setDeleteVol(v)}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
                               </TableCell>
                             </TableRow>
                           ))}
@@ -427,7 +510,12 @@ export default function StorageAdminPage() {
                   </section>
 
                   <section>
-                    <h3 className="mb-2 text-sm font-medium">S3 buckets</h3>
+                    <div className="mb-2 flex items-center justify-between">
+                      <h3 className="text-sm font-medium">S3 buckets</h3>
+                      <Button size="sm" variant="outline" onClick={() => setBucketOpen(true)}>
+                        <Plus className="mr-1 h-3 w-3" /> Create bucket
+                      </Button>
+                    </div>
                     {bucketRows.length === 0 ? (
                       <p className="text-sm text-muted-foreground">
                         No bucket on {cluster}.
@@ -446,6 +534,7 @@ export default function StorageAdminPage() {
                             <TableHead>Bucket</TableHead>
                             <TableHead>Owner</TableHead>
                             <TableHead>Size</TableHead>
+                            <TableHead />
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -454,6 +543,22 @@ export default function StorageAdminPage() {
                               <TableCell className="font-medium">{b.name}</TableCell>
                               <TableCell className="text-muted-foreground">{b.owner}</TableCell>
                               <TableCell>{formatBytes(b.sizeBytes)}</TableCell>
+                              <TableCell className="text-right">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-destructive"
+                                  disabled={acting}
+                                  onClick={() =>
+                                    runAction(`Deleted bucket ${b.name}`, (t) =>
+                                      deleteS3Bucket(t, cluster, b.name, false)
+                                    )
+                                  }
+                                  title="Delete. Refuses if the bucket still has objects."
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -464,8 +569,13 @@ export default function StorageAdminPage() {
               </Card>
 
               <Card>
-                <CardHeader>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0">
                   <CardTitle className="text-sm">Who can reach this storage</CardTitle>
+                  {principal.kind === "user" && (
+                    <Button size="sm" variant="outline" onClick={exportKeyring}>
+                      <Download className="mr-1 h-3 w-3" /> Export keyring
+                    </Button>
+                  )}
                 </CardHeader>
                 <CardContent>
                   <EffectiveAccess
@@ -483,6 +593,81 @@ export default function StorageAdminPage() {
           )}
         </div>
       </div>
+
+      {principal && (
+        <>
+          <CreateVolumeDialog
+            open={createOpen}
+            onOpenChange={setCreateOpen}
+            principal={principal}
+            cluster={cluster}
+            existing={volumes}
+            busy={acting}
+            onCreate={(name, group, size) =>
+              runAction(`Created ${name}`, (t) =>
+                createOrResizeSubvolume(t, cluster, FS_NAME, {
+                  subvol_name: name,
+                  group_name: group,
+                  size,
+                }),
+                () => setCreateOpen(false)
+              )
+            }
+          />
+          <ResizeVolumeDialog
+            open={resizeVol !== null}
+            onOpenChange={(v) => !v && setResizeVol(null)}
+            volume={resizeVol}
+            busy={acting}
+            onResize={(size) =>
+              runAction(`Resized ${resizeVol?.name}`, (t) =>
+                createOrResizeSubvolume(t, cluster, FS_NAME, {
+                  subvol_name: resizeVol!.name,
+                  group_name: groupFor(principal),
+                  size,
+                }),
+                () => setResizeVol(null)
+              )
+            }
+          />
+          <DeleteVolumeDialog
+            open={deleteVol !== null}
+            onOpenChange={(v) => !v && setDeleteVol(null)}
+            volume={deleteVol}
+            holders={access
+              .filter((a) => a.grant.volume === deleteVol?.name)
+              .map((a) => a.person || a.login)}
+            busy={acting}
+            onDelete={() =>
+              runAction(`Deleted ${deleteVol?.name}`, (t) =>
+                deleteSubvolume(t, cluster, FS_NAME, deleteVol!.name, groupFor(principal), false),
+                () => setDeleteVol(null)
+              )
+            }
+          />
+          <CreateBucketDialog
+            open={bucketOpen}
+            onOpenChange={setBucketOpen}
+            principal={principal}
+            cluster={cluster}
+            owners={
+              principal.kind === "user"
+                ? [{ login: principal.login, name: principal.name }]
+                : (resolution?.granted ?? []).map((g) => ({
+                    login: g.bastion_login,
+                    name: g.name,
+                  }))
+            }
+            busy={acting}
+            onCreate={(bucket, uid) =>
+              runAction(`Created bucket ${bucket}`, (t) =>
+                createS3Bucket(t, cluster, { bucket, uid }),
+                () => setBucketOpen(false)
+              )
+            }
+          />
+        </>
+      )}
 
       {resolution && grantVolume && (
         <ApplyPreviewDialog
