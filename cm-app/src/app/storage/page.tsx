@@ -29,6 +29,11 @@ import {
   parseKeyring as parseCephKeyring,
 } from "@/lib/ceph-caps";
 import { NO_GROUP, USER_GROUP } from "@/lib/principals";
+import {
+  collectionUrl,
+  listMyCollections,
+  MyCollection,
+} from "@/services/globus-service";
 
 // Types
 
@@ -334,6 +339,7 @@ export default function StoragePage() {
   // Format a group identifier for display: show project name if available
   // Normal user state
   const [myKeyring, setMyKeyring] = useState("");
+  const [myCollections, setMyCollections] = useState<MyCollection[]>([]);
   // Token management
   const ensureToken = useCallback(async (): Promise<string> => {
     const TOKEN_LIFETIME_MS = 30 * 60 * 1000;
@@ -380,6 +386,26 @@ export default function StoragePage() {
       throw ex;
     }
   }, [storageToken, tokenCreatedAt]);
+
+  // Which of my volumes are on Globus. Tolerated separately: a deployment with
+  // no Globus state store answers 500, and that must not take the keyring and
+  // mount instructions down with it - they have nothing to do with Globus.
+  useEffect(() => {
+    if (cmUserStatus !== "active" || !selectedCluster) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const token = await ensureToken();
+        const { data } = await listMyCollections(token);
+        if (!cancelled) setMyCollections(data?.collections ?? []);
+      } catch {
+        if (!cancelled) setMyCollections([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [cmUserStatus, selectedCluster, ensureToken]);
 
   // Load role info
   useEffect(() => {
@@ -701,13 +727,41 @@ export default function StoragePage() {
                       there is nothing to mount here.
                     </p>
                   ) : (
-                    myVolumes.map((v) => (
+                    myVolumes.map((v) => {
+                      // Matched on the volume name within this cluster. A wide
+                      // grant covers many volumes and names none of them, so it
+                      // gets no link rather than an arbitrary one.
+                      const published = v.wide
+                        ? undefined
+                        : myCollections.find(
+                            (c) =>
+                              c.cluster === selectedCluster && c.volume === v.mountName
+                          );
+                      return (
                       <div key={v.path} className="rounded border p-2">
                         <div className="text-sm font-medium">
                           {v.label}
                           {v.wide && (
                             <span className="ml-2 text-xs text-amber-700">
                               (every volume in this group)
+                            </span>
+                          )}
+                          {published?.collection_id && (
+                            <a
+                              className="ml-2 text-xs underline"
+                              href={collectionUrl(published.collection_id)}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              open in Globus
+                            </a>
+                          )}
+                          {published && !published.collection_id && (
+                            // Requested but not yet converged. Saying so beats
+                            // a link that 404s and beats silence, which reads
+                            // as "not available".
+                            <span className="ml-2 text-xs text-muted-foreground">
+                              Globus: {published.state}
                             </span>
                           )}
                         </div>
@@ -728,7 +782,8 @@ export default function StoragePage() {
                           <Copy className="h-3 w-3 mr-1" /> Copy
                         </Button>
                       </div>
-                    ))
+                      );
+                    })
                   )}
                   <p className="text-xs text-muted-foreground">
                     The path is not decoration: your key is restricted to it, so

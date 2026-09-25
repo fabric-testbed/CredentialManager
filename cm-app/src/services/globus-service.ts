@@ -100,3 +100,25 @@ export function deleteGlobusExposure(
 export function collectionUrl(collectionId: string): string {
   return `https://app.globus.org/file-manager?origin_id=${collectionId}`;
 }
+
+/** One of the caller's own volumes, as `/globus/my-collections` returns it. */
+export interface MyCollection {
+  cluster: string;
+  volume: string;
+  kind: "user" | "project";
+  site: string;
+  state: ExposureState;
+  mount_path: string | null;
+  /** Present only while the exposure is active; a link otherwise leads nowhere. */
+  collection_id: string | null;
+}
+
+/**
+ * Which of the caller's volumes are published over Globus.
+ *
+ * The one Globus endpoint a non-operator may call. It answers about the caller,
+ * resolved from their token, so there is nothing to pass and nothing to widen.
+ */
+export function listMyCollections(token: string) {
+  return storageApi(token).get<{ collections: MyCollection[] }>("/globus/my-collections");
+}
