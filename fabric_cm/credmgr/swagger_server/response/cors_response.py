@@ -1,3 +1,5 @@
+import re
+import traceback
 import uuid
 import json
 import os
@@ -119,6 +121,42 @@ def cors_500(details: str = None) -> JSONResponse:
     return cors_response(status_code=500, body=error_object, x_error=details)
 
 
+# Credentials that turn up inside exception text: a DSN from a driver, a URL a
+# request client echoes back, a header repeated in an error. Logs from this
+# service are shipped by filebeat, so a password reaching a log line does not
+# stay on the host - it is indexed.
+_SECRET_PATTERNS = (
+    # Authorization: Bearer <jwt>. FIRST, deliberately: the key/value rule below
+    # also matches "authorization:" and would mask the word "Bearer" while
+    # leaving the token - worse than not matching at all.
+    (re.compile(r"(?i)\b(bearer)\s+[A-Za-z0-9._\-]+"), r"\1 ***"),
+    # scheme://user:password@host
+    (re.compile(r"(?i)\b([a-z][a-z0-9+.\-]*://[^\s:/@]+:)[^\s@]+(@)"), r"\1***\2"),
+    # password=..., "password": "...", token: ..., client_secret=...
+    # The optional quote after the key is what makes the JSON form match; a bare
+    # \s*[=:] misses {"password": "x"} entirely.
+    (re.compile(
+        r"(?i)\b(password|passwd|pwd|secret|client[_-]?secret|token|api[_-]?key|"
+        r"authorization)\b([\"']?\s*[=:]\s*)([\"']?)[^\s,;&\"'}]+\3"
+    ), r"\1\2***"),
+)
+
+
+def scrub_secrets(text: str) -> str:
+    """Mask credential-shaped substrings.
+
+    Deliberately narrow: it masks the value after a credential-ish key and the
+    password in a URL, and leaves everything else intact, because an error
+    message with the useful half redacted is no better than no message. It is
+    a second line of defence, not a reason to log secrets confidently.
+    """
+    if not text:
+        return text
+    for pattern, replacement in _SECRET_PATTERNS:
+        text = pattern.sub(replacement, text)
+    return text
+
+
 def cors_error(ex: Exception, log=None) -> JSONResponse:
     """Turn an exception into the most useful response that is still safe.
 
@@ -164,7 +202,8 @@ def cors_error(ex: Exception, log=None) -> JSONResponse:
 
     if isinstance(ex, (CoreApiError, LiteLLMApiError)):
         upstream = "the FABRIC Core API" if isinstance(ex, CoreApiError) else "the LiteLLM API"
-        details = f"{upstream} returned an error: {ex}"
+        # Machine-generated, and it reaches the caller - scrub before it leaves.
+        details = scrub_secrets(f"{upstream} returned an error: {ex}")
         if log:
             log.error(f"Upstream failure: {details}")
         return cors_response(
@@ -177,9 +216,13 @@ def cors_error(ex: Exception, log=None) -> JSONResponse:
 
     ref = uuid.uuid4().hex[:8]
     if log:
-        # The reference is logged with the traceback, which is the only thing
-        # that makes it useful when a user quotes it back.
-        log.exception(f"Unhandled error [ref {ref}]: {ex}")
+        # The traceback is what makes the reference worth quoting, so it has to
+        # be logged - but `log.exception` appends the traceback itself, and its
+        # last line is the raw `RuntimeError: <message>`. Scrubbing only the
+        # message would leave the secret in the log anyway. So the traceback is
+        # formatted here, scrubbed whole, and logged with `error`.
+        detail = "".join(traceback.format_exception(type(ex), ex, ex.__traceback__))
+        log.error(scrub_secrets(f"Unhandled error [ref {ref}]: {ex!r}\n{detail}"))
     return cors_500(
         details=f"An internal error occurred. Quote reference {ref} when contacting support."
     )

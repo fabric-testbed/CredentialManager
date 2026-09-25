@@ -48,6 +48,5 @@ def certs_get():  # noqa: E501
         success_counter.labels(HTTP_METHOD_GET, CERTS_URL).inc()
         return cors_200(response_body=response)
     except Exception as ex:
-        LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_GET, CERTS_URL).inc()
         return cors_error(ex, LOG)
