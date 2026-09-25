@@ -19,7 +19,7 @@
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Download, HardDrive, Plus, RefreshCw, ShieldCheck, Trash2 } from "lucide-react";
+import { Download, Globe, HardDrive, Plus, RefreshCw, ShieldCheck, Trash2 } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -35,6 +35,8 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 import { ApplyPreviewDialog } from "@/components/storage/apply-preview-dialog";
+import { ExposeDialog, ExposureStatus } from "@/components/storage/globus-exposure";
+import { exposuresForVolume, liveExposure } from "@/lib/globus-exposure";
 import {
   CreateBucketDialog,
   CreateVolumeDialog,
@@ -60,6 +62,14 @@ import {
   volumesFor,
 } from "@/lib/principals";
 import { fetchStorageUsers } from "@/lib/storage-users";
+import {
+  createGlobusExposure,
+  deleteGlobusExposure,
+  GlobusEndpoint,
+  listGlobusEndpoints,
+  listGlobusExposures,
+  VolumeExposure,
+} from "@/services/globus-service";
 import { getAllProjectsPaginated, getProject } from "@/services/core-api-service";
 import {
   applyUserCaps,
@@ -136,6 +146,9 @@ export default function StorageAdminPage() {
   >([]);
   const [loading, setLoading] = useState(false);
 
+  const [endpoints, setEndpoints] = useState<GlobusEndpoint[]>([]);
+  const [exposures, setExposures] = useState<VolumeExposure[]>([]);
+  const [exposeVol, setExposeVol] = useState<VolumeRow | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [resizeVol, setResizeVol] = useState<VolumeRow | null>(null);
   const [deleteVol, setDeleteVol] = useState<VolumeRow | null>(null);
@@ -203,6 +216,21 @@ export default function StorageAdminPage() {
 
       const merged = subLists.flatMap((r) => r.data?.data ?? []);
       setSubvolumes(merged);
+
+      // Globus state. Tolerated separately: a deployment without the state
+      // store answers 500 here, and that must not blank out the volumes and
+      // buckets, which have nothing to do with Globus.
+      try {
+        const [eps, exps] = await Promise.all([
+          listGlobusEndpoints(token),
+          listGlobusExposures(token, { cluster }),
+        ]);
+        setEndpoints(eps.data?.endpoints ?? []);
+        setExposures(exps.data?.exposures ?? []);
+      } catch {
+        setEndpoints([]);
+        setExposures([]);
+      }
       setEntities(users.data?.data ?? []);
       setBuckets(bks.data?.data ?? []);
     } catch (ex) {
@@ -377,6 +405,35 @@ export default function StorageAdminPage() {
     }
   }, [principal, cluster, ensureToken]);
 
+  const expose = useCallback(
+    async (volume: VolumeRow, site: string) => {
+      if (!principal) return;
+      await runAction(
+        `Requested ${volume.name} at ${site}`,
+        (t) =>
+          createGlobusExposure(t, {
+            cluster,
+            group_name: volume.group,
+            subvol_name: volume.name,
+            site,
+            // Only meaningful for a person; a project volume's owner is its
+            // subvolume group and the service resolves it itself.
+            ...(principal.kind === "user" ? { owner_uuid: principal.uuid } : {}),
+          }),
+        () => setExposeVol(null)
+      );
+    },
+    [principal, cluster, runAction]
+  );
+
+  const withdraw = useCallback(
+    (e: VolumeExposure) =>
+      runAction(`Withdrawing ${e.subvol_name} from ${e.site}`, (t) =>
+        deleteGlobusExposure(t, e.cluster, e.group_name, e.subvol_name, e.site)
+      ),
+    [runAction]
+  );
+
   // ---- render -------------------------------------------------------------
   if (!roleLoaded) return <div className="p-6 text-sm">Loading…</div>;
 
@@ -492,6 +549,7 @@ export default function StorageAdminPage() {
                           <TableRow>
                             <TableHead>Volume</TableHead>
                             <TableHead>Quota</TableHead>
+                            <TableHead>Globus</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -507,6 +565,13 @@ export default function StorageAdminPage() {
                                 )}
                               </TableCell>
                               <TableCell>{formatQuota(v.bytesQuota)}</TableCell>
+                              <TableCell>
+                                <ExposureStatus
+                                  exposures={exposuresForVolume(
+                                    exposures, cluster, v.group, v.name
+                                  )}
+                                />
+                              </TableCell>
                               <TableCell className="space-x-1 text-right">
                                 {principal.kind === "project" && (
                                   <Button
@@ -522,6 +587,37 @@ export default function StorageAdminPage() {
                                     Grant to members…
                                   </Button>
                                 )}
+                                {(() => {
+                                  const mine = exposuresForVolume(
+                                    exposures, cluster, v.group, v.name
+                                  );
+                                  const live = liveExposure(mine);
+                                  return live ? (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      disabled={acting}
+                                      onClick={() => withdraw(live)}
+                                    >
+                                      Withdraw
+                                    </Button>
+                                  ) : (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      disabled={acting || endpoints.length === 0}
+                                      title={
+                                        endpoints.length === 0
+                                          ? "No Globus endpoint is registered"
+                                          : undefined
+                                      }
+                                      onClick={() => setExposeVol(v)}
+                                    >
+                                      <Globe className="mr-1 h-3 w-3" />
+                                      Publish…
+                                    </Button>
+                                  );
+                                })()}
                                 <Button size="sm" variant="outline" onClick={() => setResizeVol(v)}>
                                   Resize
                                 </Button>
@@ -744,6 +840,33 @@ export default function StorageAdminPage() {
                 () => setDeleteVol(null)
               )
             }
+          />
+          <ExposeDialog
+            open={exposeVol !== null}
+            onOpenChange={(v) => !v && setExposeVol(null)}
+            volumeName={exposeVol?.name ?? ""}
+            endpoints={endpoints.filter(
+              (e) =>
+                !exposures.some(
+                  (x) =>
+                    x.site === e.site &&
+                    x.subvol_name === exposeVol?.name &&
+                    x.group_name === exposeVol?.group &&
+                    x.state !== "removing"
+                )
+            )}
+            reachableBy={
+              principal.kind === "project"
+                ? (resolution?.granted ?? []).map((g) => g.name || g.bastion_login)
+                : [principal.name]
+            }
+            unresolved={
+              principal.kind === "project"
+                ? (resolution?.withoutStorage ?? []).map((m) => m.name || m.uuid)
+                : []
+            }
+            busy={acting}
+            onExpose={(site) => exposeVol && expose(exposeVol, site)}
           />
           <CreateBucketDialog
             open={bucketOpen}
