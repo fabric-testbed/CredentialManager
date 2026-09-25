@@ -231,10 +231,16 @@ def cors_error(ex: Exception, log=None) -> JSONResponse:
         # `format_tb` gives file, line, function and the source line - code, not
         # runtime data - which with the exception class is enough to find almost
         # any bug. Still scrubbed, because a frame can show a literal.
-        frames = "".join(traceback.format_tb(ex.__traceback__))
-        log.error(scrub_secrets(
-            f"Unhandled error [ref {ref}]: {type(ex).__name__}\n{frames}"
-        ))
+        # Built from each frame's own fields rather than by formatting the
+        # traceback. `format_tb` returns text derived from the exception, and a
+        # dataflow analysis is right not to trust that; filename, line number
+        # and function name are structural facts about the code, and cannot
+        # carry a caller's or an upstream's data.
+        frames = " <- ".join(
+            f"{f.filename.rsplit('/', 1)[-1]}:{f.lineno} in {f.name}"
+            for f in traceback.extract_tb(ex.__traceback__)
+        )
+        log.error(f"Unhandled error [ref {ref}]: {type(ex).__name__} at {frames}")
     return cors_500(
         details=f"An internal error occurred. Quote reference {ref} when contacting support."
     )

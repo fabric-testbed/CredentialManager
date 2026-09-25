@@ -159,7 +159,7 @@ class TestSecretsDoNotReachTheLog:
         assert "hunter2" not in out
         assert "postgresql" not in out
         assert "RuntimeError" in out, "the exception class must still be there"
-        assert "test_cors_error.py" in out, "the frames must still be there"
+        assert "test_cors_error.py:" in out, "the frames must still be there"
 
     def test_a_bearer_token_never_reaches_the_log(self):
         # Assembled at runtime rather than written as a literal. A JWT-shaped
@@ -188,8 +188,9 @@ class TestSecretsDoNotReachTheLog:
         # The message is gone, so what has to remain is the class and the place.
         out = self._logged(self.raised(RuntimeError("could not connect to postgresql://u:pw@db:5432/x")))
         assert "RuntimeError" in out
-        assert "test_cors_error.py" in out
-        assert "raise ex" in out, "the frame's source line is what locates it"
+        # file:line in function, per frame - enough to locate the raise site.
+        assert "test_cors_error.py:" in out
+        assert " in raised" in out
 
     def test_an_upstream_error_is_scrubbed_before_it_reaches_the_caller(self):
         # This one goes into the response body, which is worse than a log.
