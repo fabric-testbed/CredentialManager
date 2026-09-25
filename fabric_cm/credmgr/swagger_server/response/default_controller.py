@@ -30,7 +30,7 @@ from fabric_cm.credmgr.swagger_server.models.jwks import Jwks
 from fabric_cm.credmgr.swagger_server import received_counter, success_counter, failure_counter, fabric_jwks
 from fabric_cm.credmgr.swagger_server.response.constants import HTTP_METHOD_GET, CERTS_URL
 from fabric_cm.credmgr.logging import LOG
-from fabric_cm.credmgr.swagger_server.response.cors_response import cors_200, cors_500
+from fabric_cm.credmgr.swagger_server.response.cors_response import cors_200, cors_500, cors_error
 
 
 def certs_get():  # noqa: E501
@@ -50,4 +50,4 @@ def certs_get():  # noqa: E501
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_GET, CERTS_URL).inc()
-        return cors_500(details="An internal error occurred. Please try again or contact support.")
+        return cors_error(ex, LOG)

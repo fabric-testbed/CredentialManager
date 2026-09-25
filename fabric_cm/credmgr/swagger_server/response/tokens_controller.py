@@ -44,7 +44,7 @@ from fabric_cm.credmgr.swagger_server.response.constants import HTTP_METHOD_POST
     TOKENS_VALIDATE_URL, TOKENS_DELETE_URL, TOKENS_DELETE_TOKEN_HASH_URL, HTTP_METHOD_DELETE, \
     TOKENS_CREATE_CLI_URL, TOKENS_CREATE_LLM_URL, TOKENS_DELETE_LLM_URL, TOKENS_LLM_KEYS_URL, TOKENS_LLM_MODELS_URL
 from fabric_cm.credmgr.logging import LOG
-from fabric_cm.credmgr.swagger_server.response.cors_response import cors_200, cors_500, cors_400, cors_401
+from fabric_cm.credmgr.swagger_server.response.cors_response import cors_200, cors_500, cors_400, cors_401, cors_error
 from fabric_cm.credmgr.config import CONFIG_OBJ
 from fabric_cm.credmgr.swagger_server.dependencies import vouch_authorize
 from urllib.parse import quote, urlparse, urlencode, urlunparse, parse_qs
@@ -111,7 +111,7 @@ def tokens_create_post(request: Request, project_id: str, project_name: str, sco
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_POST, TOKENS_CREATE_URL).inc()
-        return cors_500(details="An internal error occurred. Please try again or contact support.")
+        return cors_error(ex, LOG)
 
 
 def tokens_delete_delete(claims: dict = None):  # noqa: E501
@@ -139,7 +139,7 @@ def tokens_delete_delete(claims: dict = None):  # noqa: E501
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_DELETE, TOKENS_DELETE_URL).inc()
-        return cors_500(details="An internal error occurred. Please try again or contact support.")
+        return cors_error(ex, LOG)
 
 
 def tokens_delete_token_hash_delete(token_hash: str, claims: dict = None):  # noqa: E501
@@ -174,7 +174,7 @@ def tokens_delete_token_hash_delete(token_hash: str, claims: dict = None):  # no
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_DELETE, TOKENS_DELETE_TOKEN_HASH_URL).inc()
-        return cors_500(details="An internal error occurred. Please try again or contact support.")
+        return cors_error(ex, LOG)
 
 
 def tokens_refresh_post(request: Request, body: RequestModel, project_id=None, project_name=None, scope=None):  # noqa: E501
@@ -217,11 +217,11 @@ def tokens_refresh_post(request: Request, body: RequestModel, project_id=None, p
         error_type = getattr(ex, 'error', '') or ''
         if error_type in ('invalid_token', 'invalid_grant'):
             return cors_401(details="Refresh token is invalid or has expired. Please re-login to obtain a new token.")
-        return cors_500(details="An internal error occurred. Please try again or contact support.")
+        return cors_error(ex, LOG)
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_POST, TOKENS_REFRESH_URL).inc()
-        return cors_500(details="An internal error occurred. Please try again or contact support.")
+        return cors_error(ex, LOG)
 
 
 def tokens_revoke_post(body: RequestModel, claims: dict = None):  # noqa: E501
@@ -252,7 +252,7 @@ def tokens_revoke_post(body: RequestModel, claims: dict = None):  # noqa: E501
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_POST, TOKENS_REVOKE_URL).inc()
-        return cors_500(details="An internal error occurred. Please try again or contact support.")
+        return cors_error(ex, LOG)
 
 
 def tokens_revokes_post(request: Request, body: TokenPost, claims: dict = None):  # noqa: E501
@@ -292,7 +292,7 @@ def tokens_revokes_post(request: Request, body: TokenPost, claims: dict = None):
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_POST, TOKENS_REVOKES_URL).inc()
-        return cors_500(details="An internal error occurred. Please try again or contact support.")
+        return cors_error(ex, LOG)
 
 
 def tokens_get(token_hash=None, project_id=None, expires=None, states=None, limit=None, offset=None,
@@ -349,7 +349,7 @@ def tokens_get(token_hash=None, project_id=None, expires=None, states=None, limi
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_GET, TOKENS_REVOKE_LIST_URL).inc()
-        return cors_500(details="An internal error occurred. Please try again or contact support.")
+        return cors_error(ex, LOG)
 
 
 def tokens_revoke_list_get(project_id: str):  # noqa: E501
@@ -375,7 +375,7 @@ def tokens_revoke_list_get(project_id: str):  # noqa: E501
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_GET, TOKENS_REVOKE_LIST_URL).inc()
-        return cors_500(details="An internal error occurred. Please try again or contact support.")
+        return cors_error(ex, LOG)
 
 
 def tokens_validate_post(body: TokenPost):  # noqa: E501
@@ -409,7 +409,7 @@ def tokens_validate_post(body: TokenPost):  # noqa: E501
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_POST, TOKENS_VALIDATE_URL).inc()
-        return cors_500(details="An internal error occurred. Please try again or contact support.")
+        return cors_error(ex, LOG)
 
 
 def _validate_localhost_redirect(redirect_uri: str):
@@ -673,7 +673,7 @@ fetch(CALLBACK_URL, {{ mode: 'no-cors' }})
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_GET, TOKENS_CREATE_CLI_URL).inc()
-        return cors_500(details="An internal error occurred. Please try again or contact support.")
+        return cors_error(ex, LOG)
 
 
 def tokens_create_llm_post(key_name: str = None, comment: str = None,
@@ -719,16 +719,10 @@ def tokens_create_llm_post(key_name: str = None, comment: str = None,
         LOG.debug(response)
         success_counter.labels(HTTP_METHOD_POST, TOKENS_CREATE_LLM_URL).inc()
         return cors_200(response_body=response)
-    except OAuthCredMgrError as ex:
-        LOG.exception(ex)
-        failure_counter.labels(HTTP_METHOD_POST, TOKENS_CREATE_LLM_URL).inc()
-        if ex.get_http_error_code() == BAD_REQUEST:
-            return cors_400(details=str(ex))
-        return cors_500(details="An internal error occurred. Please try again or contact support.")
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_POST, TOKENS_CREATE_LLM_URL).inc()
-        return cors_500(details="An internal error occurred. Please try again or contact support.")
+        return cors_error(ex, LOG)
 
 
 def tokens_delete_llm_delete(llm_key_id: str, claims: dict = None):  # noqa: E501
@@ -766,7 +760,7 @@ def tokens_delete_llm_delete(llm_key_id: str, claims: dict = None):  # noqa: E50
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_DELETE, TOKENS_DELETE_LLM_URL).inc()
-        return cors_500(details="An internal error occurred. Please try again or contact support.")
+        return cors_error(ex, LOG)
 
 
 def tokens_llm_keys_get(limit: int = 200, offset: int = 0,
@@ -808,7 +802,7 @@ def tokens_llm_keys_get(limit: int = 200, offset: int = 0,
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_GET, TOKENS_LLM_KEYS_URL).inc()
-        return cors_500(details="An internal error occurred. Please try again or contact support.")
+        return cors_error(ex, LOG)
 
 
 def tokens_llm_models_get(claims: dict = None):  # noqa: E501
@@ -838,4 +832,4 @@ def tokens_llm_models_get(claims: dict = None):  # noqa: E501
     except Exception as ex:
         LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_GET, TOKENS_LLM_MODELS_URL).inc()
-        return cors_500(details="An internal error occurred. Please try again or contact support.")
+        return cors_error(ex, LOG)
