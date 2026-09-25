@@ -7,6 +7,7 @@
  * volume's Globus status against another's row - wrong in a way that looks
  * right, which is the failure this page exists to avoid.
  */
+import { CephEntity, effectiveAccess, loginFromEntity } from "@/lib/ceph-caps";
 import type { VolumeExposure } from "@/services/globus-service";
 
 export function exposuresForVolume(
@@ -48,4 +49,30 @@ export const DTN_CLIENT = "globus-dtn";
  */
 export function needsDtnGrant(e: VolumeExposure): boolean {
   return e.state === "failed" && /is not mounted/.test(e.detail ?? "");
+}
+
+/**
+ * Whether the DTN's key can already mount this volume.
+ *
+ * Knowable before publishing, and worth knowing: the agent cannot grant itself
+ * a path, so publishing without this fails, and the operator finds out a
+ * convergence cycle later from a row that says "is not mounted". The caps are
+ * already loaded for the access list, so the answer costs nothing.
+ *
+ * A group-scoped grant covers every volume in the group including ones created
+ * later, which is why `fabric_users` and the older NRIG grant need no further
+ * action; a volume-scoped grant only counts for that volume.
+ */
+export function dtnCanMount(
+  entities: CephEntity[],
+  group: string,
+  volume: string
+): boolean {
+  const dtn = entities.find((e) => loginFromEntity(e.user_entity) === DTN_CLIENT);
+  if (!dtn) return false;
+  return effectiveAccess(dtn).some(
+    (g) =>
+      g.group === group &&
+      (g.scope === "group" || g.scope === "all-volumes" || g.volume === volume)
+  );
 }
