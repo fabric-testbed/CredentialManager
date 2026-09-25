@@ -8,7 +8,8 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { exposuresForVolume, liveExposure } from "../globus-exposure";
+import { exposuresForVolume, liveExposure, needsDtnGrant } from "../globus-exposure";
+
 import type { VolumeExposure } from "../../services/globus-service";
 
 const NRIG = "c93fe500-bdc7-48d7-89c7-a3103becf5f3";
@@ -83,5 +84,33 @@ describe("which exposure Withdraw acts on", () => {
 
   it("picks a failed one, which is still a live request", () => {
     expect(liveExposure([exposure({ state: "failed" })])?.state).toBe("failed");
+  });
+});
+
+
+describe("when to offer the DTN grant", () => {
+  it("offers it for the not-mounted failure, which a grant fixes", () => {
+    expect(
+      needsDtnGrant(exposure({
+        state: "failed",
+        detail:
+          "/ceph/west/projects/nsf-ci-compass is not mounted. Most often the DTN's " +
+          "cephx key has no grant for this subvolume group - check the client's mds caps.",
+      }))
+    ).toBe(true);
+  });
+
+  it("does not offer it for a failure a grant would not fix", () => {
+    // Offering a fix that cannot work is worse than offering none: it sends
+    // the operator down the wrong path and makes the real cause harder to see.
+    expect(
+      needsDtnGrant(exposure({ state: "failed", detail: "collection step failed (rc=1)" }))
+    ).toBe(false);
+  });
+
+  it("does not offer it while the volume is working or pending", () => {
+    for (const state of ["active", "requested", "removing"] as const) {
+      expect(needsDtnGrant(exposure({ state, detail: "is not mounted" }))).toBe(false);
+    }
   });
 });

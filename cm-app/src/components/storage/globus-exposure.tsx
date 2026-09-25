@@ -12,7 +12,7 @@
  * by anyone the identity map resolves, so the dialog says who that is and how
  * many, in the same shape as every other multi-principal action on this page.
  */
-import { AlertTriangle, ExternalLink, Globe } from "lucide-react";
+import { AlertTriangle, ExternalLink, Globe, KeyRound } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -37,10 +37,11 @@ import {
   GlobusEndpoint,
   VolumeExposure,
 } from "@/services/globus-service";
+import { needsDtnGrant } from "@/lib/globus-exposure";
 import { useState } from "react";
 
 // Pure logic lives in lib so it can be tested without React.
-export { exposuresForVolume, liveExposure } from "@/lib/globus-exposure";
+export { exposuresForVolume, liveExposure, needsDtnGrant, DTN_CLIENT } from "@/lib/globus-exposure";
 
 
 const STATE_LABEL: Record<VolumeExposure["state"], string> = {
@@ -51,7 +52,16 @@ const STATE_LABEL: Record<VolumeExposure["state"], string> = {
 };
 
 /** What a volume's Globus status looks like in the table. */
-export function ExposureStatus({ exposures }: { exposures: VolumeExposure[] }) {
+export function ExposureStatus({
+  exposures,
+  onGrantDtn,
+  busy,
+}: {
+  exposures: VolumeExposure[];
+  /** Offered only for the "not mounted" failure, which a grant actually fixes. */
+  onGrantDtn?: (e: VolumeExposure) => void;
+  busy?: boolean;
+}) {
   if (exposures.length === 0) {
     return <span className="text-sm text-muted-foreground">not published</span>;
   }
@@ -85,6 +95,18 @@ export function ExposureStatus({ exposures }: { exposures: VolumeExposure[] }) {
               sends the operator to a log they may not have. */}
           {e.detail && (
             <div className="text-xs text-amber-700">{e.detail}</div>
+          )}
+          {needsDtnGrant(e) && onGrantDtn && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="mt-1"
+              disabled={busy}
+              onClick={() => onGrantDtn(e)}
+            >
+              <KeyRound className="mr-1 h-3 w-3" />
+              Grant the DTN access to this volume
+            </Button>
           )}
         </div>
       ))}
