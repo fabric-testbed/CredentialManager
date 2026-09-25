@@ -124,6 +124,12 @@ interface ExposeProps {
   reachableBy: string[];
   /** Members with no resolvable Globus identity - they would not get in. */
   unresolved: string[];
+  /**
+   * Whether the DTN's key can already mount this volume. When it cannot,
+   * publishing also grants it - said here rather than discovered a convergence
+   * cycle later from a row that says "is not mounted".
+   */
+  dtnHasAccess: boolean;
   busy?: boolean;
   onExpose: (site: string) => void;
 }
@@ -142,6 +148,7 @@ function ExposeForm({
   endpoints,
   reachableBy,
   unresolved,
+  dtnHasAccess,
   busy,
   onExpose,
 }: ExposeProps) {
@@ -207,6 +214,18 @@ function ExposeForm({
           </AlertDescription>
         </Alert>
 
+        {!dtnHasAccess && (
+          <Alert>
+            <KeyRound className="h-4 w-4" />
+            <AlertDescription className="text-sm">
+              The data transfer node cannot read this volume yet, so publishing
+              will also grant its key read-write on <b>this volume</b> — not on
+              the whole group. Without that the mount fails and the volume stays
+              unpublished.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {unresolved.length > 0 && (
           <Alert>
             <AlertTriangle className="h-4 w-4" />
@@ -226,7 +245,11 @@ function ExposeForm({
         </Button>
         <Button onClick={() => onExpose(site)} disabled={busy || !site}>
           <Globe className="mr-1 h-3 w-3" />
-          {busy ? "Publishing…" : `Publish at ${site || "…"}`}
+          {busy
+            ? "Publishing…"
+            : dtnHasAccess
+            ? `Publish at ${site || "…"}`
+            : `Grant and publish at ${site || "…"}`}
         </Button>
       </DialogFooter>
     </>

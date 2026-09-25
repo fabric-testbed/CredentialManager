@@ -8,7 +8,8 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { exposuresForVolume, liveExposure, needsDtnGrant } from "../globus-exposure";
+import { dtnCanMount, exposuresForVolume, liveExposure, needsDtnGrant } from "../globus-exposure";
+import type { CephEntity } from "../ceph-caps";
 
 import type { VolumeExposure } from "../../services/globus-service";
 
@@ -112,5 +113,47 @@ describe("when to offer the DTN grant", () => {
     for (const state of ["active", "requested", "removing"] as const) {
       expect(needsDtnGrant(exposure({ state, detail: "is not mounted" }))).toBe(false);
     }
+  });
+});
+
+
+describe("whether the DTN can already mount a volume", () => {
+  const dtn = (paths: string[]): CephEntity => ({
+    user_entity: "client.globus-dtn",
+    capabilities: [
+      { entity: "mds", cap: paths.map((p) => `allow rw fsname=CEPH-FS-01 path=${p}`).join(", ") },
+    ],
+  });
+
+  it("is true for a group-scoped grant, which covers volumes made later", () => {
+    expect(dtnCanMount([dtn([`/volumes/${NRIG}`])], NRIG, "nrig")).toBe(true);
+    expect(dtnCanMount([dtn([`/volumes/${NRIG}`])], NRIG, "made-later")).toBe(true);
+  });
+
+  it("is true for a volume-scoped grant on that volume only", () => {
+    const caps = [dtn([`/volumes/${NRIG}/nrig/abc`])];
+    expect(dtnCanMount(caps, NRIG, "nrig")).toBe(true);
+    expect(dtnCanMount(caps, NRIG, "other")).toBe(false);
+  });
+
+  it("is false for a different group", () => {
+    // The real case: fabric_users and NRIG are granted, a new project is not.
+    const caps = [dtn(["/volumes/fabric_users", `/volumes/${NRIG}`])];
+    expect(dtnCanMount(caps, "c768a8b8-a19b-4366-be8c-e735dcccb027", "nsf-ci-compass"))
+      .toBe(false);
+  });
+
+  it("is false when the DTN has no cephx entity at all", () => {
+    expect(dtnCanMount([], NRIG, "nrig")).toBe(false);
+    expect(dtnCanMount([{ user_entity: "client.someone", capabilities: [] }], NRIG, "nrig"))
+      .toBe(false);
+  });
+
+  it("does not count another entity's grant as the DTN's", () => {
+    const other: CephEntity = {
+      user_entity: "client.alice",
+      capabilities: [{ entity: "mds", cap: `allow rw fsname=X path=/volumes/${NRIG}` }],
+    };
+    expect(dtnCanMount([other], NRIG, "nrig")).toBe(false);
   });
 });

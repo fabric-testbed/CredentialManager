@@ -40,7 +40,7 @@ import {
   ExposeDialog,
   ExposureStatus,
 } from "@/components/storage/globus-exposure";
-import { exposuresForVolume, liveExposure } from "@/lib/globus-exposure";
+import { dtnCanMount, exposuresForVolume, liveExposure } from "@/lib/globus-exposure";
 import {
   CreateBucketDialog,
   CreateVolumeDialog,
@@ -357,8 +357,13 @@ export default function StorageAdminPage() {
     }
   }, [grantVolume, resolution, cluster, ensureToken, loadCluster]);
 
+  /** Returns whether it succeeded, so callers can sequence two steps safely. */
   const runAction = useCallback(
-    async (what: string, fn: (token: string) => Promise<unknown>, done?: () => void) => {
+    async (
+      what: string,
+      fn: (token: string) => Promise<unknown>,
+      done?: () => void
+    ): Promise<boolean> => {
       setActing(true);
       try {
         const token = await ensureToken();
@@ -366,8 +371,10 @@ export default function StorageAdminPage() {
         toast.success(what);
         done?.();
         await loadCluster();
+        return true;
       } catch (ex) {
         toast.error(errorMessage(ex, `Failed: ${what}`));
+        return false;
       } finally {
         setActing(false);
       }
@@ -412,6 +419,29 @@ export default function StorageAdminPage() {
   const expose = useCallback(
     async (volume: VolumeRow, site: string) => {
       if (!principal) return;
+      // Grant first when the DTN cannot reach the volume. Publishing without it
+      // fails, and the operator learns that a convergence cycle later from a row
+      // that says "is not mounted" - so the dialog states it and the button
+      // reads "Grant and publish". It stays an explicit consequence of a click,
+      // not a silent side effect.
+      const needsGrant = !dtnCanMount(entities, volume.group, volume.name);
+      if (needsGrant) {
+        const ok = await runAction(
+          `Granted ${DTN_CLIENT} access to ${volume.name}`,
+          (t) =>
+            applyUserCaps(t, cluster, {
+              user_entity: `client.${DTN_CLIENT}`,
+              template_capabilities: CAPS_TEMPLATE,
+              renders: [
+                { fs_name: FS_NAME, subvol_name: volume.name, group_name: volume.group },
+              ],
+              sync_across_clusters: false,
+              merge_strategy: "multi",
+            })
+        );
+        // Publishing anyway would record an exposure that cannot converge.
+        if (!ok) return;
+      }
       await runAction(
         `Requested ${volume.name} at ${site}`,
         (t) =>
@@ -427,7 +457,7 @@ export default function StorageAdminPage() {
         () => setExposeVol(null)
       );
     },
-    [principal, cluster, runAction]
+    [principal, cluster, runAction, entities]
   );
 
   /**
@@ -906,6 +936,9 @@ export default function StorageAdminPage() {
               principal.kind === "project"
                 ? (resolution?.withoutStorage ?? []).map((m) => m.name || m.uuid)
                 : []
+            }
+            dtnHasAccess={
+              exposeVol ? dtnCanMount(entities, exposeVol.group, exposeVol.name) : true
             }
             busy={acting}
             onExpose={(site) => exposeVol && expose(exposeVol, site)}
