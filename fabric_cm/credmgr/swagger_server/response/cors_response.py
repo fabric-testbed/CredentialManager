@@ -1,3 +1,4 @@
+import uuid
 import json
 import os
 from typing import Union
@@ -116,3 +117,69 @@ def cors_500(details: str = None) -> JSONResponse:
     errors.details = details
     error_object = Status500InternalServerError([errors])
     return cors_response(status_code=500, body=error_object, x_error=details)
+
+
+def cors_error(ex: Exception, log=None) -> JSONResponse:
+    """Turn an exception into the most useful response that is still safe.
+
+    Every handler used to answer `cors_500("An internal error occurred. Please
+    try again or contact support.")` for anything that was raised. That is the
+    right answer for a bug and the wrong one for everything else, and almost
+    nothing reaching these handlers is a bug:
+
+        CredMgr: Token lifetime must be between 1 and 14
+        CredMgr: Missing required parameter 'scope'!
+        User: x@y.edu already has 3 long-lived tokens for this project
+
+    Those are deliberate, actionable, and were being replaced by an instruction
+    to contact support - who would then find nothing wrong, because nothing was.
+
+    Three kinds, three answers:
+
+      OAuthCredMgrError   Raised on purpose and already carries
+                          `http_error_code`, which the handlers discarded along
+                          with the message. Both are honoured here.
+
+      CoreApiError,       An upstream failed. Not the caller's fault and not an
+      LiteLLMApiError     internal error either, so 502 and say which upstream -
+                          "internal error" sends people to the wrong team.
+
+      anything else       A genuine bug. Stays generic, because the message may
+                          hold a connection string, a token or a stack frame -
+                          but carries a reference that is also logged, so
+                          "contact support" is something support can act on
+                          instead of a dead end.
+    """
+    from fabric_cm.credmgr.common.exceptions import OAuthCredMgrError
+    from fabric_cm.credmgr.external_apis.core_api import CoreApiError
+    from fabric_cm.credmgr.external_apis.litellm_api import LiteLLMApiError
+
+    if isinstance(ex, OAuthCredMgrError):
+        details = str(ex)
+        code = ex.get_http_error_code()
+        if log:
+            log.info(f"Returning {code} to caller: {details}")
+        by_code = {400: cors_400, 401: cors_401, 403: cors_403, 404: cors_404}
+        return by_code.get(code, cors_500)(details=details)
+
+    if isinstance(ex, (CoreApiError, LiteLLMApiError)):
+        upstream = "the FABRIC Core API" if isinstance(ex, CoreApiError) else "the LiteLLM API"
+        details = f"{upstream} returned an error: {ex}"
+        if log:
+            log.error(f"Upstream failure: {details}")
+        return cors_response(
+            status_code=502,
+            body=Status500InternalServerError([
+                Status500InternalServerErrorErrors(message="Bad Gateway", details=details)
+            ]),
+            x_error=details,
+        )
+
+    ref = uuid.uuid4().hex[:8]
+    if log:
+        # The reference is logged with the traceback, which is the only thing
+        # that makes it useful when a user quotes it back.
+        log.exception(f"Unhandled error [ref {ref}]: {ex}")
+    return cors_500(
+        details=f"An internal error occurred. Quote reference {ref} when contacting support."
+    )

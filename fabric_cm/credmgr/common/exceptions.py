@@ -34,3 +34,19 @@ class ConfigError(Exception):
     """
     Config Exception
     """
+
+class OAuthCredMgrError(Exception):
+    """A CredMgr error that is safe to show the caller.
+
+    Raised deliberately, so the message is written for a user and the status
+    code is known at the raise site. Lives here rather than in
+    oauth_credmgr.py, which cannot be imported without a database section in
+    the config - an exception type should not need one, and the response layer
+    has to be able to recognise this class to answer with it.
+    """
+    def __init__(self, message: str, http_error_code: int = 500):
+        super().__init__(message)
+        self.http_error_code = http_error_code
+
+    def get_http_error_code(self) -> int:
+        return self.http_error_code

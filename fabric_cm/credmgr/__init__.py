@@ -37,6 +37,7 @@ REST_PORT = '8100'
 
 LOG_DIR = '/var/log/credmgr'
 LOG_FILE = 'credmgr.log'
+METRICS_LOG_FILE = 'metrics.log'
 LOG_LEVEL = 'DEBUG'
 LOG_RETAIN = '5'
 LOG_FILE_SIZE = '5000000'
@@ -56,9 +57,16 @@ CONFIG.set('runtime', 'rest-port', REST_PORT)
 CONFIG.set('logging', 'logger', LOGGER)
 CONFIG.set('logging', 'log-directory', LOG_DIR)
 CONFIG.set('logging', 'log-file', LOG_FILE)
+# Read by Config.get_metrics_log_file and never defaulted, so the
+# no-config-file path raised ConfigError here too.
+CONFIG.set('logging', 'metrics-log-file', METRICS_LOG_FILE)
 CONFIG.set('logging', 'log-level', LOG_LEVEL)
 CONFIG.set('logging', 'log-retain', LOG_RETAIN)
-CONFIG.set('logging', 'log-file-size', LOG_FILE_SIZE)
+# 'log-size', matching config_template and Config.LOG_SIZE. As 'log-file-size'
+# this default was never readable, so the documented behaviour just above -
+# "credmgr will use sane defaults, in the absence of this configuration file" -
+# raised ConfigError instead. Invisible in production, where the file exists.
+CONFIG.set('logging', 'log-size', LOG_FILE_SIZE)
 
 # Now, attempt to read in the configuration file.
 if os.getenv('TEST_ENVIRONMENT', 'False') == 'True':

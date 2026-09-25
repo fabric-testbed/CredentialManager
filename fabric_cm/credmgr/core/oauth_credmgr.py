@@ -54,16 +54,10 @@ from ..common.utils import Utils
 MAX_TOKEN_LIFETIME_IN_HOURS = 1512
 
 
-class OAuthCredMgrError(Exception):
-    """
-    CredMgr Exception
-    """
-    def __init__(self, message: str, http_error_code: int = INTERNAL_SERVER_ERROR):
-        super().__init__(message)
-        self.http_error_code = http_error_code
-
-    def get_http_error_code(self) -> int:
-        return self.http_error_code
+# Defined in common.exceptions so the response layer can import it without
+# pulling in the database. Re-exported here because every raise site imports it
+# from this module.
+from fabric_cm.credmgr.common.exceptions import OAuthCredMgrError  # noqa: F401
 
 
 class TokenState(Enum):
