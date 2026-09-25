@@ -148,3 +148,26 @@
   - Verified with mocked end-to-end test (fake LiteLLM proxy enforcing global alias constraint) — 6 scenarios pass; repo pytest suite fails at collection independent of this change (test config missing `log-size` in `[logging]`)
   - Discovered fix/security-vulnerabilities was already merged via PR #84 (stale remote-tracking ref); based PR on master and deleted the merged local branch
   - Created PR #85: https://github.com/fabric-testbed/CredentialManager/pull/85 (branch fix/llm-key-name-per-user-uniqueness, GPG-signed commit 7e55647)
+
+## Session: 2026-09-25 12:15
+
+- **Project**: CredentialManager (`cm-app` + `fabric_cm`) — same session as the fabric_ceph entry of the same date
+- **Task summary**: Phases 1 and 2 of the storage-administration design — a principal-first admin UI, `/storage` rebuilt as the user's own view, per-volume Globus exposure — plus Dependabot, CodeQL and secret-scanning remediation and a rewrite of the Credential Manager's error handling.
+- **Workflow stage**: coding, testing, security remediation, deployment
+- **Prompts**: ~36 of this session's ~61 landed here (several arrived mid-turn)
+- **Models used**: Opus 5 (1M context)
+- **Estimated cost (USD)**: not measurable from inside the session
+- **PRs**: #98 principal-first admin · #99 `_nogroup` + group fan-out · #100 cluster field + nav + operator actions · #101 `/storage` as my-storage · #103 usage vs quota, project buckets · #105 Dependabot · #106 error messages · #107 secret scrubbing · #108 per-volume exposure · #110 DTN grant · #111 Globus links on /storage · #112 grant before publish — all merged
+- **Tests**: 0 → **62** (vitest added; none existed before)
+
+- **Key decisions**:
+  - **Principal first.** The old page was organised by resource with the owner as a dropdown inside each — the shape that let "Entire Project" reach 276 accounts. Inverting it was the whole point.
+  - **Preview before apply** is structural: the confirm button carries the count, and an unproven-complete user list disables the action.
+  - **Effective access, never raw capabilities** — and a group-scoped grant is flagged, because it looks identical to a single-volume one and is not.
+  - **The DTN grant stays explicit.** Publishing states that it will also grant, rather than widening a cephx key as a silent side effect.
+  - **A project owns no S3 buckets.** RGW has no project; showing members' buckets under a project lists one person's bucket under every project they belong to.
+
+- **The recurring bug, worth naming**: four separate response shapes invented rather than checked — `cluster` vs `name`, `size_kb` vs `size`, `clusters{}` vs `data{}`, and a `_nogroup` coerced to `fabric_users`. Every one typechecked and every one failed quietly, rendering something plausible. Fixtures are now copied verbatim from live responses.
+- **Other real findings**: the on-screen mount command had never worked (path-restricted keys cannot mount `/`, verified as `mount error 13`); listing subvolumes without a group returns only the ungrouped ones; `log.exception` appends the message so scrubbing the f-string is not enough; every handler logged the raw exception before the scrubbed one.
+- **My own errors**: a stray backtick ran `git add -A` on ceph-mgr and staged a live-credential config; `git add -A` later swept `globus-service.ts` into an unrelated PR; a commit pushed to an already-merged branch got no PR; automated dead-code removal broke `page.tsx` twice before I did it by hand.
+- **End state**: 0 open PRs. `/storage/admin` principal-first with exposure; `/storage` at 755 lines (from 2086), lint-clean.
