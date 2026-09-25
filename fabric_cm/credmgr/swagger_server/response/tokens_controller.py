@@ -109,7 +109,6 @@ def tokens_create_post(request: Request, project_id: str, project_name: str, sco
         success_counter.labels(HTTP_METHOD_POST, TOKENS_CREATE_URL).inc()
         return cors_200(response_body=response)
     except Exception as ex:
-        LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_POST, TOKENS_CREATE_URL).inc()
         return cors_error(ex, LOG)
 
@@ -137,7 +136,6 @@ def tokens_delete_delete(claims: dict = None):  # noqa: E501
         success_counter.labels(HTTP_METHOD_DELETE, TOKENS_DELETE_URL).inc()
         return cors_200(response_body=response)
     except Exception as ex:
-        LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_DELETE, TOKENS_DELETE_URL).inc()
         return cors_error(ex, LOG)
 
@@ -172,7 +170,6 @@ def tokens_delete_token_hash_delete(token_hash: str, claims: dict = None):  # no
         success_counter.labels(HTTP_METHOD_DELETE, TOKENS_DELETE_TOKEN_HASH_URL).inc()
         return cors_200(response_body=response)
     except Exception as ex:
-        LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_DELETE, TOKENS_DELETE_TOKEN_HASH_URL).inc()
         return cors_error(ex, LOG)
 
@@ -219,7 +216,6 @@ def tokens_refresh_post(request: Request, body: RequestModel, project_id=None, p
             return cors_401(details="Refresh token is invalid or has expired. Please re-login to obtain a new token.")
         return cors_error(ex, LOG)
     except Exception as ex:
-        LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_POST, TOKENS_REFRESH_URL).inc()
         return cors_error(ex, LOG)
 
@@ -250,7 +246,6 @@ def tokens_revoke_post(body: RequestModel, claims: dict = None):  # noqa: E501
         response.type = 'no_content'
         return cors_200(response_body=response)
     except Exception as ex:
-        LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_POST, TOKENS_REVOKE_URL).inc()
         return cors_error(ex, LOG)
 
@@ -290,7 +285,6 @@ def tokens_revokes_post(request: Request, body: TokenPost, claims: dict = None):
         response.type = 'no_content'
         return cors_200(response_body=response)
     except Exception as ex:
-        LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_POST, TOKENS_REVOKES_URL).inc()
         return cors_error(ex, LOG)
 
@@ -347,7 +341,6 @@ def tokens_get(token_hash=None, project_id=None, expires=None, states=None, limi
         LOG.debug(response)
         return cors_200(response_body=response)
     except Exception as ex:
-        LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_GET, TOKENS_REVOKE_LIST_URL).inc()
         return cors_error(ex, LOG)
 
@@ -373,7 +366,6 @@ def tokens_revoke_list_get(project_id: str):  # noqa: E501
         response.type = "revoked token hashes"
         return cors_200(response_body=response)
     except Exception as ex:
-        LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_GET, TOKENS_REVOKE_LIST_URL).inc()
         return cors_error(ex, LOG)
 
@@ -407,7 +399,6 @@ def tokens_validate_post(body: TokenPost):  # noqa: E501
         response.token = claims
         return cors_200(response_body=response)
     except Exception as ex:
-        LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_POST, TOKENS_VALIDATE_URL).inc()
         return cors_error(ex, LOG)
 
@@ -671,7 +662,6 @@ fetch(CALLBACK_URL, {{ mode: 'no-cors' }})
         resp.set_cookie(key=COOKIE_NAME, value='', max_age=0, httponly=True, samesite='lax')
         return resp
     except Exception as ex:
-        LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_GET, TOKENS_CREATE_CLI_URL).inc()
         return cors_error(ex, LOG)
 
@@ -720,7 +710,6 @@ def tokens_create_llm_post(key_name: str = None, comment: str = None,
         success_counter.labels(HTTP_METHOD_POST, TOKENS_CREATE_LLM_URL).inc()
         return cors_200(response_body=response)
     except Exception as ex:
-        LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_POST, TOKENS_CREATE_LLM_URL).inc()
         return cors_error(ex, LOG)
 
@@ -758,7 +747,6 @@ def tokens_delete_llm_delete(llm_key_id: str, claims: dict = None):  # noqa: E50
         success_counter.labels(HTTP_METHOD_DELETE, TOKENS_DELETE_LLM_URL).inc()
         return cors_200(response_body=response)
     except Exception as ex:
-        LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_DELETE, TOKENS_DELETE_LLM_URL).inc()
         return cors_error(ex, LOG)
 
@@ -800,7 +788,6 @@ def tokens_llm_keys_get(limit: int = 200, offset: int = 0,
         success_counter.labels(HTTP_METHOD_GET, TOKENS_LLM_KEYS_URL).inc()
         return cors_200(response_body=response)
     except Exception as ex:
-        LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_GET, TOKENS_LLM_KEYS_URL).inc()
         return cors_error(ex, LOG)
 
@@ -830,6 +817,5 @@ def tokens_llm_models_get(claims: dict = None):  # noqa: E501
         success_counter.labels(HTTP_METHOD_GET, TOKENS_LLM_MODELS_URL).inc()
         return cors_200(response_body=response)
     except Exception as ex:
-        LOG.exception(ex)
         failure_counter.labels(HTTP_METHOD_GET, TOKENS_LLM_MODELS_URL).inc()
         return cors_error(ex, LOG)

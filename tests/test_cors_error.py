@@ -6,6 +6,7 @@ or contact support." for anything raised. Most of what reaches them is not an
 internal error at all - it is a deliberate validation message that the caller
 needs and that was being replaced with an instruction to contact support.
 """
+import base64
 import json
 import re
 
@@ -96,7 +97,7 @@ class TestUnexpectedErrors:
                 pass
 
             def error(self, msg):
-                pass
+                self.lines.append(msg)
 
         log = Log()
         d = details(cors_error(RuntimeError("boom"), log))
@@ -109,3 +110,101 @@ class TestUnexpectedErrors:
         a = details(cors_error(RuntimeError("one")))
         b = details(cors_error(RuntimeError("two")))
         assert a != b
+
+
+class TestSecretsDoNotReachTheLog:
+    """CodeQL py/clear-text-logging-sensitive-data, alert 13.
+
+    Logs from this service are shipped by filebeat, so a credential reaching a
+    log line does not stay on the host - it is indexed. The traceback has to be
+    logged for the reference to be worth quoting, so the answer is to scrub it,
+    not to stop logging.
+    """
+
+    class Log:
+        def __init__(self):
+            self.lines = []
+
+        def error(self, msg):
+            self.lines.append(msg)
+
+        def exception(self, msg):
+            self.lines.append(msg)
+
+        def info(self, msg):
+            self.lines.append(msg)
+
+    def _logged(self, ex):
+        log = self.Log()
+        cors_error(ex, log)
+        return "\n".join(log.lines)
+
+    def raised(self, ex):
+        """Raise and catch, so the exception carries a real traceback."""
+        try:
+            raise ex
+        except type(ex) as caught:
+            return caught
+
+    def test_a_dsn_password_never_reaches_the_log(self):
+        out = self._logged(self.raised(RuntimeError("could not connect to postgresql://credmgr:hunter2@db:5432/credmgr")))
+        assert "hunter2" not in out
+
+    def test_the_message_is_not_logged_at_all(self):
+        # Not merely scrubbed. `format_exception` and `log.exception` both
+        # append the message, and scrubbing is a heuristic that would miss a
+        # bare secret. The class and the frames are logged instead - enough to
+        # find the bug, with nothing the caller or an upstream controls.
+        out = self._logged(self.raised(RuntimeError("postgresql://u:hunter2@db/x")))
+        assert "hunter2" not in out
+        assert "postgresql" not in out
+        assert "RuntimeError" in out, "the exception class must still be there"
+        assert "test_cors_error.py:" in out, "the frames must still be there"
+
+    def test_a_bearer_token_never_reaches_the_log(self):
+        # Assembled at runtime rather than written as a literal. A JWT-shaped
+        # string in the source is picked up by secret scanning - it is not a
+        # real credential, but an alert that is noise teaches people to dismiss
+        # alerts, which is the opposite of what scanning is for.
+        token = ".".join([
+            base64.urlsafe_b64encode(b'{"alg":"RS256"}').decode().rstrip("="),
+            "cGF5bG9hZA",
+            "c2lnbmF0dXJl",
+        ])
+        out = self._logged(self.raised(RuntimeError(f"401 for Authorization: Bearer {token}")))
+        assert token not in out
+        assert token.split(".")[0] not in out, "the header segment leaked"
+
+    def test_key_value_secrets_are_masked(self):
+        for text, secret in [
+            ("client_secret=s3cr3t-value&grant_type=refresh", "s3cr3t-value"),
+            ('{"password": "letmein"}', "letmein"),
+            ("api_key: abc123xyz", "abc123xyz"),
+        ]:
+            out = self._logged(self.raised(RuntimeError(text)))
+            assert secret not in out, text
+
+    def test_enough_survives_to_find_the_bug(self):
+        # The message is gone, so what has to remain is the class and the place.
+        out = self._logged(self.raised(RuntimeError("could not connect to postgresql://u:pw@db:5432/x")))
+        assert "RuntimeError" in out
+        # file:line in function, per frame - enough to locate the raise site.
+        assert "test_cors_error.py:" in out
+        assert " in raised" in out
+
+    def test_an_upstream_error_is_scrubbed_before_it_reaches_the_caller(self):
+        # This one goes into the response body, which is worse than a log.
+        r = cors_error(CoreApiError("GET https://u:hunter2@uis.example/people failed"))
+        assert "hunter2" not in details(r)
+
+    def test_the_scrubber_still_masks_a_bearer_token_where_it_is_used(self):
+        # It no longer runs over the message, but it still runs over the frames
+        # and over upstream text that reaches the caller.
+        from fabric_cm.credmgr.swagger_server.response.cors_response import scrub_secrets
+        token = ".".join(["eyJ" + "0" * 12, "cGF5bG9hZA", "c2ln"])
+        assert token not in scrub_secrets(f"Authorization: Bearer {token}")
+
+    def test_scrubbing_leaves_ordinary_text_alone(self):
+        from fabric_cm.credmgr.swagger_server.response.cors_response import scrub_secrets
+        msg = "CredMgr: Token lifetime must be between 1 and 14"
+        assert scrub_secrets(msg) == msg

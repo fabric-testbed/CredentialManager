@@ -1,3 +1,5 @@
+import re
+import traceback
 import uuid
 import json
 import os
@@ -119,6 +121,42 @@ def cors_500(details: str = None) -> JSONResponse:
     return cors_response(status_code=500, body=error_object, x_error=details)
 
 
+# Credentials that turn up inside exception text: a DSN from a driver, a URL a
+# request client echoes back, a header repeated in an error. Logs from this
+# service are shipped by filebeat, so a password reaching a log line does not
+# stay on the host - it is indexed.
+_SECRET_PATTERNS = (
+    # Authorization: Bearer <jwt>. FIRST, deliberately: the key/value rule below
+    # also matches "authorization:" and would mask the word "Bearer" while
+    # leaving the token - worse than not matching at all.
+    (re.compile(r"(?i)\b(bearer)\s+[A-Za-z0-9._\-]+"), r"\1 ***"),
+    # scheme://user:password@host
+    (re.compile(r"(?i)\b([a-z][a-z0-9+.\-]*://[^\s:/@]+:)[^\s@]+(@)"), r"\1***\2"),
+    # password=..., "password": "...", token: ..., client_secret=...
+    # The optional quote after the key is what makes the JSON form match; a bare
+    # \s*[=:] misses {"password": "x"} entirely.
+    (re.compile(
+        r"(?i)\b(password|passwd|pwd|secret|client[_-]?secret|token|api[_-]?key|"
+        r"authorization)\b([\"']?\s*[=:]\s*)([\"']?)[^\s,;&\"'}]+\3"
+    ), r"\1\2***"),
+)
+
+
+def scrub_secrets(text: str) -> str:
+    """Mask credential-shaped substrings.
+
+    Deliberately narrow: it masks the value after a credential-ish key and the
+    password in a URL, and leaves everything else intact, because an error
+    message with the useful half redacted is no better than no message. It is
+    a second line of defence, not a reason to log secrets confidently.
+    """
+    if not text:
+        return text
+    for pattern, replacement in _SECRET_PATTERNS:
+        text = pattern.sub(replacement, text)
+    return text
+
+
 def cors_error(ex: Exception, log=None) -> JSONResponse:
     """Turn an exception into the most useful response that is still safe.
 
@@ -164,9 +202,14 @@ def cors_error(ex: Exception, log=None) -> JSONResponse:
 
     if isinstance(ex, (CoreApiError, LiteLLMApiError)):
         upstream = "the FABRIC Core API" if isinstance(ex, CoreApiError) else "the LiteLLM API"
-        details = f"{upstream} returned an error: {ex}"
+        # Machine-generated, and it reaches the caller - scrub before it leaves.
+        details = scrub_secrets(f"{upstream} returned an error: {ex}")
         if log:
-            log.error(f"Upstream failure: {details}")
+            # The upstream's own words go to the caller, not into the log. What
+            # a log is useful for here is the pattern - "the Core API is failing
+            # a lot this morning" - and that needs the name and nothing else.
+            # It also means no upstream-controlled text reaches a log sink.
+            log.error(f"Upstream failure from {upstream}: {type(ex).__name__}")
         return cors_response(
             status_code=502,
             body=Status500InternalServerError([
@@ -177,9 +220,27 @@ def cors_error(ex: Exception, log=None) -> JSONResponse:
 
     ref = uuid.uuid4().hex[:8]
     if log:
-        # The reference is logged with the traceback, which is the only thing
-        # that makes it useful when a user quotes it back.
-        log.exception(f"Unhandled error [ref {ref}]: {ex}")
+        # Frames and the exception's CLASS, never its message.
+        #
+        # `log.exception` and `format_exception` both append the message, which
+        # is the part that can hold a DSN, a token or a header. Scrubbing it is
+        # only a heuristic: it catches labelled secrets and URL credentials, and
+        # would miss a bare one. Logs here are shipped off the host and indexed,
+        # so the message is not worth that risk.
+        #
+        # `format_tb` gives file, line, function and the source line - code, not
+        # runtime data - which with the exception class is enough to find almost
+        # any bug. Still scrubbed, because a frame can show a literal.
+        # Built from each frame's own fields rather than by formatting the
+        # traceback. `format_tb` returns text derived from the exception, and a
+        # dataflow analysis is right not to trust that; filename, line number
+        # and function name are structural facts about the code, and cannot
+        # carry a caller's or an upstream's data.
+        frames = " <- ".join(
+            f"{f.filename.rsplit('/', 1)[-1]}:{f.lineno} in {f.name}"
+            for f in traceback.extract_tb(ex.__traceback__)
+        )
+        log.error(f"Unhandled error [ref {ref}]: {type(ex).__name__} at {frames}")
     return cors_500(
         details=f"An internal error occurred. Quote reference {ref} when contacting support."
     )
