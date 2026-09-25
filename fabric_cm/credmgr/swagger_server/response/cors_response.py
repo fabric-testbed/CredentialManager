@@ -205,7 +205,11 @@ def cors_error(ex: Exception, log=None) -> JSONResponse:
         # Machine-generated, and it reaches the caller - scrub before it leaves.
         details = scrub_secrets(f"{upstream} returned an error: {ex}")
         if log:
-            log.error(f"Upstream failure: {details}")
+            # The upstream's own words go to the caller, not into the log. What
+            # a log is useful for here is the pattern - "the Core API is failing
+            # a lot this morning" - and that needs the name and nothing else.
+            # It also means no upstream-controlled text reaches a log sink.
+            log.error(f"Upstream failure from {upstream}: {type(ex).__name__}")
         return cors_response(
             status_code=502,
             body=Status500InternalServerError([
@@ -216,13 +220,21 @@ def cors_error(ex: Exception, log=None) -> JSONResponse:
 
     ref = uuid.uuid4().hex[:8]
     if log:
-        # The traceback is what makes the reference worth quoting, so it has to
-        # be logged - but `log.exception` appends the traceback itself, and its
-        # last line is the raw `RuntimeError: <message>`. Scrubbing only the
-        # message would leave the secret in the log anyway. So the traceback is
-        # formatted here, scrubbed whole, and logged with `error`.
-        detail = "".join(traceback.format_exception(type(ex), ex, ex.__traceback__))
-        log.error(scrub_secrets(f"Unhandled error [ref {ref}]: {ex!r}\n{detail}"))
+        # Frames and the exception's CLASS, never its message.
+        #
+        # `log.exception` and `format_exception` both append the message, which
+        # is the part that can hold a DSN, a token or a header. Scrubbing it is
+        # only a heuristic: it catches labelled secrets and URL credentials, and
+        # would miss a bare one. Logs here are shipped off the host and indexed,
+        # so the message is not worth that risk.
+        #
+        # `format_tb` gives file, line, function and the source line - code, not
+        # runtime data - which with the exception class is enough to find almost
+        # any bug. Still scrubbed, because a frame can show a literal.
+        frames = "".join(traceback.format_tb(ex.__traceback__))
+        log.error(scrub_secrets(
+            f"Unhandled error [ref {ref}]: {type(ex).__name__}\n{frames}"
+        ))
     return cors_500(
         details=f"An internal error occurred. Quote reference {ref} when contacting support."
     )

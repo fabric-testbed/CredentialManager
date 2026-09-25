@@ -146,24 +146,26 @@ class TestSecretsDoNotReachTheLog:
         except type(ex) as caught:
             return caught
 
-    def test_a_dsn_password_is_masked(self):
+    def test_a_dsn_password_never_reaches_the_log(self):
         out = self._logged(self.raised(RuntimeError("could not connect to postgresql://credmgr:hunter2@db:5432/credmgr")))
         assert "hunter2" not in out
-        assert "credmgr:***@db" in out
 
-    def test_the_traceback_tail_is_scrubbed_too(self):
-        # log.exception appends the traceback, whose last line repeats the raw
-        # message - scrubbing only the f-string would leave the secret behind.
+    def test_the_message_is_not_logged_at_all(self):
+        # Not merely scrubbed. `format_exception` and `log.exception` both
+        # append the message, and scrubbing is a heuristic that would miss a
+        # bare secret. The class and the frames are logged instead - enough to
+        # find the bug, with nothing the caller or an upstream controls.
         out = self._logged(self.raised(RuntimeError("postgresql://u:hunter2@db/x")))
-        assert "RuntimeError" in out, "the traceback must still be there"
         assert "hunter2" not in out
+        assert "postgresql" not in out
+        assert "RuntimeError" in out, "the exception class must still be there"
+        assert "test_cors_error.py" in out, "the frames must still be there"
 
-    def test_a_bearer_token_is_masked(self):
+    def test_a_bearer_token_never_reaches_the_log(self):
         # Assembled at runtime rather than written as a literal. A JWT-shaped
         # string in the source is picked up by secret scanning - it is not a
         # real credential, but an alert that is noise teaches people to dismiss
-        # alerts, which is the opposite of what scanning is for. The value the
-        # scrubber sees is identical either way.
+        # alerts, which is the opposite of what scanning is for.
         token = ".".join([
             base64.urlsafe_b64encode(b'{"alg":"RS256"}').decode().rstrip("="),
             "cGF5bG9hZA",
@@ -172,11 +174,6 @@ class TestSecretsDoNotReachTheLog:
         out = self._logged(self.raised(RuntimeError(f"401 for Authorization: Bearer {token}")))
         assert token not in out
         assert token.split(".")[0] not in out, "the header segment leaked"
-        # The Bearer rule masks the token, then the key/value rule masks what
-        # follows "Authorization:" as well. Both leave the token gone, which is
-        # what matters; asserting the exact residue would pin an implementation
-        # detail of the rule order.
-        assert "***" in out
 
     def test_key_value_secrets_are_masked(self):
         for text, secret in [
@@ -187,16 +184,24 @@ class TestSecretsDoNotReachTheLog:
             out = self._logged(self.raised(RuntimeError(text)))
             assert secret not in out, text
 
-    def test_the_useful_part_of_the_message_survives(self):
-        # A redaction that removes the diagnosis is no better than not logging.
+    def test_enough_survives_to_find_the_bug(self):
+        # The message is gone, so what has to remain is the class and the place.
         out = self._logged(self.raised(RuntimeError("could not connect to postgresql://u:pw@db:5432/x")))
-        assert "could not connect" in out
-        assert "db:5432" in out
+        assert "RuntimeError" in out
+        assert "test_cors_error.py" in out
+        assert "raise ex" in out, "the frame's source line is what locates it"
 
     def test_an_upstream_error_is_scrubbed_before_it_reaches_the_caller(self):
         # This one goes into the response body, which is worse than a log.
         r = cors_error(CoreApiError("GET https://u:hunter2@uis.example/people failed"))
         assert "hunter2" not in details(r)
+
+    def test_the_scrubber_still_masks_a_bearer_token_where_it_is_used(self):
+        # It no longer runs over the message, but it still runs over the frames
+        # and over upstream text that reaches the caller.
+        from fabric_cm.credmgr.swagger_server.response.cors_response import scrub_secrets
+        token = ".".join(["eyJ" + "0" * 12, "cGF5bG9hZA", "c2ln"])
+        assert token not in scrub_secrets(f"Authorization: Bearer {token}")
 
     def test_scrubbing_leaves_ordinary_text_alone(self):
         from fabric_cm.credmgr.swagger_server.response.cors_response import scrub_secrets
