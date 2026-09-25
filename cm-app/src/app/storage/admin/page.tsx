@@ -35,7 +35,11 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 import { ApplyPreviewDialog } from "@/components/storage/apply-preview-dialog";
-import { ExposeDialog, ExposureStatus } from "@/components/storage/globus-exposure";
+import {
+  DTN_CLIENT,
+  ExposeDialog,
+  ExposureStatus,
+} from "@/components/storage/globus-exposure";
 import { exposuresForVolume, liveExposure } from "@/lib/globus-exposure";
 import {
   CreateBucketDialog,
@@ -426,6 +430,42 @@ export default function StorageAdminPage() {
     [principal, cluster, runAction]
   );
 
+  /**
+   * Give the DTN's cephx key a path on this one volume.
+   *
+   * Deliberately a separate, explicit act rather than something
+   * `POST /globus/exposures` does for you. The DTN gaining read-write on a
+   * project's data is exactly the kind of change that should be a decision
+   * somebody made, not a side effect of a UI click - and it shows up
+   * immediately in "Who can reach this storage", where it reads as a service
+   * key holding a grant.
+   *
+   * Scoped to the volume, not the group: the mount uses the subvolume's full
+   * path, so a path grant on that one subvolume is enough. Granting the whole
+   * group would also cover volumes created later, which nobody has asked for.
+   */
+  const grantDtn = useCallback(
+    (e: VolumeExposure) =>
+      runAction(
+        `Granted ${DTN_CLIENT} access to ${e.subvol_name}`,
+        (t) =>
+          applyUserCaps(t, e.cluster, {
+            user_entity: `client.${DTN_CLIENT}`,
+            template_capabilities: CAPS_TEMPLATE,
+            renders: [
+              {
+                fs_name: FS_NAME,
+                subvol_name: e.subvol_name,
+                group_name: e.group_name,
+              },
+            ],
+            sync_across_clusters: false,
+            merge_strategy: "multi",
+          })
+      ),
+    [runAction]
+  );
+
   const withdraw = useCallback(
     (e: VolumeExposure) =>
       runAction(`Withdrawing ${e.subvol_name} from ${e.site}`, (t) =>
@@ -570,6 +610,8 @@ export default function StorageAdminPage() {
                                   exposures={exposuresForVolume(
                                     exposures, cluster, v.group, v.name
                                   )}
+                                  onGrantDtn={grantDtn}
+                                  busy={acting}
                                 />
                               </TableCell>
                               <TableCell className="space-x-1 text-right">
