@@ -276,8 +276,8 @@ class OAuthCredMgr:
         LOG.info(f"Token lifetime: {lifetime} short: {short}")
 
         if not short:
-            long_lived_tokens = self.get_tokens(project_id=project_id, user_email=user_email)
-            if long_lived_tokens is not None and len(long_lived_tokens) >= CONFIG_OBJ.get_max_llt_per_project():
+            long_lived_tokens = self.get_active_long_lived_tokens(project_id=project_id, user_email=user_email)
+            if len(long_lived_tokens) >= CONFIG_OBJ.get_max_llt_per_project():
                 raise OAuthCredMgrError(f"User: {user_email} already has {CONFIG_OBJ.get_max_llt_per_project()} "
                                         f"long lived tokens")
 
@@ -469,6 +469,26 @@ class OAuthCredMgr:
             t[self.STATE] = str(state)
 
         return tokens
+
+    def get_active_long_lived_tokens(self, *, project_id: str, user_email: str) -> List[Dict[str, Any]]:
+        """
+        Get the user's long lived tokens for a project that still count towards the per project limit,
+        i.e. excluding revoked, expired and short lived tokens
+        @param project_id project id
+        @param user_email user email
+        @return list of tokens
+        """
+        active_states = [str(TokenState.Nascent), str(TokenState.Valid), str(TokenState.Refreshed)]
+        tokens = self.get_tokens(project_id=project_id, user_email=user_email, states=active_states, limit=None)
+        result = []
+        for t in tokens:
+            if t.get(self.STATE) == str(TokenState.Expired):
+                continue
+            lifetime_in_hours = (t.get(self.EXPIRES_AT) - t.get(self.CREATED_AT)).total_seconds() / 3600
+            if Utils.is_short_lived(lifetime_in_hours=lifetime_in_hours):
+                continue
+            result.append(t)
+        return result
 
     @staticmethod
     def validate_scope(scope: str):
