@@ -21,11 +21,14 @@ export function exposuresForVolume(
   );
 }
 
-/** The exposure a Withdraw button should act on, if any. */
-export function liveExposure(exposures: VolumeExposure[]): VolumeExposure | undefined {
-  // `removing` is already on its way out; offering Withdraw again would send a
-  // second request for something the agent has not finished tearing down.
-  return exposures.find((e) => e.state !== "removing");
+/**
+ * The exposures a Withdraw button may act on - one per site.
+ *
+ * `removing` is already on its way out; offering Withdraw again would send a
+ * second request for something the agent has not finished tearing down.
+ */
+export function liveExposures(exposures: VolumeExposure[]): VolumeExposure[] {
+  return exposures.filter((e) => e.state !== "removing");
 }
 
 /**
@@ -75,4 +78,49 @@ export function dtnCanMount(
       g.group === group &&
       (g.scope === "group" || g.scope === "all-volumes" || g.volume === volume)
   );
+}
+
+/**
+ * Sites where this volume could still be published.
+ *
+ * Every registered endpoint except those already carrying a live exposure of
+ * this exact volume. Matched on (cluster, group, name) like everything else
+ * here: the same group and name on another cluster is a different volume, and
+ * publishing it at a site must not hide that site for this one.
+ */
+export function unpublishedEndpoints<E extends { site: string }>(
+  endpoints: E[],
+  exposures: VolumeExposure[],
+  cluster: string,
+  group: string,
+  name: string
+): E[] {
+  const taken = new Set(
+    exposuresForVolume(exposures, cluster, group, name)
+      .filter((e) => e.state !== "removing")
+      .map((e) => e.site)
+  );
+  return endpoints.filter((e) => !taken.has(e.site));
+}
+
+const UPLINK_LABEL: Record<string, string> = {
+  fabnetv4ext: "FABnetv4Ext",
+  facility_port: "facility port",
+};
+
+/**
+ * One line telling an operator where a site's endpoint actually is.
+ *
+ * The site key alone misleads: the endpoint registered as "UCSD" runs at MICH.
+ * The uplink and the public addresses say which network a transfer will use,
+ * and the note - written when the endpoint was registered - says which node.
+ */
+export function endpointSummary(e: {
+  uplink: string;
+  public_v4: string | null;
+  public_v6: string | null;
+}): string {
+  const addrs = [e.public_v4, e.public_v6].filter(Boolean).join(", ");
+  const uplink = UPLINK_LABEL[e.uplink] ?? e.uplink;
+  return addrs ? `${uplink} · ${addrs}` : uplink;
 }
