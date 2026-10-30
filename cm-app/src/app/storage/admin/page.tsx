@@ -40,7 +40,11 @@ import {
   ExposeDialog,
   ExposureStatus,
 } from "@/components/storage/globus-exposure";
-import { dtnCanMount, exposuresForVolume, liveExposure } from "@/lib/globus-exposure";
+import {
+  dtnCanMount,
+  exposuresForVolume,
+  unpublishedEndpoints,
+} from "@/lib/globus-exposure";
 import {
   CreateBucketDialog,
   CreateVolumeDialog,
@@ -417,7 +421,7 @@ export default function StorageAdminPage() {
   }, [principal, cluster, ensureToken]);
 
   const expose = useCallback(
-    async (volume: VolumeRow, site: string) => {
+    async (volume: VolumeRow, sites: string[]) => {
       if (!principal) return;
       // Grant first when the DTN cannot reach the volume. Publishing without it
       // fails, and the operator learns that a convergence cycle later from a row
@@ -442,18 +446,37 @@ export default function StorageAdminPage() {
         // Publishing anyway would record an exposure that cannot converge.
         if (!ok) return;
       }
+      // One request per site. Each is independent - a site that refuses does
+      // not undo the others - so all are attempted and the failures named
+      // together, rather than stopping at the first and leaving the operator
+      // to work out which sites were recorded.
       await runAction(
-        `Requested ${volume.name} at ${site}`,
-        (t) =>
-          createGlobusExposure(t, {
-            cluster,
-            group_name: volume.group,
-            subvol_name: volume.name,
-            site,
-            // Only meaningful for a person; a project volume's owner is its
-            // subvolume group and the service resolves it itself.
-            ...(principal.kind === "user" ? { owner_uuid: principal.uuid } : {}),
-          }),
+        `Requested ${volume.name} at ${sites.join(", ")}`,
+        async (t) => {
+          const failed: string[] = [];
+          for (const site of sites) {
+            try {
+              await createGlobusExposure(t, {
+                cluster,
+                group_name: volume.group,
+                subvol_name: volume.name,
+                site,
+                // Only meaningful for a person; a project volume's owner is its
+                // subvolume group and the service resolves it itself.
+                ...(principal.kind === "user" ? { owner_uuid: principal.uuid } : {}),
+              });
+            } catch (ex) {
+              failed.push(`${site}: ${errorMessage(ex, "request failed")}`);
+            }
+          }
+          if (failed.length > 0) {
+            const ok = sites.length - failed.length;
+            throw new Error(
+              `${ok ? `Recorded at ${ok} of ${sites.length} sites. ` : ""}` +
+                `Failed - ${failed.join("; ")}`
+            );
+          }
+        },
         () => setExposeVol(null)
       );
     },
@@ -641,6 +664,7 @@ export default function StorageAdminPage() {
                                     exposures, cluster, v.group, v.name
                                   )}
                                   onGrantDtn={grantDtn}
+                                  onWithdraw={withdraw}
                                   busy={acting}
                                 />
                               </TableCell>
@@ -660,27 +684,22 @@ export default function StorageAdminPage() {
                                   </Button>
                                 )}
                                 {(() => {
-                                  const mine = exposuresForVolume(
-                                    exposures, cluster, v.group, v.name
+                                  // Withdraw lives beside each site in the
+                                  // Globus column. Publish stays offered while
+                                  // any registered site does not carry it yet.
+                                  const left = unpublishedEndpoints(
+                                    endpoints, exposures, cluster, v.group, v.name
                                   );
-                                  const live = liveExposure(mine);
-                                  return live ? (
+                                  return (
                                     <Button
                                       size="sm"
                                       variant="outline"
-                                      disabled={acting}
-                                      onClick={() => withdraw(live)}
-                                    >
-                                      Withdraw
-                                    </Button>
-                                  ) : (
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      disabled={acting || endpoints.length === 0}
+                                      disabled={acting || left.length === 0}
                                       title={
                                         endpoints.length === 0
                                           ? "No Globus endpoint is registered"
+                                          : left.length === 0
+                                          ? "Published at every registered site"
                                           : undefined
                                       }
                                       onClick={() => setExposeVol(v)}
@@ -917,16 +936,13 @@ export default function StorageAdminPage() {
             open={exposeVol !== null}
             onOpenChange={(v) => !v && setExposeVol(null)}
             volumeName={exposeVol?.name ?? ""}
-            endpoints={endpoints.filter(
-              (e) =>
-                !exposures.some(
-                  (x) =>
-                    x.site === e.site &&
-                    x.subvol_name === exposeVol?.name &&
-                    x.group_name === exposeVol?.group &&
-                    x.state !== "removing"
-                )
-            )}
+            endpoints={
+              exposeVol
+                ? unpublishedEndpoints(
+                    endpoints, exposures, cluster, exposeVol.group, exposeVol.name
+                  )
+                : []
+            }
             reachableBy={
               principal.kind === "project"
                 ? (resolution?.granted ?? []).map((g) => g.name || g.bastion_login)
@@ -941,7 +957,7 @@ export default function StorageAdminPage() {
               exposeVol ? dtnCanMount(entities, exposeVol.group, exposeVol.name) : true
             }
             busy={acting}
-            onExpose={(site) => exposeVol && expose(exposeVol, site)}
+            onExpose={(sites) => exposeVol && expose(exposeVol, sites)}
           />
           <CreateBucketDialog
             open={bucketOpen}

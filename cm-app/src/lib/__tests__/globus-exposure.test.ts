@@ -8,7 +8,14 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { dtnCanMount, exposuresForVolume, liveExposure, needsDtnGrant } from "../globus-exposure";
+import {
+  dtnCanMount,
+  endpointSummary,
+  exposuresForVolume,
+  liveExposures,
+  needsDtnGrant,
+  unpublishedEndpoints,
+} from "../globus-exposure";
 import type { CephEntity } from "../ceph-caps";
 
 import type { VolumeExposure } from "../../services/globus-service";
@@ -72,19 +79,84 @@ describe("finding a volume's exposures", () => {
 });
 
 
-describe("which exposure Withdraw acts on", () => {
+describe("which exposures Withdraw acts on", () => {
   it("ignores one already being withdrawn", () => {
     // Offering Withdraw again would send a second request for something the
     // agent has not finished tearing down.
-    expect(liveExposure([exposure({ state: "removing" })])).toBeUndefined();
+    expect(liveExposures([exposure({ state: "removing" })])).toEqual([]);
   });
 
-  it("picks an active one", () => {
-    expect(liveExposure([exposure({ state: "active" })])?.state).toBe("active");
+  it("keeps active and failed ones - a failed one is still a live request", () => {
+    expect(
+      liveExposures([exposure({ state: "active" }), exposure({ state: "failed" })]).map(
+        (e) => e.state
+      )
+    ).toEqual(["active", "failed"]);
   });
 
-  it("picks a failed one, which is still a live request", () => {
-    expect(liveExposure([exposure({ state: "failed" })])?.state).toBe("failed");
+  it("offers one per site, so publishing at two sites can be undone at one", () => {
+    const live = liveExposures([
+      exposure({ site: "UCSD" }),
+      exposure({ site: "NCSA" }),
+      exposure({ site: "PSC", state: "removing" }),
+    ]);
+    expect(live.map((e) => e.site)).toEqual(["UCSD", "NCSA"]);
+  });
+});
+
+
+describe("where a volume can still be published", () => {
+  const eps = [{ site: "UCSD" }, { site: "NCSA" }, { site: "PSC" }];
+
+  it("leaves out sites already publishing this volume", () => {
+    const left = unpublishedEndpoints(eps, [exposure({ site: "UCSD" })], "west", NRIG, "nrig");
+    expect(left.map((e) => e.site)).toEqual(["NCSA", "PSC"]);
+  });
+
+  it("offers a site again once its exposure is being withdrawn", () => {
+    const left = unpublishedEndpoints(
+      eps, [exposure({ site: "UCSD", state: "removing" })], "west", NRIG, "nrig"
+    );
+    expect(left.map((e) => e.site)).toEqual(["UCSD", "NCSA", "PSC"]);
+  });
+
+  it("is not fooled by the same group and name on another cluster", () => {
+    const left = unpublishedEndpoints(
+      eps, [exposure({ site: "UCSD", cluster: "east" })], "west", NRIG, "nrig"
+    );
+    expect(left.map((e) => e.site)).toEqual(["UCSD", "NCSA", "PSC"]);
+  });
+
+  it("is not fooled by the same name in another group", () => {
+    const left = unpublishedEndpoints(
+      eps, [exposure({ site: "UCSD", group_name: "fabric_users" })], "west", NRIG, "nrig"
+    );
+    expect(left.map((e) => e.site)).toEqual(["UCSD", "NCSA", "PSC"]);
+  });
+});
+
+
+describe("describing an endpoint", () => {
+  it("names the network and both addresses", () => {
+    expect(
+      endpointSummary({
+        uplink: "facility_port",
+        public_v4: "141.142.151.18",
+        public_v6: "2620:0:c80:1011::18",
+      })
+    ).toBe("facility port · 141.142.151.18, 2620:0:c80:1011::18");
+  });
+
+  it("copes with an IPv4-only FABnetv4Ext endpoint", () => {
+    expect(
+      endpointSummary({ uplink: "fabnetv4ext", public_v4: "23.134.232.98", public_v6: null })
+    ).toBe("FABnetv4Ext · 23.134.232.98");
+  });
+
+  it("still says something before addresses are known", () => {
+    expect(endpointSummary({ uplink: "facility_port", public_v4: null, public_v6: null })).toBe(
+      "facility port"
+    );
   });
 });
 
